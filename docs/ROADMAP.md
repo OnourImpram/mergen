@@ -119,6 +119,10 @@ Wires `hooks.after_implement -> speckit.mergen.verify` with `optional: false`, m
 - Both settings patchers (`effort-mode/scripts/patch_settings.py` and `dist/native/patch_settings_hooks.py`) are BOM-safe: they strip a UTF-8 BOM before parsing and write without BOM.
 - The "non-bypassable" language in prior documentation has been corrected. The non-bypassable guarantee is honestly scoped to the spec-kit `after_implement` hook contract plus CI, not an absolute in-session lock. A prompt protocol asks, a hook nudges, a CI gate refuses.
 
+### Promo website
+
+A static promo site for Mergen and the Agent Continuity Stack is published at https://thegoatpsy.github.io/mergen/ . It is served from the `gh-pages` branch, kept separate from the engine source on `main`. It presents the identity, the Governor, the verify gate, and the honest enforcement distinction, and it claims no benchmark numbers. The repository itself stays private for now.
+
 ---
 
 ## 2. Known limits of v1.0.0
@@ -174,9 +178,6 @@ The 14 commands in v1.0.0 cover the primary SDD lifecycle. Patterns for common a
 
 **Spec-kit extension: `init` equivalent.**
 A mechanism to bootstrap the `.specify/templates/` directory (including the two mergen-addition templates) into a project that adopts the spec-kit preset, so no manual copy step is required.
-
-**Promo website.**
-A public-facing site explaining Mergen's purpose, architecture, and installation. Deferred until the eval numbers are real.
 
 ---
 
