@@ -5,7 +5,6 @@ to return a temporary directory so tests never read from or write to the
 real ~/.claude directory.
 """
 
-import json
 import sys
 from pathlib import Path
 

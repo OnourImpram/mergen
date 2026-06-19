@@ -24,6 +24,7 @@ set -e
 # Parse command line arguments
 JSON_MODE=false
 REQUIRE_TASKS=false
+REQUIRE_SPEC=false
 INCLUDE_TASKS=false
 PATHS_ONLY=false
 
@@ -34,6 +35,9 @@ for arg in "$@"; do
             ;;
         --require-tasks)
             REQUIRE_TASKS=true
+            ;;
+        --require-spec)
+            REQUIRE_SPEC=true
             ;;
         --include-tasks)
             INCLUDE_TASKS=true
@@ -50,6 +54,7 @@ Consolidated prerequisite checking for Spec-Driven Development workflow.
 OPTIONS:
   --json              Output in JSON format
   --require-tasks     Require tasks.md to exist (for implementation phase)
+  --require-spec      Require spec.md to exist (for the clarify phase, before plan)
   --include-tasks     Include tasks.md in AVAILABLE_DOCS list
   --paths-only        Only output path variables (no prerequisite validation)
   --help, -h          Show this help message
@@ -118,17 +123,26 @@ if [[ ! -d "$FEATURE_DIR" ]]; then
     exit 1
 fi
 
-if [[ ! -f "$IMPL_PLAN" ]]; then
-    echo "ERROR: plan.md not found in $FEATURE_DIR" >&2
-    echo "Run $(format_speckit_command plan "$REPO_ROOT") first to create the implementation plan." >&2
-    exit 1
-fi
+# Clarify runs before plan, so it requires spec.md and does not require plan.md.
+if $REQUIRE_SPEC; then
+    if [[ ! -f "$FEATURE_SPEC" ]]; then
+        echo "ERROR: spec.md not found in $FEATURE_DIR" >&2
+        echo "Run $(format_speckit_command specify "$REPO_ROOT") first to create the feature spec." >&2
+        exit 1
+    fi
+else
+    if [[ ! -f "$IMPL_PLAN" ]]; then
+        echo "ERROR: plan.md not found in $FEATURE_DIR" >&2
+        echo "Run $(format_speckit_command plan "$REPO_ROOT") first to create the implementation plan." >&2
+        exit 1
+    fi
 
-# Check for tasks.md if required
-if $REQUIRE_TASKS && [[ ! -f "$TASKS" ]]; then
-    echo "ERROR: tasks.md not found in $FEATURE_DIR" >&2
-    echo "Run $(format_speckit_command tasks "$REPO_ROOT") first to create the task list." >&2
-    exit 1
+    # Check for tasks.md if required
+    if $REQUIRE_TASKS && [[ ! -f "$TASKS" ]]; then
+        echo "ERROR: tasks.md not found in $FEATURE_DIR" >&2
+        echo "Run $(format_speckit_command tasks "$REPO_ROOT") first to create the task list." >&2
+        exit 1
+    fi
 fi
 
 # Build list of available documents

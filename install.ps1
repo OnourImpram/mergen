@@ -152,7 +152,7 @@ if (-not (Test-Path $EffortInstaller)) {
   Write-Host "ERROR: expected file not found: $EffortInstaller" -ForegroundColor Red
   exit 1
 }
-& powershell.exe -ExecutionPolicy Bypass -File "$EffortInstaller"
+& "$EffortInstaller"
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 Write-Host ""

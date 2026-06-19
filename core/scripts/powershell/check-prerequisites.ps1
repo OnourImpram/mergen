@@ -18,6 +18,7 @@
 param(
     [switch]$Json,
     [switch]$RequireTasks,
+    [switch]$RequireSpec,
     [switch]$IncludeTasks,
     [switch]$PathsOnly,
     [switch]$Help
@@ -35,6 +36,7 @@ Consolidated prerequisite checking for Spec-Driven Development workflow.
 OPTIONS:
   -Json               Output in JSON format
   -RequireTasks       Require tasks.md to exist (for implementation phase)
+  -RequireSpec        Require spec.md to exist (for the clarify phase, before plan)
   -IncludeTasks       Include tasks.md in AVAILABLE_DOCS list
   -PathsOnly          Only output path variables (no prerequisite validation)
   -Help, -h           Show this help message
@@ -89,19 +91,29 @@ if (-not (Test-Path $paths.FEATURE_DIR -PathType Container)) {
     exit 1
 }
 
-if (-not (Test-Path $paths.IMPL_PLAN -PathType Leaf)) {
-    Write-Output "ERROR: plan.md not found in $($paths.FEATURE_DIR)"
-    $planCommand = Format-SpecKitCommand -CommandName 'plan' -RepoRoot $paths.REPO_ROOT
-    Write-Output "Run $planCommand first to create the implementation plan."
-    exit 1
-}
+# Clarify runs before plan, so it requires spec.md and does not require plan.md.
+if ($RequireSpec) {
+    if (-not (Test-Path $paths.FEATURE_SPEC -PathType Leaf)) {
+        Write-Output "ERROR: spec.md not found in $($paths.FEATURE_DIR)"
+        $specifyCommand = Format-SpecKitCommand -CommandName 'specify' -RepoRoot $paths.REPO_ROOT
+        Write-Output "Run $specifyCommand first to create the feature spec."
+        exit 1
+    }
+} else {
+    if (-not (Test-Path $paths.IMPL_PLAN -PathType Leaf)) {
+        Write-Output "ERROR: plan.md not found in $($paths.FEATURE_DIR)"
+        $planCommand = Format-SpecKitCommand -CommandName 'plan' -RepoRoot $paths.REPO_ROOT
+        Write-Output "Run $planCommand first to create the implementation plan."
+        exit 1
+    }
 
-# Check for tasks.md if required
-if ($RequireTasks -and -not (Test-Path $paths.TASKS -PathType Leaf)) {
-    Write-Output "ERROR: tasks.md not found in $($paths.FEATURE_DIR)"
-    $tasksCommand = Format-SpecKitCommand -CommandName 'tasks' -RepoRoot $paths.REPO_ROOT
-    Write-Output "Run $tasksCommand first to create the task list."
-    exit 1
+    # Check for tasks.md if required
+    if ($RequireTasks -and -not (Test-Path $paths.TASKS -PathType Leaf)) {
+        Write-Output "ERROR: tasks.md not found in $($paths.FEATURE_DIR)"
+        $tasksCommand = Format-SpecKitCommand -CommandName 'tasks' -RepoRoot $paths.REPO_ROOT
+        Write-Output "Run $tasksCommand first to create the task list."
+        exit 1
+    }
 }
 
 # Build list of available documents

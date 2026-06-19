@@ -11,9 +11,9 @@ Spec Kit artifacts:
                          `replaces:` the stock speckit.<name>.
 
   extensions/mergen/  Adds the commands Spec Kit does not have (verify,
-                         rollup, go) as namespaced `speckit.mergen.<cmd>`,
-                         and wires the verify gate as a non-bypassable
-                         `after_implement` hook.
+                         rollup, go, lean, debt, govern) as namespaced
+                         `speckit.mergen.<cmd>`, and wires the verify gate
+                         as a mandatory after_implement hook (optional: false).
 
 Why this is mostly copy + manifest generation: the single-source command files
 are authored in Spec Kit's own SOURCE convention (bare `scripts/bash/...` in
@@ -122,9 +122,9 @@ def build_extension_yaml(descs: dict[str, str]) -> str:
         '  name: "Mergen (mergen verification and minimalism)"',
         '  version: "1.0.0"',
         '  description: "Adds adversarial verification, canonical project-state '
-        'rollup, a complexity router, an over-engineering review, and a '
-        'deferred-shortcut debt ledger, and a risk-tier Governor to Spec Kit, and wires a non-bypassable '
-        'verify gate after implement."',
+        'rollup, a complexity router, an over-engineering review, a '
+        'deferred-shortcut debt ledger, and a risk-tier Governor to Spec Kit. '
+        'Wires the verify gate as a mandatory after_implement hook (optional: false)."',
         f'  author: "{AUTHOR}"',
         f'  repository: "{REPO_URL}"',
         f'  license: "{LICENSE}"',

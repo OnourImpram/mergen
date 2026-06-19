@@ -29,7 +29,7 @@ Real enforcement comes from the implement pipeline's adversarial verify stage.
 
 spec-kit's own documentation reports three recurring failure modes: phantom completions (tasks
 marked done with no backing file or test), no task parallelism, and no verification gate. The
-three metrics below target those failure modes directly.
+four metrics below target those failure modes directly.
 
 ## Evidence metric
 
