@@ -24,9 +24,11 @@ Three mechanisms appear in Mergen and the table above, and they are not equal. A
 hook nudges. A CI gate refuses. In-session the implement pipeline will not mark a task done without the
 verifier, and the spec-kit `after_implement` hook makes verify mandatory in that flow. Neither is an absolute
 lock, since a person can edit the task file by hand. Mergen's own CI guards this repository (its tests, the
-single-source drift gate, and the no-reference-text gate), not your project's tasks. A truly non-bypassable
-verify gate for a user project is a CI check against its verification artifacts, which is on the roadmap.
-Naming a nudge as enforcement would itself violate the evidence-honesty principle, so Mergen does not.
+single-source drift gate, and the no-reference-text gate). For a user project, Mergen ships the CI gate as a
+drop-in workflow plus the gate mode of the evidence metric. It fails the build when the committed verification
+report shows phantom or unverified work, and because it reads the committed artifact, the deepest guarantee
+still rests on the verifier that produced it. Naming a nudge as enforcement would itself violate the
+evidence-honesty principle, so Mergen does not.
 
 ## A note on the reference
 

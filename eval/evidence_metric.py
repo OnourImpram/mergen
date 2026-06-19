@@ -67,10 +67,41 @@ def minimal_change(overbuild_path: str | None):
     return None
 
 
+def run_gate(claimed, verified, with_evidence, max_phantoms, min_work_done) -> int:
+    """CI gate over the committed report. Honest about what it checks.
+
+    A phantom is a task claimed done that the verifier did not confirm pass.
+    The gate acts on the committed verification report, so a hand-edited report
+    can still pass. The deepest guarantee rests on the verifier that produced
+    the report, not on this check. What the gate buys is that phantom or
+    unverified work fails the build by default rather than passing in silence.
+    """
+    print("gate")
+    if claimed == 0:
+        print("  no tasks claimed done. nothing to enforce. passing.")
+        return 0
+    phantoms = claimed - verified
+    rate = with_evidence / claimed
+    ok = phantoms <= max_phantoms and rate >= min_work_done
+    print(f"  phantom completions: {phantoms}  (allowed {max_phantoms})")
+    print(f"  work-done rate:      {rate:.2f}  (required {min_work_done:.2f})")
+    print(f"  result:              {'PASS' if ok else 'FAIL'}")
+    if not ok:
+        print("  the committed verification report shows phantom or unverified work.",
+              file=sys.stderr)
+    return 0 if ok else 1
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description="Mergen minimal evidence metric")
     ap.add_argument("report", help="verification-report.json file, or a directory to scan")
     ap.add_argument("--overbuild", help="optional overbuild.json with added_lines and lean_flagged_lines")
+    ap.add_argument("--gate", action="store_true",
+                    help="exit non-zero when the report shows phantom or unverified work (for CI)")
+    ap.add_argument("--max-phantoms", type=int, default=0,
+                    help="phantom completions tolerated under --gate (default 0)")
+    ap.add_argument("--min-work-done", type=float, default=1.0,
+                    help="minimum work-done rate required under --gate (default 1.0)")
     args = ap.parse_args(argv)
 
     reports = load_reports(args.report)
@@ -99,6 +130,9 @@ def main(argv=None) -> int:
         print(f"  lean-flagged lines:  {flagged}")
         print(f"  added lines:         {added}")
         print(f"  over-build ratio:    {ratio:.2f}  (flagged / added)")
+
+    if args.gate:
+        return run_gate(claimed, verified, with_evidence, args.max_phantoms, args.min_work_done)
     return 0
 
 

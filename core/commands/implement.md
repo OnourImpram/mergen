@@ -57,11 +57,11 @@ This command runs under the mergen substrate: maximum reasoning effort plus Work
 
 8. Progress: after each wave, report which tasks passed, which were re-queued, and which remain failing, with evidence references.
 
-## Verify gate (non-bypassable)
+## Verify gate (mandatory in pipeline, not an absolute lock)
 
 9. Before reporting completion, run a final verification pass equivalent to `/mergen.verify` (or `/speckit.mergen.verify`): independently re-check every `[X]` task against the filesystem and tests. If any `[X]` task fails this gate, revert it to `[ ]` and re-queue. "Marked complete" is never accepted as evidence of completion. Only verifier-confirmed filesystem and test state is.
 
-Honest scope: "non-bypassable" means this pipeline does not mark a task `[X]` without the verifier, and in spec-kit mode the `after_implement` hook makes verify mandatory in that flow. In-session this is strong reinforcement, not an absolute lock, since a user can still edit `tasks.md` by hand. The gate that genuinely cannot be talked around is CI, which re-runs verification on every push. See `MERGEN.md`.
+Honest scope: this pipeline does not mark a task `[X]` without the verifier, and in spec-kit mode the `after_implement` hook makes verify mandatory in that flow. In-session this is strong reinforcement, not an absolute lock, since a user can still edit `tasks.md` by hand. The layer that refuses for your own project is the drop-in CI gate `eval/ci/verify-gate.yml`, which fails the build when the committed verification report shows phantom or unverified work. It reads the committed artifact, so the deepest guarantee rests on the verifier that produced it. See `MERGEN.md`.
 
 ## Governor checkpoint (high-trust only)
 
@@ -78,6 +78,6 @@ Report final status: tasks verified-complete, tasks re-queued/failing (with evid
 ## Done When
 
 - [ ] Every task in `tasks.md` is either verifier-confirmed `[X]` or explicitly reported as failing with evidence (no silent or assertion-only completions).
-- [ ] The non-bypassable verify gate passed for all `[X]` tasks against the filesystem and tests.
+- [ ] The mandatory verify gate passed for all `[X]` tasks against the filesystem and tests.
 - [ ] Implementation matches the spec, plan, and constitution; tests pass.
 - [ ] Completion reported with the parallel-wave and verification summary.

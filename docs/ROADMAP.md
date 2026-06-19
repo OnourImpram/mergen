@@ -29,7 +29,7 @@ Fourteen command files in `core/commands/`, each defining a named Workflow-tool 
 | `plan.md` | Multi-approach generation plus a refute-biased architecture critic. |
 | `tasks.md` | Loop-until-dry completeness critic. Emits `tasks-dag.json` with wave id, file list, parallel flag, dependency links, and test-task marker. |
 | `analyze.md` | Parallel cross-artifact consistency checkers with deduplication. |
-| `implement.md` | Wave-parallel pipeline: isolated max-effort implementer per task, then a separate-context refute-biased verifier that checks filesystem and tests before marking `[X]`. Re-queues on failure. Non-bypassable final verify gate. |
+| `implement.md` | Wave-parallel pipeline: isolated max-effort implementer per task, then a separate-context refute-biased verifier that checks filesystem and tests before marking `[X]`. Re-queues on failure. A final verify gate the pipeline will not skip, scoped honestly in section 2. |
 | `verify.md` | Parallel multi-lens check (file-exists, spec-match, tests-pass, git-consistent). Majority-or-FAIL result. Reverts unverified `[X]` markers to `[ ]`. Emits `verification-report.json` and `tasks-state.json` (schemas in `core/schemas/`), each task carrying a confidence label. |
 | `rollup.md` | Synthesis of all feature specs into canonical `.specify/memory/project-state.md`. |
 | `go.md` | Complexity router that directs a request to the appropriate SDD tier. |
@@ -72,6 +72,10 @@ The Governor classifies an incoming task into one of four tiers (tiny, standard,
 
 `eval/evidence_metric.py` is a minimal honest metric derived from the verify JSON: it reports work-done rate (fraction of tasks with verifier-confirmed evidence) and phantom-completion count (tasks marked `[X]` with no backing artifact). The metric abstains on minimal-change runs that have no lean data rather than reporting a misleading zero. The full benchmark suite stays on the roadmap.
 
+### Verify-gate (CI for your own project)
+
+`eval/evidence_metric.py --gate` exits non-zero when a committed `verification-report.json` shows phantom or unverified work. `eval/ci/verify-gate.yml` is a drop-in GitHub Actions workflow that runs it, documented in `eval/ci/README.md`. This is the layer that refuses for a user project, the one that can block a merge. It reads the committed artifact, so a hand-edited report can still pass, and the deepest guarantee rests on the separate-context verifier that produced the report. Mergen's own CI continues to guard this repository (tests, the drift gate, the no-reference-text gate). It does not run verify against a downstream project, which is exactly what the drop-in gate is for.
+
 ### Mneme seam
 
 Mergen is the execution layer and pairs with mneme (the memory layer) across one seam. Mergen stores no memory of its own. `docs/MNEME-SEAM.md` documents the seam contract. `scripts/mneme_emit.py` is the emit hook that writes structured events across the seam. The full mneme writeback adapter is deferred.
@@ -98,7 +102,7 @@ Overrides 8 stock Spec Kit commands via `provides.templates` entries of type `co
 **Extension** (`dist/speckit/extensions/mergen/`, declared in `extension.yml`):
 Adds 6 new commands not present in stock Spec Kit:
 `speckit.mergen.verify`, `speckit.mergen.rollup`, `speckit.mergen.go`, `speckit.mergen.lean`, `speckit.mergen.debt`, `speckit.mergen.govern`.
-Wires `hooks.after_implement -> speckit.mergen.verify` with `optional: false`, making this a non-bypassable gate in the Spec Kit flow.
+Wires `hooks.after_implement -> speckit.mergen.verify` with `optional: false`, making verify mandatory in the Spec Kit implement flow. This is the hook contract, reinforced by the drop-in CI verify-gate, not an absolute in-session lock.
 
 ### Cross-agent renderer
 

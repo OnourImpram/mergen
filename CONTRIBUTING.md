@@ -1,6 +1,9 @@
-# Contributing to mergen
+# Contributing to Mergen
 
-Thank you for your interest. This is a small, focused tool, contributions that stay within that scope are most welcome.
+Mergen is original work with a strict single-source contract and an honest
+posture about what it can and cannot enforce. A few rules keep both intact.
+This is a small, focused tool. Contributions that stay within that scope are
+most welcome.
 
 ## Development setup
 
@@ -11,28 +14,66 @@ pip install pytest
 python -m pytest tests/ -v
 ```
 
-No other dependencies are required. The project uses only the Python standard library.
+No other dependencies are required. The project uses only the Python standard
+library. Tests use `tmp_path` fixtures and monkeypatch `Path.home()`, so they
+never touch your real `~/.claude` directory.
 
-## Running tests
+## The single-source contract
+
+`core/` is the source of truth. The files under `dist/` are rendered output, and
+they are committed so the install path needs no build step. Never hand-edit a file
+under `dist/`. Edit the matching source in `core/`, then re-render and prove the
+tree is in sync:
+
+```bash
+python dist/native/build_native.py build --dry-run
+python dist/speckit/build_speckit.py --dry-run
+python scripts/check_sync.py
+```
+
+`check_sync.py` is the drift gate. It re-renders from `core/` and fails if the
+committed `dist/` is stale. A pull request with stale output will not pass.
+
+## Gates that must stay green
 
 ```bash
 python -m pytest tests/ -v
+python scripts/check_sync.py
+python scripts/check_no_reference_text.py
 ```
 
-Tests use `tmp_path` fixtures and monkeypatch `Path.home()` so they never touch your real `~/.claude` directory. All 16 tests should pass on Python 3.9, 3.11, and 3.12.
+`check_no_reference_text.py` fails the build if any structural fingerprint of a
+proprietary reference prompt appears in the repository. Mergen reproduces no
+proprietary text. Keep it that way.
 
-## CI
+## Style
 
-[![CI](https://github.com/TheGoatPsy/mergen/actions/workflows/ci.yml/badge.svg)](https://github.com/TheGoatPsy/mergen/actions/workflows/ci.yml)
+Authored prose uses periods and commas only. No em dash, no en dash, no semicolon,
+no emoji. This is the same minimal-output discipline Mergen applies to its own
+work. Code is exempt from the punctuation rule, since a semicolon in Python or
+YAML is syntax, not prose.
 
-CI runs the test suite on every push and pull request to `main`, across Python 3.9, 3.11, and 3.12.
+## The lazy ladder
 
-## Pull request requirements
+Before adding code, stop at the first rung that holds: is it needed at all, then
+the standard library, then a native platform feature, then an installed
+dependency, then one line, then the minimum that works. Validation, security,
+accessibility, error handling, and tests are never on the chopping block. The
+discipline lives in `core/lazy-ladder.md`.
 
-- Any change to `hooks/mergen_prompt_hook.py` or `scripts/patch_settings.py` must include or update corresponding tests.
-- The test suite must pass (`python -m pytest tests/ -v`) before requesting review.
-- Keep the scope tight. This tool does one thing: reconstruct `max effort + standing orchestration` from two halves. Extensions that add unrelated features belong in separate projects.
+## Review is a separate lane
+
+Authoring and review run in separate passes. A change is complete when an
+independent check confirms it against the real filesystem and real tests, not when
+the author asserts it. New behavior needs a test. A claim without evidence is a
+hypothesis, not a result.
+
+## Commit messages
+
+Conventional Commits. Keep the subject in the imperative and under about seventy
+characters. Explain the why in the body when the change is not obvious.
 
 ## Reporting issues
 
-Open a GitHub issue. Include your Claude Code version, OS, and Python version.
+Open a GitHub issue. Include your Claude Code version, OS, and Python version. For
+a security issue, follow `SECURITY.md` instead and report it privately.
