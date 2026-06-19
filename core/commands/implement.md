@@ -61,6 +61,10 @@ This command runs under the mergen substrate: maximum reasoning effort plus Work
 
 9. Before reporting completion, run a final verification pass equivalent to `/mergen.verify` (or `/speckit.mergen.verify`): independently re-check every `[X]` task against the filesystem and tests. If any `[X]` task fails this gate, revert it to `[ ]` and re-queue. "Marked complete" is never accepted as evidence of completion; only verifier-confirmed filesystem/test state is.
 
+## Governor checkpoint (high-trust only)
+
+If the Governor classified the task or wave as high-trust, the verify gate is necessary but not sufficient. Hold the final `[X]` until the operator signs off, after seeing the diff, the verifier evidence, and the matched triggers. The verifier's evidence standard follows the tier the Governor set.
+
 ## spec-kit interop (B shell only)
 
 When running as the spec-kit preset/extension, also honor `.specify/extensions.yml` `before_implement` / `after_implement` hooks per spec-kit's hook contract (emit `EXECUTE_COMMAND:` for mandatory hooks). The verify gate above is wired as a mandatory `after_implement` hook.

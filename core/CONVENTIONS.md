@@ -50,7 +50,8 @@ Workflow pattern, not a single-context monologue:
 | implement | pipeline (wave by wave); each task: isolated max-effort implementer -> refute-biased verifier -> `[X]` only on signed PASS, else re-queue |
 | verify | parallel multi-lens verifiers (file-exists, spec-match, tests-pass, git-consistent); majority-or-FAIL |
 | rollup | synthesis agent: reconcile all specs into canonical `project-state.md` |
-| go | complexity router: tinySpec / standard / mergen tiers |
+| govern | the Governor: classify a task into tiny / standard / spec / high-trust and set memory scope, workflow depth, evidence standard, and human approval. Emits `governor-decision.json` |
+| go | complexity router that executes the Governor's chosen tier (adds a human checkpoint for high-trust) |
 | constitution | author/update constitution; keep dependent templates in sync |
 | checklist | requirements-quality checklist ("unit tests for requirements") |
 | lean | over-engineering review: parallel per-file reviewers -> dedup -> ranked delete-list (complexity only, never correctness) |

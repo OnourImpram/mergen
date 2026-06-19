@@ -29,6 +29,9 @@ provides:
     - name: "speckit.mergen.debt"
       file: "commands/speckit.mergen.debt.md"
       description: "Harvest mergen: deferred-shortcut comments into a debt ledger so simplifications stay visible across the lifecycle."
+    - name: "speckit.mergen.govern"
+      file: "commands/speckit.mergen.govern.md"
+      description: "Classify a task by risk and complexity, then set the memory scope, workflow depth, evidence standard, and human-approval requirement (Mergen's wisdom organ)."
 
 hooks:
   after_implement:
