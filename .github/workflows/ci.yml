@@ -34,3 +34,43 @@ jobs:
 
       - name: Check no reference-prompt text is committed
         run: python scripts/check_no_reference_text.py
+
+  lint:
+    name: "ruff"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install ruff
+        run: pip install ruff
+      - name: Lint
+        run: ruff check .
+
+  shell-smoke:
+    name: "shell parse (bash + pwsh)"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Bash syntax check
+        run: |
+          shopt -s nullglob
+          fail=0
+          for f in core/scripts/bash/*.sh install.sh effort-mode/install.sh; do
+            [ -f "$f" ] || continue
+            if ! bash -n "$f"; then echo "syntax error in $f"; fail=1; fi
+          done
+          exit $fail
+      - name: PowerShell parse check
+        shell: pwsh
+        run: |
+          $fail = 0
+          $files = @(Get-ChildItem -Path core/scripts/powershell -Filter *.ps1 -ErrorAction SilentlyContinue)
+          $files += @(Get-Item install.ps1, effort-mode/install.ps1 -ErrorAction SilentlyContinue)
+          foreach ($f in $files) {
+            $tokens = $null; $errs = $null
+            [System.Management.Automation.Language.Parser]::ParseFile($f.FullName, [ref]$tokens, [ref]$errs) | Out-Null
+            if ($errs.Count -gt 0) { Write-Output "parse errors in $($f.FullName)"; $errs | ForEach-Object { Write-Output $_.Message }; $fail = 1 }
+          }
+          exit $fail

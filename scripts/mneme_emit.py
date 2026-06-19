@@ -62,6 +62,9 @@ def main(argv=None) -> int:
     except Exception as exc:  # noqa: BLE001
         print(f"cannot read report: {exc}", file=sys.stderr)
         return 1
+    if not isinstance(report, dict):
+        print(f"cannot process report: expected a JSON object, got {type(report).__name__}", file=sys.stderr)
+        return 1
     sys.stdout.write(to_decision_markdown(report))
     return 0
 

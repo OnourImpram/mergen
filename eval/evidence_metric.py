@@ -43,6 +43,8 @@ def load_reports(path_str: str):
 def work_done(reports):
     claimed = verified = with_evidence = 0
     for _, report in reports:
+        if not isinstance(report, dict):
+            continue
         for task in report.get("tasks", []):
             if task.get("claimed_status") == "done":
                 claimed += 1

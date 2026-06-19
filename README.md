@@ -10,7 +10,7 @@ adversarial verification, governed so the ceremony scales to the risk.**
 <p align="center">
   <a href="https://github.com/TheGoatPsy/mergen/actions/workflows/ci.yml"><img src="https://github.com/TheGoatPsy/mergen/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <img src="https://img.shields.io/badge/status-experimental-orange" alt="status: experimental">
-  <img src="https://img.shields.io/badge/python-3.8%2B-blue" alt="Python 3.8+">
+  <img src="https://img.shields.io/badge/python-3.9%2B-blue" alt="Python 3.9+">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-blue" alt="License: Apache-2.0"></a>
 </p>
 
@@ -84,7 +84,7 @@ affordable.
 
 ## Quickstart (native install)
 
-Requirements: Claude Code, Python 3.8+ on `PATH`.
+Requirements: Claude Code, Python 3.9+ on `PATH`.
 
 ```bash
 git clone https://github.com/TheGoatPsy/mergen.git

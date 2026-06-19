@@ -5,8 +5,6 @@ import json
 import sys
 from pathlib import Path
 
-import pytest
-
 
 def _run_patcher(home_dir: Path, args: list) -> int:
     """Run patch_settings.main() with the given CLI args. Returns exit code."""

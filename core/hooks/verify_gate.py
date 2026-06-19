@@ -38,20 +38,24 @@ def main() -> int:
 
         tool_input = data.get("tool_input", {}) or {}
         path = (tool_input.get("file_path") or "").replace("\\", "/")
-        if not path.endswith("tasks.md"):
+        # Scope to a Mergen SDD tasks file, not any tasks.md in any project.
+        if not (path.endswith("tasks.md") and ".specify/" in path):
             return 0
 
-        # Collect the text this call added, to see if it introduced an [X] mark.
+        # Collect the text added and the text replaced, so the nudge fires only
+        # when this call INTRODUCES a new [X] rather than touching one already there.
         if tool == "Write":
             added = tool_input.get("content", "") or ""
+            removed = ""
         elif tool == "Edit":
             added = tool_input.get("new_string", "") or ""
+            removed = tool_input.get("old_string", "") or ""
         else:  # MultiEdit
-            added = "\n".join(
-                (e or {}).get("new_string", "") for e in (tool_input.get("edits") or [])
-            )
+            edits = tool_input.get("edits") or []
+            added = "\n".join((e or {}).get("new_string", "") for e in edits)
+            removed = "\n".join((e or {}).get("old_string", "") for e in edits)
 
-        if not _CHECKED.search(added):
+        if len(_CHECKED.findall(added)) <= len(_CHECKED.findall(removed)):
             return 0
 
         msg = (

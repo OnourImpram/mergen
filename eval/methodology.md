@@ -1,7 +1,7 @@
 # Evaluation Methodology
 
 **Status: no numbers have been measured yet.**
-This document defines three metrics, explains how each targets a specific spec-kit failure mode,
+This document defines four metrics, explains how each targets a specific spec-kit failure mode,
 and gives exact reproduction steps. Any figure marked SYNTHETIC or ILLUSTRATIVE is a placeholder
 showing the shape of the result table only. It is not a measured value. Replace every SYNTHETIC
 cell with real values from the reproduction run before making any public claim.
@@ -312,7 +312,7 @@ Run each arm in isolation:
 ## Reproduction Steps
 
 These steps produce a controlled head-to-head comparison on an identical feature spec. Follow
-them exactly to generate valid data for all three metrics.
+them exactly to generate valid data for all four metrics.
 
 ### Prerequisites
 
