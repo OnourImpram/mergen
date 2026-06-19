@@ -1,0 +1,42 @@
+schema_version: "1.0"
+
+extension:
+  id: "mergen"
+  name: "Mergen (mergen verification and minimalism)"
+  version: "1.1.0"
+  description: "Adds adversarial verification, canonical project-state rollup, a complexity router, an over-engineering review, and a deferred-shortcut debt ledger to Spec Kit, and wires a non-bypassable verify gate after implement."
+  author: "TheGoatPsy"
+  repository: "https://github.com/TheGoatPsy/mergen"
+  license: "Apache-2.0"
+
+requires:
+  speckit_version: ">=0.6.0"
+
+provides:
+  commands:
+    - name: "speckit.mergen.verify"
+      file: "commands/speckit.mergen.verify.md"
+      description: "Independently verify completed tasks against the filesystem and tests (the phantom-completion gate)."
+    - name: "speckit.mergen.rollup"
+      file: "commands/speckit.mergen.rollup.md"
+      description: "Reconcile all feature specs into a single canonical project-state.md."
+    - name: "speckit.mergen.go"
+      file: "commands/speckit.mergen.go.md"
+      description: "Route a request to the right SDD tier by complexity."
+    - name: "speckit.mergen.lean"
+      file: "commands/speckit.mergen.lean.md"
+      description: "Review the diff or repo for over-engineering and return a delete-list. Complexity only, never correctness."
+    - name: "speckit.mergen.debt"
+      file: "commands/speckit.mergen.debt.md"
+      description: "Harvest mergen: deferred-shortcut comments into a debt ledger so simplifications stay visible across the lifecycle."
+
+hooks:
+  after_implement:
+    command: "speckit.mergen.verify"
+    optional: false
+    description: "Independently verify every [X] task against the filesystem and tests before completion is claimed."
+
+tags:
+  - "mergen"
+  - "verification"
+  - "adversarial"
