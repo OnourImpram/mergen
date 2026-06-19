@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/TheGoatPsy/mergen/schemas/governor-decision.schema.json",
+  "title": "Mergen Governor decision",
+  "description": "The Governor's classification of a task: the tier and the ceremony it sets. Auditable because the matched triggers are recorded, not just the label.",
+  "type": "object",
+  "required": ["schema_version", "task", "tier", "triggers_matched", "memory_scope", "workflow", "evidence_standard", "human_approval_required"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": "1.0" },
+    "task": { "type": "string" },
+    "tier": { "enum": ["tiny", "standard", "spec", "high-trust"] },
+    "triggers_matched": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "High-trust triggers that fired. Non-empty implies tier is high-trust."
+    },
+    "memory_scope": { "type": "string" },
+    "workflow": { "type": "string" },
+    "evidence_standard": { "type": "string" },
+    "human_approval_required": { "type": "boolean" }
+  }
+}
