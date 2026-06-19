@@ -10,7 +10,7 @@
 
   Native install performs three steps in order:
     1. effort-mode\install.ps1         /mergen command + UserPromptSubmit effort hook
-    2. build_native.py build           renders 11 /mergen.* skills to ~/.claude/skills/
+    2. build_native.py build           renders 14 /mergen.* skills to ~/.claude/skills/
     3. patch_settings_hooks.py         registers verify_gate + constitution_inject hooks
 
   After install: restart Claude Code (or run /hooks) so all new hooks load.
@@ -72,7 +72,7 @@ Usage:
 
 Native install steps (in order):
   1. effort-mode\install.ps1         /mergen command + UserPromptSubmit effort hook
-  2. build_native.py build           renders 11 /mergen.* skills to ~/.claude/skills/
+  2. build_native.py build           renders 14 /mergen.* skills to ~/.claude/skills/
   3. patch_settings_hooks.py         registers verify_gate + constitution_inject hooks
 
 Note: /effort max requires one manual paste after running /mergen in a session.
@@ -112,7 +112,7 @@ To install mergen into a spec-kit project that already has "specify init":
 The preset overrides 8 Spec Kit core commands (constitution, specify, clarify,
 checklist, plan, tasks, analyze, implement) with mergen-powered versions.
 
-The extension adds five commands Spec Kit does not have (verify, rollup, go, lean, debt)
+The extension adds six commands Spec Kit does not have (verify, rollup, go, lean, debt, govern)
 as speckit.mergen.<cmd> and wires the verify gate as an after_implement hook.
 
 "Spec Kit" is a GitHub, Inc. project (MIT). See ATTRIBUTION.md for attribution.
@@ -156,7 +156,7 @@ if (-not (Test-Path $EffortInstaller)) {
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 Write-Host ""
-Write-Host "==> Step 2/3: Building native SDD skills (11 /mergen.* commands) ..."
+Write-Host "==> Step 2/3: Building native SDD skills (14 /mergen.* commands) ..."
 $BuildNative = Join-Path $Here "dist\native\build_native.py"
 if (-not (Test-Path $BuildNative)) {
   Write-Host "ERROR: expected file not found: $BuildNative" -ForegroundColor Red

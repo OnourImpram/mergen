@@ -78,7 +78,7 @@ A task is marked `[X]` in `tasks.md` only when its verifier returns `pass: true`
 
 Before reporting completion, a final verification pass equivalent to `/mergen.verify` re-checks every `[X]` task. This gate is non-bypassable: if any `[X]` task fails, it reverts to `[ ]` and is re-queued.
 
-**`mergen.verify`: parallel multi-lens phantom-completion gate.** Four independent lanes per task: file-exists, spec-match, tests-pass, git-consistent. Lane 1 (file-exists) is an unconditional FAIL gate: a file that does not exist on the filesystem cannot satisfy any other criterion. Otherwise, a task earns PASS when three or more lenses return `pass: true` with concrete command output as evidence. Assertion without output is not evidence. Default is FAIL when uncertain. Tasks that fail the majority verdict are reverted from `[X]` to `[ ]` with failure guidance appended. The full report, including actual command output from every lens of every task, is written to `FEATURE_DIR/verification-report.md`.
+**`mergen.verify`: parallel multi-lens phantom-completion gate.** Four independent lanes per task: file-exists, spec-match, tests-pass, git-consistent. Lane 1 (file-exists) is an unconditional FAIL gate: a file that does not exist on the filesystem cannot satisfy any other criterion. Otherwise, a task earns PASS when three or more lenses return `pass: true` with concrete command output as evidence. Assertion without output is not evidence. Default is FAIL when uncertain. Tasks that fail the majority verdict are reverted from `[X]` to `[ ]` with failure guidance appended. The full report, including actual command output from every lens of every task, is written to `FEATURE_DIR/verification-report.md`. Machine-readable output is also emitted as `verification-report.json` and `tasks-state.json` (schemas in `core/schemas/`), each task carrying a confidence label. These JSON files are the input consumed by `eval/evidence_metric.py`.
 
 **`mergen.rollup`: canonical project-state synthesis.** Three parallel reader lanes (requirements, plan and data-model, tasks and contracts) produce a deduplicated, conflict-flagged inventory. A synthesis lane adjudicates conflicts, drops superseded material, and writes `.specify/memory/project-state.md` following the project-state template. An adversarial self-check confirms no requirement dropped silently and no section contains contradictory claims before the file is accepted.
 
@@ -87,6 +87,8 @@ Before reporting completion, a final verification pass equivalent to `/mergen.ve
 **`mergen.constitution` and `mergen.checklist`.** The constitution command authors or updates the governance document. The checklist command applies a requirements-quality checklist before any implementation begins.
 
 **`mergen.lean` and `mergen.debt`.** These two commands belong to the minimalism layer described in 3.4. `mergen.lean` runs an over-engineering review (parallel per-file reviewers against the lazy ladder, deduplicated into a ranked delete-list, complexity only and never correctness). `mergen.debt` harvests `mergen:` deferred-shortcut comments into a risk-banded ledger and, in gate mode, fails on any shortcut with no named ceiling and upgrade path.
+
+**`mergen.govern`: the Governor.** Classifies an incoming task into one of four tiers: tiny, standard, spec, or high-trust. For each tier it sets memory scope, workflow depth, evidence standard, and the human-approval threshold. A deterministic high-trust floor is always enforced: the floor can be raised by explicit configuration but is never silently lowered. The Governor is the wisdom organ of the suite. It decides how much ceremony a task warrants. The `/mergen.go` complexity router then executes the chosen tier. Machine-readable verify output (`verification-report.json` and `tasks-state.json`, schemas in `core/schemas/`) carries a confidence label per task and feeds both the Governor's evidence standard and the eval evidence metric in `eval/evidence_metric.py`.
 
 ### 3.3 Reinforcement hooks
 
@@ -110,7 +112,7 @@ The discipline, and only the discipline, ports to non-Claude agents via `dist/ag
 
 ## 4. Feature and Parity Table
 
-The table below maps each Spec Kit command to its mergen equivalent and describes what mergen adds. The native shell (C) is the full 13-command experience. The spec-kit shell (B) ships a preset that overrides eight stock Spec Kit commands and an extension that adds five commands Spec Kit lacks.
+The table below maps each Spec Kit command to its mergen equivalent and describes what mergen adds. The native shell (C) is the full 14-command experience. The spec-kit shell (B) ships a preset that overrides eight stock Spec Kit commands and an extension that adds six commands Spec Kit lacks.
 
 | Spec Kit command | mergen native equivalent | mergen spec-kit equivalent | What mergen adds |
 |---|---|---|---|
@@ -127,8 +129,9 @@ The table below maps each Spec Kit command to its mergen equivalent and describe
 | (not present) | `/mergen.go` | `speckit.mergen.go` (extension) | Complexity router: tinySpec, standard, or mergen tier. When uncertain, routes to the higher tier. Explicitly names excessive ceremony as a failure mode. |
 | (not present) | `/mergen.lean` | `speckit.mergen.lean` (extension) | Over-engineering review: parallel per-file reviewers against the lazy ladder, deduplicated into a ranked delete-list (`delete`/`stdlib`/`native`/`yagni`/`shrink`). Complexity only, never correctness. Lists cuts, never applies them. |
 | (not present) | `/mergen.debt` | `speckit.mergen.debt` (extension) | Harvests `mergen:` deferred-shortcut comments into a risk-banded ledger. Gate mode fails on any shortcut with no named ceiling and upgrade path. |
+| (not present) | `/mergen.govern` | `speckit.mergen.govern` (extension) | Classifies a task into tiny, standard, spec, or high-trust and sets memory scope, workflow depth, evidence standard, and human approval threshold. Deterministic high-trust floor: the floor can be raised by explicit configuration but is never silently lowered. The wisdom organ that precedes routing. The `/mergen.go` router executes the chosen tier. |
 
-**Scope note.** The native shell installs all thirteen commands as Claude Code skills under `~/.claude/skills/mergen-<name>/SKILL.md`, invoked as `/mergen.<name>`, via `dist/native/build_native.py`. The spec-kit shell (`dist/speckit/build_speckit.py`) delivers a preset (`dist/speckit/preset/mergen/`) that overrides eight stock Spec Kit commands and an extension (`dist/speckit/extensions/mergen/`) that adds five commands Spec Kit lacks (`verify`, `rollup`, `go`, `lean`, `debt`) as `speckit.mergen.<cmd>`, with the verify gate wired as a non-bypassable `after_implement` hook. The spec-kit shell does not claim to replace Spec Kit's own install tooling or preset infrastructure.
+**Scope note.** The native shell installs all 14 commands as Claude Code skills under `~/.claude/skills/mergen-<name>/SKILL.md`, invoked as `/mergen.<name>`, via `dist/native/build_native.py`. The spec-kit shell (`dist/speckit/build_speckit.py`) delivers a preset (`dist/speckit/preset/mergen/`) that overrides eight stock Spec Kit commands and an extension (`dist/speckit/extensions/mergen/`) that adds six commands Spec Kit lacks (`verify`, `rollup`, `go`, `lean`, `debt`, `govern`) as `speckit.mergen.<cmd>`, with the verify gate wired as a non-bypassable `after_implement` hook contract plus CI. The spec-kit shell does not claim to replace Spec Kit's own install tooling or preset infrastructure.
 
 ---
 
@@ -168,4 +171,9 @@ No benchmark numbers are claimed in this document. The eval directory (`eval/`) 
 - `core/hooks/constitution_inject.py`: constitution reinforcement hook source
 - `dist/native/build_native.py`: native shell renderer
 - `dist/speckit/build_speckit.py`: spec-kit shell renderer
+- `docs/MNEME-SEAM.md`: the single seam between mergen (execution layer) and mneme (memory layer)
+- `scripts/mneme_emit.py`: emit hook that writes structured events across the mneme seam
+- `eval/evidence_metric.py`: minimal honest eval metric (work-done rate, phantom-completion count) derived from verify JSON
+- `core/schemas/verification-report.schema.json`: schema for machine-readable verify output
+- `core/schemas/tasks-state.schema.json`: schema for per-task state with confidence labels
 - `ATTRIBUTION.md`: MIT attribution for vendored Spec Kit material

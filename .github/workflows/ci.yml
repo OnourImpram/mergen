@@ -31,3 +31,6 @@ jobs:
 
       - name: Check single-source sync (dist not stale)
         run: python scripts/check_sync.py
+
+      - name: Check no reference-prompt text is committed
+        run: python scripts/check_no_reference_text.py

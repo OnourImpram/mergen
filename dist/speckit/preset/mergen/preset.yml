@@ -3,7 +3,7 @@ schema_version: "1.0"
 preset:
   id: "mergen"
   name: "Mergen SDD"
-  version: "1.1.0"
+  version: "1.0.0"
   description: "Max-effort, Workflow-orchestrated, adversarially-verified, minimal-by-default replacements for the core Spec Kit commands."
   author: "TheGoatPsy"
   repository: "https://github.com/TheGoatPsy/mergen"

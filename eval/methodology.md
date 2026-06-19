@@ -31,7 +31,7 @@ applies effort is not exposed to hooks and `max` cannot be persisted in `setting
 single manual step is the honest cost of reaching the max tier. The `/mergen` command prints
 the `/effort max` line for the user to paste once.
 
-**SDD layer** (`core/`): thirteen commands implement the full SDD lifecycle. The implement command
+**SDD layer** (`core/`): fourteen commands implement the full SDD lifecycle. The implement command
 (`core/commands/implement.md`) runs a wave-parallel pipeline where each task is handled by an
 isolated max-effort implementer followed by a separate-context, refute-biased verifier that
 checks filesystem presence and test passage before writing `[X]`. On `pass: false` the task is
@@ -47,9 +47,9 @@ mechanisms and they do not block, prevent, or enforce any action. The real enfor
 implement pipeline's adversarial verify stage.
 
 The spec-kit renderer (`dist/speckit/build_speckit.py`) produces a preset that overrides eight
-stock spec-kit commands and an extension that adds verify, rollup, go, lean, and debt as
+stock spec-kit commands and an extension that adds verify, rollup, go, lean, debt, and govern as
 `speckit.mergen.*` commands wired via `after_implement` (optional: false). The native renderer
-(`dist/native/build_native.py`) provides the complete thirteen-command suite. The eval below uses
+(`dist/native/build_native.py`) provides the complete 14-command suite. The eval below uses
 the native renderer.
 
 ---
@@ -244,7 +244,7 @@ counted, because the ladder never cuts those.
 
 ### Why it matters
 
-This is the only metric that measures the v1.1.0 minimalism layer. Phantom-completion and
+This is the only metric that measures the minimalism layer. Phantom-completion and
 adversarial-catch measure correctness. Over-build rate measures whether the verified output is also
 minimal. A toolchain can score perfectly on the first three metrics and still ship twice the code a
 task needs.
@@ -496,8 +496,8 @@ and commit the updated methodology before publishing any claim.
 - The effort-mode layer requires one manual paste step (`/effort max`) that is not automatable
   by any hook or script. Runs without that paste operate at the default effort level, not at
   `max`. Record whether the paste was performed for each run and note it in the results.
-- The spec-kit comparison covers the preset (eight command overrides) and extension (three
-  additional commands: verify, rollup, go) produced by `dist/speckit/build_speckit.py`. It
+- The spec-kit comparison covers the preset (eight command overrides) and extension (six
+  additional commands: verify, rollup, go, lean, debt, govern) produced by `dist/speckit/build_speckit.py`. It
   does not claim full spec-kit feature parity beyond that scope.
 - Both toolchains invoke a live LLM. Results will vary across models, model versions, and API
   conditions. Record the Claude Code version and model identifier for each run.
