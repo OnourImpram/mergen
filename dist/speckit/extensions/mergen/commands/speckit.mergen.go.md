@@ -19,6 +19,10 @@ This command runs under the mergen substrate: maximum reasoning effort plus Work
 2. Remind the user once, verbatim: "For genuine max effort, paste this into Claude Code now: `/effort max`". Do not block on this, but note that routing quality and downstream execution both scale with it.
 3. For any tier that fans out work (standard and mergen), you MUST use the Workflow tool. Do not execute multi-task plans in this single context. That single-context collapse is the exact failure mode mergen exists to prevent.
 
+## Governor classification (policy source)
+
+Classification follows the Governor. Run `/mergen.govern $ARGUMENTS` first and read its `governor-decision.json`. The paths below are the execution side of the Governor's tiers: tiny maps to the tinySpec path, standard to the standard path, and spec to the mergen path. A fourth tier, high-trust, runs the mergen path and adds the high-trust path's human checkpoint and strict evidence standard. A high-trust task can never be routed below that floor, even when its complexity alone looks moderate. The tiers and the high-trust triggers are defined in `/mergen.govern`.
+
 ## Complexity classification
 
 Classify `$ARGUMENTS` into exactly one of the three tiers below. Apply the rule strictly. When uncertain between two tiers, pick the higher one.
@@ -78,6 +82,10 @@ Stop here. Do not proceed to the standard or mergen paths.
 11. Run `/mergen.rollup` to reconcile all specs into `project-state.md`.
 12. Proceed to the Done When checklist below.
 
+## high-trust path
+
+A high-trust task (per the Governor) runs the full mergen path above and then gates completion on a human checkpoint. Before reporting done, present the diff, the verifier evidence, and the matched high-trust triggers to the operator and wait for explicit sign-off. The verify verdict stays at conditional_pass until the operator approves. Do not auto-complete a high-trust task. This is the floor the Governor sets, and `go` must not lower it.
+
 ## Adversarial verification requirement
 
 For both standard and mergen paths, adversarial verification is not optional and cannot be skipped. The verifier in each task pipeline receives only the task spec and the resulting diff, never the implementer's reasoning. Its explicit mandate is to find reasons the task is not complete. This separation of context is what makes mergen more reliable than single-context execution. If the Workflow tool is unavailable, state that clearly and do not proceed with a simulated single-context verification; escalate to the user instead.
@@ -90,5 +98,6 @@ For both standard and mergen paths, adversarial verification is not optional and
 - [ ] For standard and mergen: the Workflow tool was used to fan out implementation and verification lanes; single-context execution did not occur.
 - [ ] Every task is either verifier-confirmed `[X]` with filesystem and test evidence, or explicitly reported as failing with the verifier's failure list (no silent or assertion-only completions).
 - [ ] The non-bypassable verify gate passed for all `[X]` tasks.
+- [ ] For high-trust: the operator signed off before any `[X]` was finalized, and the matched triggers were shown.
 - [ ] For mergen: `project-state.md` was updated by `/mergen.rollup`.
 - [ ] The user received a summary of tier, commands executed, verification results, and any remaining failures.

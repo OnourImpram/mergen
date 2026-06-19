@@ -41,8 +41,9 @@ def test_native_parses_every_command_including_lean_and_debt():
         names.append(cmd.name)
     assert "lean" in names
     assert "debt" in names
-    # 11 original commands + lean + debt.
-    assert len(names) == 13, f"expected 13 commands, got {len(names)}: {sorted(names)}"
+    assert "govern" in names
+    # 11 original commands + lean + debt + govern.
+    assert len(names) == 14, f"expected 14 commands, got {len(names)}: {sorted(names)}"
 
 
 # --------------------------------------------------------------------------- #

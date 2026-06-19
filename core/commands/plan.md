@@ -27,6 +27,7 @@ This command runs under the mergen substrate: maximum reasoning effort plus Work
 1. Run the setup-plan script from repo root and parse `FEATURE_SPEC`, `IMPL_PLAN`, and `SPECS_DIR` (absolute paths). The script copies the plan template if `plan.md` does not yet exist and returns the feature directory.
 2. Load context: REQUIRED `spec.md`; IF EXISTS `research.md`, `quickstart.md`, and `.specify/memory/constitution.md` (governance constraints). If `spec.md` is absent, stop and tell the user to run `/mergen.specify` first.
 3. Constitution check: scan the loaded constitution for architectural constraints (forbidden patterns, required patterns, complexity limits). Record violations that must be justified in the plan's Complexity Tracking table.
+4. Governor check: if a `governor-decision.json` exists for this task, let its tier set the planning depth. A tiny task needs no plan. A high-trust task gets the full multi-approach and architecture-critic pass and records that a human checkpoint will gate implementation.
 
 ## Workflow execution (MULTI-APPROACH + ARCHITECTURE-CRITIC)
 
