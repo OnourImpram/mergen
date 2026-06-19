@@ -55,21 +55,31 @@ def entry_has_basename(entry: dict, basename: str) -> bool:
     return False
 
 
+def _read_text_bom(path: Path):
+    """Read text, tolerating and remembering a UTF-8 BOM (Claude Code on Windows
+    sometimes writes one). Returns (text, had_bom)."""
+    raw = path.read_bytes()
+    if raw.startswith(b"\xef\xbb\xbf"):
+        return raw[3:].decode("utf-8"), True
+    return raw.decode("utf-8"), False
+
+
 def load_settings(path: Path):
-    """Return (data, error_message). error_message is empty on success."""
+    """Return (data, had_bom, error_message). error_message is empty on success."""
     if not path.is_file():
-        return {}, ""
+        return {}, False, ""
     try:
-        data = json.loads(path.read_text(encoding="utf-8"))
+        text, had_bom = _read_text_bom(path)
+        data = json.loads(text)
     except Exception as exc:
-        return None, f"{path} is not valid JSON ({exc})"
+        return None, False, f"{path} is not valid JSON ({exc})"
     if not isinstance(data, dict):
-        return None, "settings.json root is not a JSON object"
-    return data, ""
+        return None, False, "settings.json root is not a JSON object"
+    return data, had_bom, ""
 
 
 def status(path: Path) -> int:
-    data, err = load_settings(path)
+    data, _had_bom, err = load_settings(path)
     if err:
         print(f"absent (could not read settings: {err})")
         return 1
@@ -100,7 +110,7 @@ def main(argv=None) -> int:
     if args.status:
         return status(settings_path)
 
-    data, err = load_settings(settings_path)
+    data, had_bom, err = load_settings(settings_path)
     if err:
         print(f"ERROR: {err}. Aborting so your settings are not corrupted.", file=sys.stderr)
         return 1
@@ -132,6 +142,8 @@ def main(argv=None) -> int:
         data.pop("hooks", None)
 
     rendered = json.dumps(data, indent=2, ensure_ascii=False) + "\n"
+    if had_bom:
+        rendered = chr(0xFEFF) + rendered
     if args.dry_run:
         print(rendered, end="")
         return 0

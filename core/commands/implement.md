@@ -59,7 +59,9 @@ This command runs under the mergen substrate: maximum reasoning effort plus Work
 
 ## Verify gate (non-bypassable)
 
-9. Before reporting completion, run a final verification pass equivalent to `/mergen.verify` (or `/speckit.mergen.verify`): independently re-check every `[X]` task against the filesystem and tests. If any `[X]` task fails this gate, revert it to `[ ]` and re-queue. "Marked complete" is never accepted as evidence of completion; only verifier-confirmed filesystem/test state is.
+9. Before reporting completion, run a final verification pass equivalent to `/mergen.verify` (or `/speckit.mergen.verify`): independently re-check every `[X]` task against the filesystem and tests. If any `[X]` task fails this gate, revert it to `[ ]` and re-queue. "Marked complete" is never accepted as evidence of completion. Only verifier-confirmed filesystem and test state is.
+
+Honest scope: "non-bypassable" means this pipeline does not mark a task `[X]` without the verifier, and in spec-kit mode the `after_implement` hook makes verify mandatory in that flow. In-session this is strong reinforcement, not an absolute lock, since a user can still edit `tasks.md` by hand. The gate that genuinely cannot be talked around is CI, which re-runs verification on every push. See `MERGEN.md`.
 
 ## Governor checkpoint (high-trust only)
 

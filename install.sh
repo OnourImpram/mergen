@@ -126,7 +126,7 @@ if [ ! -f "${EFFORT_INSTALLER}" ]; then
   echo "ERROR: expected file not found: ${EFFORT_INSTALLER}" >&2
   exit 1
 fi
-sh "${EFFORT_INSTALLER}"
+bash "${EFFORT_INSTALLER}"
 
 echo ""
 echo "==> Step 2/3: Building native SDD skills (11 /mergen.* commands) ..."
