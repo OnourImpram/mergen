@@ -1,0 +1,45 @@
+{
+  "schema_version": "1.0",
+  "feature_id": "sample-auth-hardening",
+  "verified_at": "2026-06-19T00:00:00Z",
+  "verifier": { "tool": "mergen-verify", "mode": "adversarial", "agent": "claude-code" },
+  "summary": { "verdict": "conditional_pass", "risk_level": "high-trust", "human_review_required": true },
+  "tasks": [
+    {
+      "task_id": "T001",
+      "claimed_status": "done",
+      "verified_status": "pass",
+      "confidence": "extracted",
+      "files_checked": ["src/auth/session.py"],
+      "tests_run": ["pytest tests/test_session.py"],
+      "evidence": ["3 tests passed", "diff adds server-side validation"],
+      "failures": []
+    },
+    {
+      "task_id": "T002",
+      "claimed_status": "done",
+      "verified_status": "fail",
+      "confidence": "extracted",
+      "files_checked": [],
+      "tests_run": [],
+      "evidence": [],
+      "failures": ["no file change found", "no test output"]
+    },
+    {
+      "task_id": "T003",
+      "claimed_status": "done",
+      "verified_status": "pass",
+      "confidence": "extracted",
+      "files_checked": ["src/auth/policy.py"],
+      "tests_run": ["pytest tests/test_policy.py"],
+      "evidence": ["2 tests passed"],
+      "failures": []
+    }
+  ],
+  "policy_results": [
+    { "policy_id": "protected-auth-paths", "result": "warn", "reason": "auth files changed, security reviewer required" }
+  ],
+  "memory_updates": [
+    { "type": "decision", "status": "proposed", "target": "decisions/ADR-sample-auth.md" }
+  ]
+}

@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/TheGoatPsy/mergen/schemas/tasks-state.schema.json",
+  "title": "Mergen tasks state",
+  "description": "Machine-readable mirror of the post-verification completion state of tasks.md.",
+  "type": "object",
+  "required": ["schema_version", "feature_id", "tasks"],
+  "additionalProperties": true,
+  "properties": {
+    "schema_version": { "const": "1.0" },
+    "feature_id": { "type": "string" },
+    "tasks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "status"],
+        "properties": {
+          "id": { "type": "string" },
+          "status": {
+            "enum": ["pending", "done"],
+            "description": "done corresponds to a verifier-confirmed [X], pending to [ ]"
+          },
+          "test_task": { "type": ["string", "null"] },
+          "files": { "type": "array", "items": { "type": "string" } },
+          "last_verified_at": { "type": ["string", "null"] }
+        }
+      }
+    }
+  }
+}

@@ -82,6 +82,15 @@ The report at `FEATURE_DIR/verification-report.md` MUST contain:
 
 The report is the permanent record. "I checked it" without the output is not a record.
 
+## Machine-readable output (JSON)
+
+Alongside the markdown, emit two machine-readable files so the result can be measured and audited, not just read.
+
+- `FEATURE_DIR/verification-report.json`, conforming to `core/schemas/verification-report.schema.json`. For each checked task record `task_id`, `claimed_status`, `verified_status`, the `confidence` label (extracted, inferred, or ambiguous), `files_checked`, `tests_run`, `evidence`, and `failures`. Record only what was actually checked. A task with no concrete evidence is `verified_status: "fail"`, never an inferred pass.
+- `FEATURE_DIR/tasks-state.json`, conforming to `core/schemas/tasks-state.schema.json`. Mirror the post-verification `[ ]` / `[X]` state of every task in `tasks.md`.
+
+These files are the source the eval evidence metric reads (`eval/evidence_metric.py`) and the records the mneme seam emits (`scripts/mneme_emit.py`). The markdown is for people. The JSON is for proof.
+
 ## spec-kit interop (B shell only)
 
 When running as the spec-kit extension, also honor `.specify/extensions.yml` `after_implement` hooks per spec-kit's hook contract. This command is wired as a mandatory `after_implement` hook and MUST be called before completion is reported. Emit `EXECUTE_COMMAND:` for mandatory hook steps as required by the spec-kit contract.
@@ -93,3 +102,4 @@ When running as the spec-kit extension, also honor `.specify/extensions.yml` `af
 - [ ] `FEATURE_DIR/verification-report.md` exists, follows `.specify/templates/verification-template.md`, and contains actual command output for every lens of every checked task.
 - [ ] The final gate result ("All `[X]` tasks confirmed: YES / NO") is stated in the report and echoed to the user.
 - [ ] No task was accepted as PASS on the basis of the `[X]` mark alone, an assertion, or a summary without evidence.
+- [ ] `verification-report.json` and `tasks-state.json` were emitted next to the markdown, conforming to their schemas, with a confidence label on every task.
