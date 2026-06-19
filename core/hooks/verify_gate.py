@@ -4,7 +4,7 @@
 This is a REINFORCEMENT nudge, not the enforcement mechanism. Real enforcement
 is the /mergen.implement pipeline's adversarial verify stage: a separate
 context that checks the filesystem and tests before any task is marked [X], plus
-the non-bypassable final verify gate. A PostToolUse hook cannot itself run a
+the final verify gate the pipeline will not skip. A PostToolUse hook cannot itself run a
 project's tests to prove completion, so it does not pretend to. What it does is
 re-surface the discipline at the exact moment a task box is checked, so a
 single-context shortcut cannot quietly mark work done without the reminder.

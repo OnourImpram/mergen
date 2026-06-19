@@ -1,0 +1,43 @@
+# Mergen verify-gate. A drop-in CI workflow for your own project.
+#
+# Copy this file into your project's .github/workflows/ directory. It fails the
+# build when your committed verification report shows phantom or unverified work,
+# so a green checkmark on a pull request means the verifier actually confirmed the
+# tasks it claims are done.
+#
+# Setup is two steps.
+#   1. Vendor the metric into your repo, for example at tools/evidence_metric.py.
+#      It is Python standard library only, so there is nothing to install.
+#   2. Commit the verification-report.json that /mergen.verify emits, and point
+#      the run step below at it.
+#
+# What it enforces. A phantom is a task claimed done that the verifier did not
+# confirm pass. The gate reads the committed report, so a hand-edited report can
+# still pass. The deepest guarantee rests on the verifier that produced the
+# report, not on this check. What the gate buys is that phantom or unverified work
+# fails the build by default rather than passing in silence.
+
+name: verify-gate
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  verify-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      # Replace path/to/verification-report.json with your committed report path.
+      # If you vendored the metric somewhere other than tools/, update that path too.
+      - name: Fail the build on phantom or unverified work
+        run: |
+          python tools/evidence_metric.py \
+            path/to/verification-report.json \
+            --gate --max-phantoms 0 --min-work-done 1.0

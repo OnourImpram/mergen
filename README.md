@@ -7,6 +7,13 @@
 **The execution backbone for AI coding agents. Maximum reasoning effort, Workflow orchestration, and
 adversarial verification, governed so the ceremony scales to the risk.**
 
+<p align="center">
+  <a href="https://github.com/TheGoatPsy/mergen/actions/workflows/ci.yml"><img src="https://github.com/TheGoatPsy/mergen/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <img src="https://img.shields.io/badge/status-experimental-orange" alt="status: experimental">
+  <img src="https://img.shields.io/badge/python-3.8%2B-blue" alt="Python 3.8+">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-blue" alt="License: Apache-2.0"></a>
+</p>
+
 Mergen is named for the Turkic deity of wisdom and isabet, of sound judgment and the arrow that finds its
 mark. The name states the architecture. Mergen judges, with wisdom, how much care a task deserves, and it
 proves, with accuracy, that the work was actually done and was no larger than it needed to be. The wisdom is
@@ -154,8 +161,11 @@ never as a memory store of Mergen's own.
 On honesty about enforcement: a prompt protocol asks, a hook nudges, and a CI gate refuses. In-session the
 implement pipeline will not mark a task done without the verifier, which is strong discipline but not an
 absolute lock. Mergen's own CI guards this repository (its tests, the drift gate, the no-reference-text gate),
-not your project's task verification. A truly non-bypassable verify gate for your own project means wiring a
-CI check against your verification artifacts, which is on the roadmap. Mergen does not blur the three.
+not your project's task verification. For your own project, Mergen ships that CI gate as a drop-in workflow
+(`eval/ci/verify-gate.yml`) plus the `--gate` mode of the evidence metric. Added to your CI, it fails the build
+when your committed verification report shows phantom or unverified work. It reads the committed artifact, so a
+hand-edited report can still pass, and the deepest guarantee rests on the verifier that produced it. Mergen does
+not blur the three.
 
 ---
 
@@ -261,6 +271,8 @@ v1.0.0, experimental.
 - The Governor sets risk-calibrated ceremony with a deterministic high-trust floor.
 - Machine-readable verify (`verification-report.json`, `tasks-state.json`) and a minimal eval evidence metric.
 - The mneme seam ships as a documented, network-free stub. The full writeback adapter is on the roadmap.
+- The verify-gate ships as a drop-in CI workflow (`eval/ci/verify-gate.yml`) plus a `--gate` mode, so your project
+  can fail the build on phantom or unverified work. It checks the committed report, not your live filesystem.
 - No benchmark numbers are claimed. The methodology and a reproduction procedure are in `eval/`.
 - `/effort max` requires one manual paste per session. The binary does not expose that control to hooks.
 - Hooks are reinforcement nudges. Enforcement is the implement pipeline's adversarial verify stage, made a

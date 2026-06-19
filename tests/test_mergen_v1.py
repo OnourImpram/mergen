@@ -67,6 +67,24 @@ def test_evidence_metric_work_done(capsys):
     assert "abstaining on minimal-change" in out
 
 
+def test_evidence_metric_gate_fails_on_phantom(capsys):
+    metric = _load("eval/evidence_metric.py")
+    sample = str(REPO / "eval" / "sample" / "verification-report.json")
+    rc = metric.main([sample, "--gate"])
+    out = capsys.readouterr().out
+    assert rc == 1
+    assert "result:              FAIL" in out
+
+
+def test_evidence_metric_gate_passes_when_tolerant(capsys):
+    metric = _load("eval/evidence_metric.py")
+    sample = str(REPO / "eval" / "sample" / "verification-report.json")
+    rc = metric.main([sample, "--gate", "--max-phantoms", "1", "--min-work-done", "0.6"])
+    out = capsys.readouterr().out
+    assert rc == 0
+    assert "result:              PASS" in out
+
+
 # --------------------------------------------------------------------------- #
 # mneme seam
 # --------------------------------------------------------------------------- #

@@ -77,9 +77,12 @@ certain way. A hook nudges at a lifecycle point. A CI gate refuses. In-session t
 strong discipline, since it does not mark a task done without the verifier, but it is not an absolute lock,
 because a person can edit the task file by hand. Mergen's own CI enforces this repository's integrity, its
 tests, its single-source drift gate, and the no-reference-text gate. It does not run the verify command
-against your project. Making the verify gate truly non-bypassable in your own project means wiring a CI check
-against your verification artifacts, which is on the roadmap and has not shipped. Mergen names each mechanism
-for exactly what it is, because overclaiming enforcement would be its own kind of fabrication.
+against your project. For your own project, Mergen ships that CI check as a drop-in workflow
+(`eval/ci/verify-gate.yml`) plus a gate mode of the evidence metric. Added to your continuous integration, it
+fails the build when your committed verification report shows phantom or unverified work. It reads the committed
+artifact, so a hand-edited report can still pass, and the deepest guarantee rests on the verifier that produced
+it. Mergen names each mechanism for exactly what it is, because overclaiming enforcement would be its own kind
+of fabrication.
 
 ## On its own making
 
