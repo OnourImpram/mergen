@@ -147,9 +147,11 @@ a phantom-completion count, abstaining honestly when it has no data. Worth-remem
 seam to mneme as provenance-bearing records (`scripts/mneme_emit.py`, [docs/MNEME-SEAM.md](docs/MNEME-SEAM.md)),
 never as a memory store of Mergen's own.
 
-On honesty about enforcement: a prompt protocol asks, a hook nudges, and a CI gate refuses. Only the CI gate
-cannot be talked around, and only it is described as non-bypassable. In-session the verify gate is strong
-reinforcement, made absolute by CI on every push. Mergen does not blur the three.
+On honesty about enforcement: a prompt protocol asks, a hook nudges, and a CI gate refuses. In-session the
+implement pipeline will not mark a task done without the verifier, which is strong discipline but not an
+absolute lock. Mergen's own CI guards this repository (its tests, the drift gate, the no-reference-text gate),
+not your project's task verification. A truly non-bypassable verify gate for your own project means wiring a
+CI check against your verification artifacts, which is on the roadmap. Mergen does not blur the three.
 
 ---
 
@@ -172,8 +174,9 @@ If you use GitHub Spec Kit, `./install.sh --speckit` renders a preset and extens
 | `speckit.mergen.debt` | Deferred-shortcut debt ledger |
 
 The extension wires `hooks.after_implement -> speckit.mergen.verify` with `optional: false`, making verify
-mandatory in the Spec Kit implement flow. That is the hook contract, reinforced in-session and enforced by CI.
-Spec Kit behavior outside those command surfaces is not modified or replicated.
+mandatory in the Spec Kit implement flow. That is the hook contract, reinforced in-session. A CI check against
+your project would make it a true gate. Spec Kit behavior outside those command surfaces is not modified or
+replicated.
 
 ---
 

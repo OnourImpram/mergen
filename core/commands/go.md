@@ -64,7 +64,7 @@ Stop here. Do not proceed to the standard or mergen paths.
 4. Run `/mergen.plan` to produce `plan.md` with a short multi-approach generation and architecture-critic pass.
 5. Run `/mergen.tasks` to produce `tasks.md` and `tasks-dag.json`.
 6. Use the Workflow tool to run `/mergen.implement` over the task waves as described in the implement command. Each task goes through an isolated implementer lane and an adversarial verifier lane before it can be marked `[X]`. Do not collapse the waves into this context.
-7. Run `/mergen.verify` as the final non-bypassable gate.
+7. Run `/mergen.verify` as the required final gate. The pipeline will not advance without it.
 8. Proceed to the Done When checklist below.
 
 ## mergen path
@@ -78,7 +78,7 @@ Stop here. Do not proceed to the standard or mergen paths.
 7. Run `/mergen.tasks`. The completeness-critic loop runs until no new tasks emerge, then emits `tasks-dag.json` with the full dependency DAG.
 8. Run `/mergen.analyze` to surface cross-artifact inconsistencies (spec vs. plan vs. tasks vs. contracts) before a single line of code is written. Fix any flagged inconsistencies.
 9. Use the Workflow tool to run `/mergen.implement` at maximum parallelism. Every task wave fans out via the Workflow tool into isolated implementer contexts and separate adversarial verifier contexts. The verifier's mandate is to disprove completion. A task is marked `[X]` only on a verifier-signed `pass: true` with filesystem and test evidence. Failed tasks are re-queued with the verifier's failure list; retries are capped at two. After the cap the task is left `[ ]` and surfaced in the report.
-10. Run `/mergen.verify` as the final non-bypassable gate: independent multi-lens verifiers (file-exists, spec-match, tests-pass, git-consistent) re-check every `[X]` task. Majority-or-FAIL. Any `[X]` that fails reverts to `[ ]` and is re-queued.
+10. Run `/mergen.verify` as the required final gate: independent multi-lens verifiers (file-exists, spec-match, tests-pass, git-consistent) re-check every `[X]` task. Majority-or-FAIL. Any `[X]` that fails reverts to `[ ]` and is re-queued. The pipeline does not advance without it. A truly non-bypassable gate for your own project is a CI check against its verification artifacts, which is on the roadmap.
 11. Run `/mergen.rollup` to reconcile all specs into `project-state.md`.
 12. Proceed to the Done When checklist below.
 
@@ -97,7 +97,7 @@ For both standard and mergen paths, adversarial verification is not optional and
 - [ ] For standard and mergen: every SDD step was routed to its named command, not collapsed into this context.
 - [ ] For standard and mergen: the Workflow tool was used to fan out implementation and verification lanes; single-context execution did not occur.
 - [ ] Every task is either verifier-confirmed `[X]` with filesystem and test evidence, or explicitly reported as failing with the verifier's failure list (no silent or assertion-only completions).
-- [ ] The non-bypassable verify gate passed for all `[X]` tasks.
+- [ ] The required verify gate passed for all `[X]` tasks.
 - [ ] For high-trust: the operator signed off before any `[X]` was finalized, and the matched triggers were shown.
 - [ ] For mergen: `project-state.md` was updated by `/mergen.rollup`.
 - [ ] The user received a summary of tier, commands executed, verification results, and any remaining failures.

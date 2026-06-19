@@ -28,7 +28,7 @@ Classify the task into exactly one tier. When uncertain between two tiers, pick 
 | tiny | typo, comment, doc nit, formatting | minimal recent context | direct edit | diff only | no |
 | standard | isolated bug fix, one unit test | relevant facts plus recent failures | mini plan, implement, verify | test output plus diff | no, unless a protected path is touched |
 | spec | refactor, feature, multi-file or API change | ADRs, prior decisions, project state | full specify, clarify, plan, tasks, implement, verify, rollup | independent adversarial verify plus `verification-report.json` | optional |
-| high-trust | see triggers below | full context plus domain pack | full spec plus a mandatory human checkpoint | strict: tests, a security or safety lens, explicit human sign-off; the verify verdict caps at conditional_pass until sign-off | required |
+| high-trust | see triggers below | full context plus domain pack | full spec plus a mandatory human checkpoint | strict: tests, a security or safety lens, explicit human sign-off, and the verify verdict caps at conditional_pass until sign-off | required |
 
 ## High-trust triggers (the floor that cannot be lowered)
 
@@ -68,7 +68,7 @@ For a tiny task the record is just as honest: `tier: "tiny"`, empty `triggers_ma
 ## How the rest of the lifecycle uses the decision
 
 - `/mergen.go` routes to the path the tier names. For a high-trust tier it adds the mandatory human checkpoint and the strict evidence standard before completion can be claimed.
-- `/mergen.plan` lets the tier set how deep the plan goes. A tiny task needs no plan; a high-trust task gets the full multi-approach and architecture-critic pass.
+- `/mergen.plan` lets the tier set how deep the plan goes. A tiny task needs no plan. A high-trust task gets the full multi-approach and architecture-critic pass.
 - `/mergen.implement` lets the tier set the verifier's evidence standard and whether a human checkpoint gates the final `[X]`.
 
 The Governor is what makes maximum effort affordable. Without it, every task pays full ceremony and the cost drives people to skip the discipline entirely. With it, the discipline scales to the risk.
