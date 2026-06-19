@@ -1,0 +1,22 @@
+mergen
+Copyright 2026 Onour Impram and mergen contributors
+
+This product includes software developed as part of the
+mergen project
+(https://github.com/TheGoatPsy/mergen).
+
+Licensed under the Apache License, Version 2.0.
+
+This product includes third-party material under the MIT License:
+  - GitHub Spec Kit (github/spec-kit), Copyright GitHub, Inc. Vendored
+    spec-driven-development templates and helper scripts.
+  - ponytail (https://github.com/DietrichGebert/ponytail), Copyright (c) 2026
+    DietrichGebert. The minimalism discipline (the lazy ladder) is derived from it.
+See ATTRIBUTION.md for the list of derived and vendored files and the full MIT
+License text.
+
+This project is an independent, community tool for Claude Code. It is not
+affiliated with, endorsed by, or sponsored by Anthropic. "Claude" and
+"Claude Code" are trademarks of Anthropic. The tool configures only public,
+user-facing extension points (slash commands, hooks, and settings) and does
+not modify the Claude Code binary.

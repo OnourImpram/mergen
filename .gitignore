@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+*.egg-info/
+build/
+# Python wheel/sdist build artifacts only. Our dist/native and dist/speckit are
+# hand-authored distribution SOURCE (renderers, preset, extensions) and ARE tracked.
+*.whl
+*.tar.gz
+.env
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.idea/
+.vscode/
+*.swp
+
+# Local scratch
+*.log
+/tmp/
+
+# oh-my-claudecode session state (orchestration runtime, not part of this tool)
+.omc/

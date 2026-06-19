@@ -1,0 +1,70 @@
+schema_version: "1.0"
+
+preset:
+  id: "mergen"
+  name: "Mergen SDD"
+  version: "1.1.0"
+  description: "Max-effort, Workflow-orchestrated, adversarially-verified, minimal-by-default replacements for the core Spec Kit commands."
+  author: "TheGoatPsy"
+  repository: "https://github.com/TheGoatPsy/mergen"
+  license: "Apache-2.0"
+
+requires:
+  speckit_version: ">=0.6.0"
+
+provides:
+  templates:
+    - type: "command"
+      name: "speckit.constitution"
+      file: "commands/speckit.constitution.md"
+      description: "Create or update the project constitution; keep dependent templates in sync."
+      replaces: "speckit.constitution"
+
+    - type: "command"
+      name: "speckit.specify"
+      file: "commands/speckit.specify.md"
+      description: "Create the feature specification from a natural-language description."
+      replaces: "speckit.specify"
+
+    - type: "command"
+      name: "speckit.clarify"
+      file: "commands/speckit.clarify.md"
+      description: "Ask up to 5 targeted clarification questions and encode the answers into the spec."
+      replaces: "speckit.clarify"
+
+    - type: "command"
+      name: "speckit.checklist"
+      file: "commands/speckit.checklist.md"
+      description: "Generate a requirements-quality checklist (unit tests for requirements)."
+      replaces: "speckit.checklist"
+
+    - type: "command"
+      name: "speckit.plan"
+      file: "commands/speckit.plan.md"
+      description: "Produce the implementation plan and design artifacts."
+      replaces: "speckit.plan"
+
+    - type: "command"
+      name: "speckit.tasks"
+      file: "commands/speckit.tasks.md"
+      description: "Generate a dependency-ordered tasks.md plus a parallel-wave DAG."
+      replaces: "speckit.tasks"
+
+    - type: "command"
+      name: "speckit.analyze"
+      file: "commands/speckit.analyze.md"
+      description: "Non-destructive cross-artifact consistency and quality analysis."
+      replaces: "speckit.analyze"
+
+    - type: "command"
+      name: "speckit.implement"
+      file: "commands/speckit.implement.md"
+      description: "Execute tasks.md as a verified, wave-parallel Workflow at maximum effort. Every task is implemented in an isolated context and adversarially verified against the filesystem and tests before it is marked complete."
+      replaces: "speckit.implement"
+
+tags:
+  - "mergen"
+  - "max-effort"
+  - "workflow"
+  - "verified"
+  - "adversarial"
