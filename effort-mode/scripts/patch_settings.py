@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env python3
+#!/usr/bin/env python3
 """Idempotently add, remove, or check the mergen UserPromptSubmit hook in
 ~/.claude/settings.json.
 
@@ -36,18 +36,27 @@ def is_mergen_entry(entry: dict) -> bool:
     return False
 
 
+def _read_text_bom(path: Path):
+    """Read text, tolerating and remembering a UTF-8 BOM. Returns (text, had_bom)."""
+    raw = path.read_bytes()
+    if raw.startswith(b"\xef\xbb\xbf"):
+        return raw[3:].decode("utf-8"), True
+    return raw.decode("utf-8"), False
+
+
 def _load_settings() -> tuple:
-    """Return (parsed_data, error_message). error_message is empty on success."""
+    """Return (parsed_data, had_bom, error_message). error_message is empty on success."""
     settings = Path.home() / ".claude" / "settings.json"
     if not settings.is_file():
-        return {}, ""
+        return {}, False, ""
     try:
-        data = json.loads(settings.read_text(encoding="utf-8"))
+        text, had_bom = _read_text_bom(settings)
+        data = json.loads(text)
     except Exception as exc:
-        return None, f"{settings} is not valid JSON ({exc})"
+        return None, False, f"{settings} is not valid JSON ({exc})"
     if not isinstance(data, dict):
-        return None, "settings.json root is not a JSON object"
-    return data, ""
+        return None, False, "settings.json root is not a JSON object"
+    return data, had_bom, ""
 
 
 def main() -> int:
@@ -61,7 +70,7 @@ def main() -> int:
 
     # --status: read-only inspection
     if args.status:
-        data, err = _load_settings()
+        data, _had_bom, err = _load_settings()
         if err:
             print(f"absent (could not read settings: {err})")
             return 1
@@ -73,7 +82,7 @@ def main() -> int:
             print("absent: mergen UserPromptSubmit hook is not registered")
             return 1
 
-    data, err = _load_settings()
+    data, had_bom, err = _load_settings()
     if err:
         print(f"ERROR: {err}. Aborting so your settings are not corrupted.", file=sys.stderr)
         return 1
@@ -99,8 +108,11 @@ def main() -> int:
     if not hooks:
         data.pop("hooks", None)
 
+    rendered = json.dumps(data, indent=2, ensure_ascii=False) + "\n"
+    if had_bom:
+        rendered = chr(0xFEFF) + rendered
     settings_path.parent.mkdir(parents=True, exist_ok=True)
-    settings_path.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    settings_path.write_text(rendered, encoding="utf-8")
     print(f"{'removed' if args.remove else 'installed'} mergen UserPromptSubmit hook in {settings_path}")
     return 0
 
