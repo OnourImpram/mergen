@@ -121,7 +121,9 @@ def cmd_build(target: Path, dry_run: bool, force: bool) -> int:
                 skipped.append(rel)
                 continue
         dst.parent.mkdir(parents=True, exist_ok=True)
-        dst.write_text(content, encoding="utf-8", newline="\n")
+        # write_bytes keeps LF cross-platform and is 3.9-safe (write_text gained
+        # the newline argument only in 3.10).
+        dst.write_bytes(content.encode("utf-8"))
         print(f"rendered {rel} -> {dst}")
     if skipped:
         print(f"\nWARNING: {len(skipped)} file(s) were NOT overwritten because they exist "
