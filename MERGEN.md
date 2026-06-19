@@ -23,7 +23,8 @@ ceremony a given task actually earns.
 
 ## How Mergen surfaces and proves truth
 
-Mergen's claim to truth is not a slogan. It is enforced.
+Mergen's claim to truth is not a slogan. It is built into the pipeline and the gates, and the honesty section
+below is exact about what each mechanism does and does not prevent.
 
 Wisdom is the Governor. Before work begins, the Governor classifies the task and sets the ceremony: how much
 memory to pull, how deep the workflow runs, what evidence will be required, and whether a human must sign
@@ -72,9 +73,13 @@ person it serves.
 ## On honesty about enforcement
 
 Mergen distinguishes three things and does not blur them. A prompt protocol asks the agent to behave a
-certain way. A hook nudges at a lifecycle point. A CI gate refuses to merge. Only the last is enforcement
-that cannot be talked around, and only the last is described as non-bypassable. The others are
-reinforcement, and Mergen names them as such. Overclaiming enforcement would be its own kind of fabrication.
+certain way. A hook nudges at a lifecycle point. A CI gate refuses. In-session the implement pipeline is
+strong discipline, since it does not mark a task done without the verifier, but it is not an absolute lock,
+because a person can edit the task file by hand. Mergen's own CI enforces this repository's integrity, its
+tests, its single-source drift gate, and the no-reference-text gate. It does not run the verify command
+against your project. Making the verify gate truly non-bypassable in your own project means wiring a CI check
+against your verification artifacts, which is on the roadmap and has not shipped. Mergen names each mechanism
+for exactly what it is, because overclaiming enforcement would be its own kind of fabrication.
 
 ## On its own making
 

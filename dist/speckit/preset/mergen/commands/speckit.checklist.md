@@ -48,7 +48,7 @@ This command runs under the mergen substrate: maximum reasoning effort plus Work
    Receives: the three flat lists from lanes 1, 2, and 3; the focus area; the full `checklist-template.md` template structure.
    Task: Merge all items, deduplicate overlaps (keep the more specific item), group by category derived from the spec's section headings, and re-sequence IDs as CHK001, CHK002, and so on. Map the result onto the `checklist-template.md` format: fill in the `[CHECKLIST TYPE]` header with the focus area, `[FEATURE NAME]` with the feature name, the `**Purpose**` line with a one-sentence description, and the `**Feature**` line with a relative path to `spec.md`. Replace every sample item in the template with the actual derived items. Emit the completed checklist as a Markdown string.
 
-## Adversarial verification (non-bypassable)
+## Adversarial verification (mandatory attempt, warns on unresolved failures)
 
 7. Before writing the file, use the Workflow tool to run an adversarial verify task in a separate isolated context.
 

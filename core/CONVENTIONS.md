@@ -30,7 +30,7 @@ command logic; author it here and let the renderers adapt it.
   spec-kit already has, or an extension command
   (`dist/speckit/extensions/mergen/commands/speckit.mergen.<name>.md`, invoked
   as `/speckit.mergen.<name>`) for the commands spec-kit lacks (verify, rollup, go,
-  lean, debt).
+  lean, debt, govern).
 
 ## The mergen difference (every command states it)
 

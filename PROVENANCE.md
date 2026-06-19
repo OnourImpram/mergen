@@ -32,7 +32,7 @@ deleted and regenerated from the transformed source, so `dist/speckit/preset/mer
 `dist/speckit/extensions/mergen` are fresh renders, not edited copies.
 
 Verified after transform. Zero `hyper*` tokens remain in the tree. `check_sync` reports the committed output
-in sync with `core/`. The native renderer plans 13 skills. The test suite passes.
+in sync with `core/`. The native renderer plans 14 skills. The test suite passes.
 
 ## Naming
 
