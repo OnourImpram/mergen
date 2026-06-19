@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/mergen-emblem.png" alt="Mergen emblem: a gold arrow finding its mark above a verify checkmark, flanked by two wolves, ringed by a runic border on a deep night sky" width="360">
+</p>
+
 # Mergen
 
 **The execution backbone for AI coding agents. Maximum reasoning effort, Workflow orchestration, and
