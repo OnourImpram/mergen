@@ -100,6 +100,16 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
+## Reference principles (not vendored, not copied)
+
+Mergen's operating principles were informed by widely held responsible-AI design
+ideas studied from a reference system prompt. No proprietary prompt text was
+copied into this repository, and the reference is not a vendored source. Where a
+principle echoes a common responsible-AI norm, that norm is common property and
+the specific wording here is Mergen's own. `scripts/check_no_reference_text.py`
+fails the build if reference-prompt fingerprints appear, which keeps this promise
+testable rather than asserted. See `MERGEN.md` and `MERGEN_PRINCIPLES.md`.
+
 ## Not affiliated
 
 This project is an independent community tool. It is not affiliated with,

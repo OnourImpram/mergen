@@ -1,4 +1,4 @@
-"""Render and single-source-sync tests for the SDD layer (v1.1.0).
+"""Render and single-source-sync tests for the SDD layer (v1.0.0).
 
 These cover the renderers and the drift gate, which the hook tests do not touch:
 - the native renderer parses every core command, including lean and debt,
@@ -61,7 +61,8 @@ def test_committed_extension_yaml_lists_lean_and_debt():
                 / "extension.yml").read_text(encoding="utf-8")
     assert "speckit.mergen.lean" in ext_yaml
     assert "speckit.mergen.debt" in ext_yaml
-    assert 'version: "1.1.0"' in ext_yaml
+    assert "speckit.mergen.govern" in ext_yaml
+    assert 'version: "1.0.0"' in ext_yaml
 
 
 def test_committed_command_files_exist():

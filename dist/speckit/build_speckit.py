@@ -79,7 +79,7 @@ def build_preset_yaml(descs: dict[str, str]) -> str:
         "preset:",
         '  id: "mergen"',
         '  name: "Mergen SDD"',
-        '  version: "1.1.0"',
+        '  version: "1.0.0"',
         '  description: "Max-effort, Workflow-orchestrated, adversarially-verified, '
         'minimal-by-default replacements for the core Spec Kit commands."',
         f'  author: "{AUTHOR}"',
@@ -120,10 +120,10 @@ def build_extension_yaml(descs: dict[str, str]) -> str:
         "extension:",
         f'  id: "{EXT_ID}"',
         '  name: "Mergen (mergen verification and minimalism)"',
-        '  version: "1.1.0"',
+        '  version: "1.0.0"',
         '  description: "Adds adversarial verification, canonical project-state '
         'rollup, a complexity router, an over-engineering review, and a '
-        'deferred-shortcut debt ledger to Spec Kit, and wires a non-bypassable '
+        'deferred-shortcut debt ledger, and a risk-tier Governor to Spec Kit, and wires a non-bypassable '
         'verify gate after implement."',
         f'  author: "{AUTHOR}"',
         f'  repository: "{REPO_URL}"',

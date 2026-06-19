@@ -31,6 +31,10 @@ spec-kit's own documentation reports three recurring failure modes: phantom comp
 marked done with no backing file or test), no task parallelism, and no verification gate. The
 three metrics below target those failure modes directly.
 
+## Evidence metric
+
+`evidence_metric.py` in this directory is a minimal honest metric derived from the machine-readable verify output. It reports two values: work-done rate (fraction of tasks with verifier-confirmed evidence) and phantom-completion count (tasks marked `[X]` with no backing artifact). The metric abstains on minimal-change runs that lack lean data rather than reporting a misleading zero. It reads `verification-report.json` and `tasks-state.json` emitted by `/mergen.verify` (schemas in `core/schemas/`). The full benchmark suite is on the roadmap.
+
 ## Four metrics
 
 | # | Metric | Definition |
@@ -68,12 +72,12 @@ The spec-kit renderer (`dist/speckit/build_speckit.py`) produces:
 
 - A **preset** (`dist/speckit/preset/mergen/`) that overrides eight stock spec-kit commands
   (constitution, specify, clarify, checklist, plan, tasks, analyze, implement) via `preset.yml`.
-- An **extension** (`dist/speckit/extensions/mergen/`) that adds five commands
+- An **extension** (`dist/speckit/extensions/mergen/`) that adds six commands
   (`speckit.mergen.verify`, `speckit.mergen.rollup`, `speckit.mergen.go`,
-  `speckit.mergen.lean`, `speckit.mergen.debt`) via `extension.yml`, with
+  `speckit.mergen.lean`, `speckit.mergen.debt`, `speckit.mergen.govern`) via `extension.yml`, with
   `after_implement` wired to `speckit.mergen.verify` (optional: false).
 
-The native renderer (`dist/native/build_native.py`) provides the full thirteen-command suite
+The native renderer (`dist/native/build_native.py`) provides the full 14-command suite
 under `~/.claude/skills/mergen-<name>/SKILL.md`. The eval uses the native renderer by
 default and notes where spec-kit renderer behavior differs.
 

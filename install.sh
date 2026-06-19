@@ -10,7 +10,7 @@
 #
 # The native install performs three steps in order:
 #   1. Run effort-mode/install.sh  - installs /mergen command + UserPromptSubmit effort hook
-#   2. python dist/native/build_native.py build  - renders the 13 /mergen.* skills
+#   2. python dist/native/build_native.py build  - renders the 14 /mergen.* skills
 #   3. python dist/native/patch_settings_hooks.py --python <python>  - registers SDD hooks
 #
 # After install: restart Claude Code (or run /hooks) so all new hooks load.
@@ -48,7 +48,7 @@ Usage:
 
 Native install steps (in order):
   1. effort-mode/install.sh          /mergen command + UserPromptSubmit effort hook
-  2. build_native.py build           renders 11 /mergen.* skills to ~/.claude/skills/
+  2. build_native.py build           renders 14 /mergen.* skills to ~/.claude/skills/
   3. patch_settings_hooks.py         registers verify_gate + constitution_inject hooks
 
 Note: /effort max requires one manual paste after running /mergen in a session.
@@ -88,7 +88,7 @@ To install mergen into a spec-kit project that already has "specify init":
 The preset overrides 8 Spec Kit core commands (constitution, specify, clarify,
 checklist, plan, tasks, analyze, implement) with mergen-powered versions.
 
-The extension adds five commands Spec Kit does not have (verify, rollup, go, lean, debt)
+The extension adds six commands Spec Kit does not have (verify, rollup, go, lean, debt, govern)
 as speckit.mergen.<cmd> and wires the verify gate as an after_implement hook.
 
 "Spec Kit" is a GitHub, Inc. project (MIT). See ATTRIBUTION.md for attribution.
@@ -129,7 +129,7 @@ fi
 bash "${EFFORT_INSTALLER}"
 
 echo ""
-echo "==> Step 2/3: Building native SDD skills (11 /mergen.* commands) ..."
+echo "==> Step 2/3: Building native SDD skills (14 /mergen.* commands) ..."
 BUILD_SCRIPT="${HERE}/dist/native/build_native.py"
 if [ ! -f "${BUILD_SCRIPT}" ]; then
   echo "ERROR: expected file not found: ${BUILD_SCRIPT}" >&2
