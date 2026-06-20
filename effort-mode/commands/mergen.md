@@ -75,6 +75,7 @@ fi
 
 ## Notes
 
+- The marker snippets above are POSIX shell. On Windows they run under Claude Code's Bash tool (Git Bash), so no change is needed there. In a native PowerShell session, create or remove the same `~/.claude/mergen.json` marker with PowerShell idioms (`New-Item`, `Set-Content`, `Remove-Item`). The marker contract is the file and its JSON, not the shell that writes it.
 - Activation is explicit. Only this command activates mergen. Mentioning the word `mergen` in a prompt does not turn it on.
 - Activation is session-scoped. The marker at `~/.claude/mergen.json` binds to the session where you ran /mergen on its first prompt, and the directive injects only in that session. A new session starts clean (the marker, still bound to the old session, is inert) until you run /mergen again. Use `/mergen off` to disarm explicitly.
 

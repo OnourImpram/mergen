@@ -13,37 +13,24 @@ Read `$ARGUMENTS` carefully before proceeding. The entire routing decision depen
 
 ## mergen substrate
 
-This command runs under the mergen substrate: maximum reasoning effort plus Workflow orchestration. Before classifying and routing:
+This command runs under the mergen substrate: maximum reasoning effort plus Workflow orchestration. Before routing:
 
 1. Ensure mergen is armed (the effort-mode marker `~/.claude/mergen.json` with `active: true`). If the marker is absent and `/mergen` is available, instruct the user to run `/mergen`.
 2. Remind the user once, verbatim: "For genuine max effort, paste this into Claude Code now: `/effort max`". Do not block on this, but note that routing quality and downstream execution both scale with it.
 3. For any tier that fans out work (standard and mergen), you MUST use the Workflow tool. Do not execute multi-task plans in this single context. That single-context collapse is the exact failure mode mergen exists to prevent.
 
-## Governor classification (policy source)
+## Routing (Governor is the only classifier)
 
-Classification follows the Governor. Run `/mergen.govern $ARGUMENTS` first and read its `governor-decision.json`. The paths below are the execution side of the Governor's tiers: tiny maps to the tinySpec path, standard to the standard path, and spec to the mergen path. A fourth tier, high-trust, runs the mergen path and adds the high-trust path's human checkpoint and strict evidence standard. A high-trust task can never be routed below that floor, even when its complexity alone looks moderate. The tiers and the high-trust triggers are defined in `/mergen.govern`.
+Classification follows the Governor, and only the Governor. Run `/mergen.govern $ARGUMENTS` first and read the `tier` field of its `governor-decision.json`. Do not re-derive the tier here from your own criteria. The Governor is the single source of both the tier and the criteria that set it, including the high-trust triggers. Restating those criteria in this command would create a second decision surface that can drift from the Governor and quietly contradict it, which is the exact inconsistency `go` must avoid.
 
-## Complexity classification
+The paths below are the execution side of the Governor's tiers, not a place to re-decide which tier applies. The mapping is direct:
 
-Classify `$ARGUMENTS` into exactly one of the three tiers below. Apply the rule strictly. When uncertain between two tiers, pick the higher one.
+- `tiny` runs the **tinySpec path**.
+- `standard` runs the **standard path**.
+- `spec` runs the **mergen path**.
+- `high-trust` runs the **mergen path** and then the **high-trust path** human checkpoint and strict evidence standard. A high-trust task can never be routed below that floor, even when its complexity alone looks moderate.
 
-### Tier A: tinySpec (trivial), Governor tier `tiny`
-
-Criteria: the change touches a single file, adds or fixes one small thing (a constant, a typo, a one-line guard, a config value, a single failing test), requires no design, no new contracts, and no cross-file coordination. The full implementation fits in one isolated context without losing anything.
-
-If the request meets all criteria, go to the **tinySpec path** below.
-
-### Tier B: standard (medium feature), Governor tier `standard`
-
-Criteria: the change spans two to five files, or touches a clear module boundary, or requires a short design thought, or adds a user-visible capability. The normal SDD chain (specify, plan, tasks, implement, verify) is appropriate. Parallelism is useful but not critical.
-
-If the request meets these criteria, go to the **standard path** below.
-
-### Tier C: mergen (complex), Governor tier `spec`
-
-Criteria: any of the following apply: multiple subsystems or packages are involved, a new public contract or data model is introduced, the change is safety-critical or security-relevant, the request is ambiguous enough that a judge panel is needed to resolve it, or the expected task list is ten or more tasks. Full parallel orchestration, adversarial verification, and a dedicated constitution review are warranted.
-
-If the request meets any one of these criteria, go to the **mergen path** below.
+If the Governor output is missing or genuinely ambiguous between two tiers, take the higher one.
 
 ## tinySpec path
 
@@ -92,7 +79,7 @@ For both standard and mergen paths, adversarial verification is not optional and
 
 ## Done When
 
-- [ ] Tier was classified (tinySpec, standard, or mergen) and the classification was stated with reasoning.
+- [ ] The Governor's tier (tiny, standard, spec, or high-trust) was read from `governor-decision.json` and the matching execution path was taken. The tier was not re-derived in this command.
 - [ ] For tinySpec: the change was made directly, the file was confirmed, and no unnecessary ceremony was added.
 - [ ] For standard and mergen: every SDD step was routed to its named command, not collapsed into this context.
 - [ ] For standard and mergen: the Workflow tool was used to fan out implementation and verification lanes; single-context execution did not occur.

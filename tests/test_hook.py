@@ -93,7 +93,7 @@ def test_armed_marker_custom_directive(home_dir):
 
 
 # ---------------------------------------------------------------------------
-# No keyword auto-trigger (the behavior change in v1.0.1)
+# No keyword auto-trigger (the behavior this version ships)
 # ---------------------------------------------------------------------------
 
 def test_keyword_does_not_activate(home_dir):

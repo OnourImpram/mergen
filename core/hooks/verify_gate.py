@@ -13,8 +13,11 @@ Registered as a PostToolUse hook on Write/Edit/MultiEdit. PostToolUse is the
 correct event because it is the only tool-use hook in this build that supports
 injecting additionalContext into the model's context.
 
-Fail-soft: any error, or any call that is not a tasks.md edit introducing an
-[X] mark, exits 0 with no output (true no-op).
+Fail-soft: any error, or any call that does not raise the [X] count of a Mergen
+tasks.md, exits 0 with no output (true no-op). For Edit and MultiEdit the count
+is measured against the replaced text, so the nudge is precise to a newly
+introduced mark. For Write, a full-file rewrite, a PostToolUse hook cannot see
+the prior content, so the nudge fires on any [X] in the written content.
 """
 
 from __future__ import annotations
@@ -42,8 +45,15 @@ def main() -> int:
         if not (path.endswith("tasks.md") and ".specify/" in path):
             return 0
 
-        # Collect the text added and the text replaced, so the nudge fires only
-        # when this call INTRODUCES a new [X] rather than touching one already there.
+        # Collect the text added and the text replaced. For Edit and MultiEdit
+        # the old_string gives a true baseline, so the nudge fires only when this
+        # call INTRODUCES a new [X] rather than touching one already there. Write
+        # is a full-file rewrite seen by a PostToolUse hook, which runs AFTER the
+        # write, so the prior content is already gone and cannot be diffed. For
+        # Write the baseline is therefore empty and the nudge fires whenever the
+        # written content contains an [X], which may include marks that already
+        # existed. A reminder that occasionally over-fires on a full rewrite is
+        # the safer default for a fail-soft gate than silently missing one.
         if tool == "Write":
             added = tool_input.get("content", "") or ""
             removed = ""
