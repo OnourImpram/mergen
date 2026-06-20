@@ -4,6 +4,48 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project aims to follow
 [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+Engineering line that turns the guarantees the v1.0.0 prompts describe into
+deterministic code. The theme is a tool proves over a prompt promises. Not yet
+tagged as a release.
+
+### Added
+
+- A deterministic, agent-agnostic core, pure standard library, no network and no
+  model. `scripts/verify_core.py` (the mechanical verify harness that emits
+  `verification-report.json`), `scripts/governor_floor.py` (the non-downgradable
+  high-trust floor and a `policy_results` audit trail), `scripts/tasks_dag_validator.py`
+  (unique ids, resolvable refs, no cycles, earlier-wave deps), `scripts/ledger.py`
+  (an append-only event ledger), `scripts/injection_quarantine.py` (scan, fence,
+  classify untrusted text), and `scripts/project_config.py` (a floor-raising
+  project overlay). A real, no-LLM phantom-detection benchmark in `eval/benchmark.py`.
+- `mergen_cli.py`, one cross-platform CLI with `install`, `doctor`, `uninstall`,
+  `upgrade`, and an agent-agnostic `verify` verb that forwards to the harness.
+- The mneme seam read direction (`scripts/mneme_emit.py` parses Mergen's own
+  emitted record shape) and shareable domain packs (`domains/clinical`).
+- A worked end-to-end example (`examples/verify-demo/`) and a compatibility
+  matrix (`docs/COMPAT.md`) mapping which features need which runtime.
+
+### Changed
+
+- One confidence vocabulary, defined once in `MERGEN_PRINCIPLES.md` and mirrored
+  by `verify_core.CONFIDENCE`, with a test asserting the code and the schema enum
+  cannot drift. One `policy_results` shape shared between the Governor decision
+  and the verification report, with a test asserting the two schemas stay identical.
+- `verify.md` makes tests-pass a hard gate alongside file-exists, aligned with the
+  harness's any-applicable-lens-fails rule.
+- A mypy --strict CI gate over the Python surface. The bash and PowerShell command
+  logic collapsed into one Python layer. The test suite inverted into focused
+  per-module files.
+
+### Fixed
+
+- Removed a stale confidence vocabulary from the docs. `tasks-state.json` never
+  carried a confidence label. The label lives on the verification report.
+- Honest scoping of the `PROVENANCE.md` no-seed-tokens claim, effort-patcher
+  parity with the native patcher, and installer Python-version strings.
+
 ## [1.0.0] - 2026-06-19
 
 Initial release of Mergen, the execution backbone for AI coding agents. Mergen is the execution half of the

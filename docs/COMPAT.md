@@ -1,0 +1,70 @@
+# Compatibility matrix
+
+Which parts of Mergen need which runtime. The short version: the deterministic
+core that proves work was done needs nothing but Python. The prompt and
+orchestration layer needs a host that runs slash commands, and the full
+multi-agent behavior needs Claude Code. This page states exactly where each line
+falls, so a reader knows what they get on their own stack without guessing.
+
+The split matters because it is the honest form of the project's claim. The
+guarantee that a tool proves the work lives in the agent-agnostic core. The
+prompts ask and the hooks nudge, and those need their host. Naming a host-only
+feature as portable would be the kind of over-claim the charter forbids.
+
+## Tier 0. Agent agnostic, pure Python
+
+Standard library only. No network, no model, no Claude Code. Runs anywhere
+Python 3.9 or newer runs. This is the layer that makes Mergen's verification and
+governance real regardless of which agent, if any, sits above it.
+
+| Component | What it does | Entry point |
+|---|---|---|
+| `scripts/verify_core.py` | Mechanical verify harness (file-exists, tests-pass, git-consistent), emits `verification-report.json` | `python scripts/verify_core.py` or `mergen verify` |
+| `scripts/governor_floor.py` | Deterministic high-trust floor and the `policy_results` audit trail | `python scripts/governor_floor.py` |
+| `scripts/tasks_dag_validator.py` | Validates a `tasks-dag.json` (unique ids, resolvable refs, no cycles, earlier-wave deps) | `python scripts/tasks_dag_validator.py --gate` |
+| `scripts/project_config.py` | Reads `.specify/mergen.toml`, applies the floor-raising overlay | imported by `governor_floor --config` |
+| `scripts/injection_quarantine.py` | Scans, fences, and classifies untrusted text | `python scripts/injection_quarantine.py` |
+| `scripts/ledger.py` | Append-only event ledger | `python scripts/ledger.py` |
+| `scripts/mneme_emit.py` | Emits and reads decision records across the mneme seam | `python scripts/mneme_emit.py` |
+| `eval/benchmark.py` | Deterministic phantom-detection benchmark, no LLM | `python eval/benchmark.py --gate` |
+| `eval/evidence_metric.py` | Evidence metric and CI gate over a committed report | `python eval/evidence_metric.py --gate` |
+
+A worked end-to-end run of this tier is in [`examples/verify-demo/`](../examples/verify-demo/README.md).
+
+To use the verify harness outside this repository you do not need to install
+anything. `scripts/verify_core.py` is a single self-contained standard-library
+file. Copy it, or install the repo and call `mergen verify`, which forwards to
+it verbatim.
+
+## Tier 1. Needs a renderer install, then runs in that host
+
+The 14 SDD commands are authored once in `core/commands/` and rendered into one
+of two shells. The rendered command is a prompt, so it needs a host that runs
+slash commands. The single-source contract is in `core/CONVENTIONS.md`.
+
+| Component | Needs | Notes |
+|---|---|---|
+| `/mergen.*` native skills | Claude Code | `dist/native/build_native.py` renders to `~/.claude/skills/mergen-<name>/SKILL.md` |
+| `speckit.*` and `speckit.mergen.*` | Spec Kit | `dist/speckit/build_speckit.py` renders a preset (8 overrides) and an extension (6 additions) |
+| `verify_gate.py`, `constitution_inject.py` | Claude Code hooks | Reinforcement nudges via `settings.json`. No-ops where the hook system is absent |
+
+## Tier 2. Needs Claude Code specifically
+
+| Component | Why |
+|---|---|
+| Workflow orchestration in every command | The multi-agent fan-out (judge panel, refute-biased verifier, wave-parallel pipeline) is Claude Code's Workflow tool. Another host that runs the prompt gets the single-context reading of it, not the fan-out |
+| `/effort max` | Claude Code's effort ladder. A hook cannot set the live effort value, so one manual paste is irreducible |
+| Effort-mode standing directive | `effort-mode/hooks/mergen_prompt_hook.py` is a Claude Code `UserPromptSubmit` hook |
+
+## Tier 3. Optional integrations
+
+| Component | Behavior when absent |
+|---|---|
+| mneme memory seam | `scripts/mneme_emit.py` round-trips Mergen's own emitted record shape. With no mneme vault present it returns an empty result. mneme is optional and consumed only across the documented seam |
+| Non-Claude agent rule files | `dist/agents/build_agents.py` ports only the lazy-ladder minimalism discipline to Cursor, Windsurf, Cline, Copilot, and Kiro as passive rule files. The SDD engine and the Workflow orchestration do not port, and the renderer does not claim they do |
+
+## One-line summary
+
+If all you want is the proof that work was done and was minimal, Tier 0 is the
+whole answer and it runs on plain Python. Everything above Tier 0 is about how
+the work gets produced, and that is where the host starts to matter.
