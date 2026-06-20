@@ -38,7 +38,7 @@
           "verified_status": { "enum": ["pass", "fail"] },
           "confidence": {
             "enum": ["extracted", "inferred", "ambiguous"],
-            "description": "How the verdict is known. extracted means direct filesystem or test evidence. A verdict without evidence is fail, never an inferred pass."
+            "description": "How the verdict is known, from the one confidence vocabulary defined in MERGEN_PRINCIPLES.md and mirrored by verify_core.CONFIDENCE. extracted means direct filesystem or test evidence. A verdict without evidence is fail, never an inferred pass."
           },
           "files_checked": { "type": "array", "items": { "type": "string" } },
           "tests_run": { "type": "array", "items": { "type": "string" } },

@@ -222,6 +222,75 @@ def classify_floor(
     return {"tier": tier, "triggers_matched": all_triggers}
 
 
+def _build_policy_catalog() -> list[tuple[str, str]]:
+    """Return the ordered, deduped catalog of (policy_id, source) the floor checks.
+
+    A policy id can be checked two ways (a segment match and a glob match share
+    one id, for example "secrets-path"). The catalog records each id once, in a
+    stable order, tagged with where it is evaluated: "path" for the path-based
+    guards, "diff" for the diff-text guards.
+    """
+    catalog: list[tuple[str, str]] = []
+    seen: set[str] = set()
+    for policy_id in _SEGMENT_EXACT:
+        if policy_id not in seen:
+            catalog.append((policy_id, "path"))
+            seen.add(policy_id)
+    for policy_id in _PATH_GLOBS:
+        if policy_id not in seen:
+            catalog.append((policy_id, "path"))
+            seen.add(policy_id)
+    for policy_id in _DIFF_PATTERNS:
+        if policy_id not in seen:
+            catalog.append((policy_id, "diff"))
+            seen.add(policy_id)
+    return catalog
+
+
+# The full set of floor guards, computed once. Stable and deterministic.
+_POLICY_CATALOG: list[tuple[str, str]] = _build_policy_catalog()
+
+
+def policy_results(
+    changed_paths: list[str],
+    diff_text: str = "",
+    include_passing: bool = False,
+) -> list[dict[str, Any]]:
+    """Return a per-policy audit trail for the floor decision.
+
+    Each entry uses the shared policy-result shape {policy_id, result, reason}
+    that verification-report.json also uses, so the Governor and the verifier
+    speak one policy vocabulary. A guard that matched the change is a tripped
+    high-trust floor and reports result "fail" (a non-downgradable escalation,
+    the policy-engine sense of a deny rule firing). A guard that did not match
+    reports "pass".
+
+    By default only the tripped guards are returned, which keeps the trace
+    minimal. Pass include_passing=True for the full evaluated catalog, the
+    record an auditor needs to confirm every guard was actually checked.
+
+    Scope: the built-in path and diff floor catalog. The config-overlay and
+    injection guards are applied in a later layer and surface their own ids in
+    triggers_matched.
+    """
+    fired = set(_check_paths(changed_paths)) | set(_check_diff(diff_text))
+    results: list[dict[str, Any]] = []
+    for policy_id, source in _POLICY_CATALOG:
+        if policy_id in fired:
+            results.append({
+                "policy_id": policy_id,
+                "result": "fail",
+                "reason": f"matched the high-trust floor via {source}",
+            })
+        elif include_passing:
+            results.append({
+                "policy_id": policy_id,
+                "result": "pass",
+                "reason": f"no {source} match",
+            })
+    return results
+
+
 def combine(model_tier: str, floor_tier: str) -> str:
     """Return the higher of model_tier and floor_tier.
 
@@ -277,6 +346,16 @@ def _build_cli_parser() -> argparse.ArgumentParser:
         help="Also scan the diff for prompt injection (A3). A detection forces "
              "high-trust. Opt-in, because the patterns fire on security prose.",
     )
+    parser.add_argument(
+        "--policy-trace",
+        nargs="?",
+        const="matched",
+        choices=["matched", "all"],
+        default=None,
+        help="Add a per-policy audit trail (policy_results) to the decision "
+             "JSON. Bare or 'matched' lists only the floor guards that tripped; "
+             "'all' lists every guard evaluated, matched or not.",
+    )
     return parser
 
 
@@ -311,6 +390,16 @@ def main(argv: list[str] | None = None) -> int:
             if "injection-detected" not in triggers:
                 triggers.append("injection-detected")
             decision = {**decision, "tier": "high-trust", "triggers_matched": triggers}
+
+    if args.policy_trace is not None:
+        # Auditable policy-as-code trace, in the shape shared with the verify
+        # report. Reflects the built-in floor catalog (path + diff guards).
+        decision = {
+            **decision,
+            "policy_results": policy_results(
+                args.paths, diff_text, include_passing=(args.policy_trace == "all")
+            ),
+        }
 
     print(json.dumps(decision, indent=2))
 

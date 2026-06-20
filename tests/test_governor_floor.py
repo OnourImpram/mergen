@@ -8,6 +8,7 @@ floor can raise but never lower the model tier.
 from __future__ import annotations
 
 import importlib.util
+import json
 from pathlib import Path
 
 # ---------------------------------------------------------------------------
@@ -30,6 +31,7 @@ _m = _load_module()
 classify_floor = _m.classify_floor
 combine = _m.combine
 main = _m.main
+policy_results = _m.policy_results
 
 
 # ---------------------------------------------------------------------------
@@ -570,3 +572,93 @@ def test_cli_injection_not_scanned_without_the_flag(tmp_path, capsys):
     # No --scan-injection: the text is not a built-in floor trigger, so tiny.
     rc = main(["--paths", "docs/readme.md", "--diff-file", str(diff), "--gate"])
     assert rc == 0
+
+
+# ===========================================================================
+# policy_results: the per-policy audit trail (roadmap 2.2, policy-as-code)
+# ===========================================================================
+
+
+class TestPolicyResults:
+    def test_matched_only_lists_just_the_tripped_guards(self):
+        results = policy_results(["src/auth/login.py"])
+        ids = [r["policy_id"] for r in results]
+        assert ids == ["auth-path"]
+        assert results[0]["result"] == "fail"
+        assert "path" in results[0]["reason"]
+
+    def test_benign_change_has_empty_matched_trace(self):
+        assert policy_results(["docs/README.md"]) == []
+
+    def test_diff_guard_reports_diff_source(self):
+        diff = "+charge = process_payment(amount)"
+        results = policy_results([], diff)
+        ids = [r["policy_id"] for r in results]
+        assert ids == ["high-trust-keyword-in-diff"]
+        assert results[0]["result"] == "fail"
+        assert "diff" in results[0]["reason"]
+
+    def test_matched_set_equals_triggers_matched(self):
+        # The audit trail's failing guards must be exactly the floor's triggers.
+        paths = ["db/migrations/001.sql", "services/payment/charge.py"]
+        diff = "+def check_permission(user):\n+    encrypt(data)"
+        matched = {
+            r["policy_id"] for r in policy_results(paths, diff) if r["result"] == "fail"
+        }
+        triggers = set(classify_floor(paths, diff)["triggers_matched"])
+        assert matched == triggers
+
+    def test_include_passing_returns_full_catalog(self):
+        full = policy_results(["src/auth/login.py"], include_passing=True)
+        matched_only = policy_results(["src/auth/login.py"])
+        # Every guard appears, matched or not, and it is a superset of matched.
+        assert len(full) > len(matched_only)
+        results_by_id = {r["policy_id"]: r["result"] for r in full}
+        assert results_by_id["auth-path"] == "fail"
+        # A guard that did not fire is a pass, not absent.
+        assert results_by_id["payment-path"] == "pass"
+
+    def test_full_catalog_is_all_pass_for_benign_change(self):
+        full = policy_results(["docs/README.md"], include_passing=True)
+        assert full != []
+        assert all(r["result"] == "pass" for r in full)
+
+    def test_every_entry_uses_the_shared_shape(self):
+        full = policy_results(["src/auth/login.py"], include_passing=True)
+        for entry in full:
+            assert set(entry.keys()) == {"policy_id", "result", "reason"}
+            assert entry["result"] in {"pass", "warn", "fail"}
+
+    def test_catalog_ids_are_unique(self):
+        full = policy_results([], include_passing=True)
+        ids = [r["policy_id"] for r in full]
+        assert len(ids) == len(set(ids))
+
+
+class TestPolicyTraceCLI:
+    def test_policy_trace_adds_matched_results(self, capsys):
+        rc = main(["--paths", "src/auth/login.py", "--policy-trace"])
+        out = capsys.readouterr().out
+        assert rc == 0
+        decision = json.loads(out)
+        assert "policy_results" in decision
+        ids = [r["policy_id"] for r in decision["policy_results"]]
+        assert ids == ["auth-path"]
+
+    def test_policy_trace_all_lists_passing_guards_too(self, capsys):
+        rc = main(["--paths", "src/auth/login.py", "--policy-trace", "all"])
+        out = capsys.readouterr().out
+        assert rc == 0
+        decision = json.loads(out)
+        results = decision["policy_results"]
+        assert any(r["result"] == "pass" for r in results)
+        assert any(r["result"] == "fail" for r in results)
+
+    def test_no_policy_trace_omits_the_field(self, capsys):
+        main(["--paths", "src/auth/login.py"])
+        decision = json.loads(capsys.readouterr().out)
+        assert "policy_results" not in decision
+
+    def test_policy_trace_with_gate_still_refuses_high_trust(self, capsys):
+        rc = main(["--paths", "src/auth/login.py", "--policy-trace", "--gate"])
+        assert rc == 1
