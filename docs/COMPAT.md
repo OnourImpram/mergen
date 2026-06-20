@@ -29,6 +29,7 @@ governance real regardless of which agent, if any, sits above it.
 | `scripts/dashboard.py` | Static, offline HTML dashboard over a directory of verification reports (verdicts, phantom counts, provenance) | `python scripts/dashboard.py <dir>` or `mergen dashboard <dir>` |
 | `scripts/tasks_status.py` | Summarizes a `tasks-state.json` (done versus pending, per task). The Spec Kit analog is `specify status` | `python scripts/tasks_status.py <file>` or `mergen status <file>` |
 | `scripts/tasks_to_issues.py` | Renders GitHub issue stubs from a `tasks.md` (it renders, it does not create). The Spec Kit analog is taskstoissues | `python scripts/tasks_to_issues.py <file>` or `mergen issues <file>` |
+| `scripts/trends.py` | Cross-run verification trends and per-task churn over a directory of reports (self-contained HTML, or a `--json` metrics export). The snapshot dashboard's time dimension | `python scripts/trends.py <dir>` or `mergen trends <dir>` |
 | `eval/benchmark.py` | Deterministic phantom-detection benchmark, no LLM | `python eval/benchmark.py --gate` |
 | `eval/evidence_metric.py` | Evidence metric and CI gate over a committed report | `python eval/evidence_metric.py --gate` |
 

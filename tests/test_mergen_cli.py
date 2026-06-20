@@ -181,6 +181,7 @@ def test_forward_verbs_dispatch_to_the_right_script(monkeypatch):
         ("dashboard", mergen_cli._DASHBOARD),
         ("status", mergen_cli._STATUS),
         ("issues", mergen_cli._ISSUES),
+        ("trends", mergen_cli._TRENDS),
     ):
         seen.clear()
         rc = mergen_cli.main([verb, "PASSTHROUGH_ARG", "--flag"])
@@ -200,6 +201,17 @@ def test_issues_subcommand_forwards_to_the_renderer(tmp_path):
     md.write_text("- [ ] T001 [P] do the thing in src/a.py\n", encoding="utf-8")
     rc = mergen_cli.main(["issues", str(md)])
     assert rc == 0
+
+
+def test_trends_subcommand_forwards_to_the_analyzer(tmp_path):
+    # `mergen trends` forwards to trends.py over a reports directory. Writing to a
+    # file (like the dashboard test) keeps the forwarded child off the inherited
+    # stdout and asserts a real artifact, not just an exit code. An empty dir is
+    # valid input: it renders a "no reports" page and exits 0.
+    out = tmp_path / "trends.html"
+    rc = mergen_cli.main(["trends", str(tmp_path), "--out", str(out)])
+    assert rc == 0
+    assert out.is_file()
 
 
 def test_doctor_checks_shipped_schema_validity(tmp_path, capsys):
