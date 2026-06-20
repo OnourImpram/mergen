@@ -39,13 +39,41 @@ mergen verify --tasks-state examples/verify-demo/tasks-state.json --root example
 ## What you get
 
 The harness runs three mechanical lenses per task (file exists, tests pass, git
-consistent) and exits non-zero because one claimed-done task did not hold up.
+consistent) and emits a JSON report to stdout. It exits non-zero because one
+claimed-done task did not hold up. Trimmed to the fields that matter, the real
+output is:
 
-```
-summary: verdict "fail", mechanically_passed 1, mechanically_failed 1
-
-T001  verified pass   file-exists pass, tests-pass pass, git-consistent pass
-T002  verified fail   file-exists fail (missing: src/teardown.py)
+```json
+{
+  "summary": {
+    "verdict": "fail",
+    "mechanically_passed": 1,
+    "mechanically_failed": 1
+  },
+  "tasks": [
+    {
+      "task_id": "T001",
+      "verified_status": "pass",
+      "lens_file_exists": "pass",
+      "lens_tests_pass": "pass",
+      "lens_git_consistent": "pass",
+      "evidence": [
+        "exists: src/greeter.py",
+        "pytest exit 0 for tests/test_greeter.py",
+        "git-tracked: src/greeter.py"
+      ]
+    },
+    {
+      "task_id": "T002",
+      "verified_status": "fail",
+      "lens_file_exists": "fail",
+      "failures": [
+        "missing: src/teardown.py",
+        "git-unknown: src/teardown.py"
+      ]
+    }
+  ]
+}
 ```
 
 T001 is confirmed by real evidence: the file is on disk, its test exits zero,

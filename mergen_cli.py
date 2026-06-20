@@ -54,7 +54,7 @@ _EFFORT_HOOK = _REPO / "effort-mode" / "hooks" / "mergen_prompt_hook.py"
 _COMMANDS_SRC = _REPO / "core" / "commands"
 
 # Files install copies into ~/.claude/hooks (the two SDD hooks are copied there
-# by build_native; the effort hook is copied by this CLI).
+# by build_native, the effort hook is copied by this CLI).
 _SDD_HOOK_FILES = ("verify_gate.py", "constitution_inject.py")
 _EFFORT_HOOK_FILE = "mergen_prompt_hook.py"
 _ALL_HOOK_FILES = (*_SDD_HOOK_FILES, _EFFORT_HOOK_FILE)
@@ -168,7 +168,7 @@ def doctor(
         ok = ok and reg
         print(f"  [{'OK ' if reg else 'BAD'}] {fname} registered in settings.json")
 
-    # Honest caveats (these are not failures; they are how mergen actually works).
+    # Honest caveats (these are not failures, they are how mergen actually works).
     print("")
     print("  notes (by design, not faults):")
     print("    - max effort needs one manual paste of '/effort max' per session. A hook")
