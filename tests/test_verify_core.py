@@ -329,3 +329,35 @@ def test_report_has_required_schema_keys(tmp_path: Path) -> None:
 
     # Exit code 0 means no mechanical failure.
     assert exit_code == 0
+
+
+# ---------------------------------------------------------------------------
+# BOM tolerance: Windows PowerShell writes a UTF-8 BOM into JSON files.
+# ---------------------------------------------------------------------------
+
+
+def test_main_reads_tasks_state_with_utf8_bom(tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    init_git_repo(repo)
+
+    src_file = "src/module.py"
+    write_and_stage(repo, src_file, "x = 1\n")
+    commit_all(repo)
+
+    test_rel = "tests/test_module.py"
+    write_passing_test(repo, test_rel)
+
+    state = {
+        "schema_version": "1.0",
+        "feature_id": "bom",
+        "tasks": [{"id": "T1", "status": "done", "files": [src_file], "test_task": test_rel}],
+    }
+    tasks_file = tmp_path / "tasks-state.json"
+    # Prepend the UTF-8 BOM. With the old utf-8 read this would crash the verifier.
+    tasks_file.write_bytes(b"\xef\xbb\xbf" + json.dumps(state).encode("utf-8"))
+
+    exit_code = verify_core.main(["--tasks-state", str(tasks_file), "--root", str(repo)])
+    # The BOM file parsed and the genuine task verified: exit 0, not the
+    # file-read error code 2 and not an uncaught BOM decode crash.
+    assert exit_code == 0

@@ -608,6 +608,35 @@ def test_create_new_feature_number_and_timestamp_warns(tmp_path, monkeypatch):
 
 
 # --------------------------------------------------------------------------- #
+# BOM tolerance: a Windows developer can save these .specify/ config files with a
+# UTF-8 BOM (PowerShell, some editors). The readers must parse them, not return
+# an empty/default value that produces a misleading downstream error.
+# --------------------------------------------------------------------------- #
+
+def test_read_feature_json_tolerates_utf8_bom(tmp_path):
+    specify = tmp_path / ".specify"
+    specify.mkdir()
+    (specify / "feature.json").write_bytes(
+        b"\xef\xbb\xbf" + json.dumps({"feature_directory": "specs/001-x"}).encode("utf-8")
+    )
+    # Under the old utf-8 read this raised and the reader returned "".
+    assert fops.read_feature_json_feature_directory(tmp_path) == "specs/001-x"
+
+
+def test_invoke_separator_tolerates_utf8_bom(tmp_path):
+    specify = tmp_path / ".specify"
+    specify.mkdir()
+    (specify / "integration.json").write_bytes(
+        b"\xef\xbb\xbf" + json.dumps({
+            "default_integration": "speckit",
+            "integration_settings": {"speckit": {"invoke_separator": "-"}},
+        }).encode("utf-8")
+    )
+    # A BOM crash would fall through to the "." default; "-" proves it parsed.
+    assert fops.get_invoke_separator(tmp_path) == "-"
+
+
+# --------------------------------------------------------------------------- #
 # build_available_docs helper
 # --------------------------------------------------------------------------- #
 

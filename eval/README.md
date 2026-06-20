@@ -37,7 +37,15 @@ four metrics below target those failure modes directly.
 
 ## Evidence metric
 
-`evidence_metric.py` in this directory is a minimal honest metric derived from the machine-readable verify output. It reports two values: work-done rate (fraction of tasks with verifier-confirmed evidence) and phantom-completion count (tasks marked `[X]` with no backing artifact). The metric abstains on minimal-change runs that lack lean data rather than reporting a misleading zero. It reads `verification-report.json` and `tasks-state.json` emitted by `/mergen.verify` (schemas in `core/schemas/`). The full benchmark suite is on the roadmap.
+`evidence_metric.py` in this directory is a minimal honest metric derived from the machine-readable verify output. It reports two values: work-done rate (fraction of tasks with verifier-confirmed evidence) and phantom-completion count (tasks marked `[X]` with no backing artifact). The metric abstains on minimal-change runs that lack lean data rather than reporting a misleading zero. It reads `verification-report.json` and `tasks-state.json` emitted by `/mergen.verify` (schemas in `core/schemas/`). It reads BOM-prefixed JSON (the form Windows PowerShell writes) without choking. The full benchmark suite is on the roadmap.
+
+Gate use, honest defaults. `python eval/evidence_metric.py <report> --gate` fails the build when a claimed-done task is not verifier-confirmed. With nothing claimed done it abstains and passes, because a gate cannot enforce work that was never claimed. That abstention also means an empty report would pass, so a CI step meant to prove work was done should require at least one claimed task. The recommended CI invocation is:
+
+```
+python eval/evidence_metric.py path/to/verification-report.json --gate --min-claimed 1
+```
+
+With `--min-claimed 1` an empty or under-claiming report fails instead of passing silently. The deeper guarantee still rests on the verifier that produced the report, not on this metric: the gate acts on a committed artifact, so a hand-edited report can pass. What it buys is that phantom, unverified, or empty work fails the build by default.
 
 ## Deterministic phantom-detection benchmark
 

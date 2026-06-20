@@ -98,3 +98,17 @@ def test_cli_read_lists_vault_records(tmp_path, capsys):
     out = capsys.readouterr().out
     assert rc == 0
     assert "feature_id" in out
+
+
+def test_cli_reads_report_with_utf8_bom(tmp_path, capsys):
+    # The seam reads the same verification-report.json that the evidence metric
+    # reads. A BOM-prefixed report (the form PowerShell writes) must parse here
+    # too, not crash with "cannot read report".
+    emit = _load("scripts/mneme_emit.py")
+    raw = (REPO / "eval" / "sample" / "verification-report.json").read_bytes()
+    bom_report = tmp_path / "verification-report.json"
+    bom_report.write_bytes(b"\xef\xbb\xbf" + raw)
+    rc = emit.main([str(bom_report)])
+    out = capsys.readouterr().out
+    assert rc == 0
+    assert "# Decision:" in out

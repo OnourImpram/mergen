@@ -38,6 +38,25 @@ jobs:
       - name: Phantom-detection benchmark gate (verify harness regression)
         run: python eval/benchmark.py --gate
 
+  test-windows:
+    # The repo ships a PowerShell installer and reads BOM-prefixed JSON (the form
+    # PowerShell writes). Run the suite on the platform that produces those BOMs so
+    # the BOM-tolerance and Windows path behavior are a CI guarantee, not a hope.
+    # Scoped to the test suite: check_sync is a byte-for-byte compare and is left to
+    # the Linux job to avoid autocrlf line-ending false positives on a Windows checkout.
+    # The benchmark gate is OS-agnostic (fixed fixtures) and stays on the Linux job.
+    name: "Windows (Python 3.12)"
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install pytest
+        run: pip install pytest
+      - name: Run tests
+        run: python -m pytest tests/ -v
+
   lint:
     name: "ruff"
     runs-on: ubuntu-latest
