@@ -1,5 +1,23 @@
 [project]
+name = "mergen"
+version = "1.0.0"
+description = "The execution backbone for AI coding agents: a wise Governor and a precise verify gate."
 requires-python = ">=3.9"
+
+# Installing this project exposes the `mergen` command. The supported path is an
+# editable/clone install (`pip install -e .` or `pipx install -e .`), because
+# mergen renders the SDD skills from this repo's core/ tree and the command must
+# be able to find it. A standalone wheel that bundles core/ as package data is
+# on the roadmap.
+[project.scripts]
+mergen = "mergen_cli:main"
+
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+py-modules = ["mergen_cli"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
