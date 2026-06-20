@@ -152,3 +152,90 @@ def test_dashboard_subcommand_forwards_to_the_generator(tmp_path):
     rc = mergen_cli.main(["dashboard", str(tmp_path), "--out", str(out)])
     assert rc == 0
     assert out.is_file()
+
+
+def test_status_subcommand_forwards_to_the_summarizer():
+    # `mergen status` forwards to tasks_status.py. The demo tasks-state is a valid
+    # read, so it exits 0. The dispatch-table test below proves it reaches the right
+    # helper with the args passed through, which an exit code alone cannot show.
+    rc = mergen_cli.main(["status", str(_DEMO / "tasks-state.json")])
+    assert rc == 0
+
+
+def test_forward_verbs_dispatch_to_the_right_script(monkeypatch):
+    # The four forwarding verbs must each reach their own helper with the trailing
+    # args passed through verbatim. Recording _run pins the dispatch table directly,
+    # which is stronger than an exit code and answers the "wrong helper, returned 0
+    # for an unrelated reason" concern without depending on fd-level capture of a
+    # child process (unreliable across platforms).
+    seen: dict[str, object] = {}
+
+    def fake_run(script, *args, dry_run=False):
+        seen["script"] = script
+        seen["args"] = args
+        return 0
+
+    monkeypatch.setattr(mergen_cli, "_run", fake_run)
+    for verb, target in (
+        ("verify", mergen_cli._VERIFY_CORE),
+        ("dashboard", mergen_cli._DASHBOARD),
+        ("status", mergen_cli._STATUS),
+        ("issues", mergen_cli._ISSUES),
+    ):
+        seen.clear()
+        rc = mergen_cli.main([verb, "PASSTHROUGH_ARG", "--flag"])
+        assert rc == 0
+        assert seen["script"] == target
+        assert seen["args"] == ("PASSTHROUGH_ARG", "--flag")
+
+
+def test_status_subcommand_reports_missing_state():
+    rc = mergen_cli.main(["status", str(_DEMO / "does-not-exist.json")])
+    assert rc == 2
+
+
+def test_issues_subcommand_forwards_to_the_renderer(tmp_path):
+    # `mergen issues` forwards to tasks_to_issues.py over a tasks.md checklist.
+    md = tmp_path / "tasks.md"
+    md.write_text("- [ ] T001 [P] do the thing in src/a.py\n", encoding="utf-8")
+    rc = mergen_cli.main(["issues", str(md)])
+    assert rc == 0
+
+
+def test_doctor_checks_shipped_schema_validity(tmp_path, capsys):
+    # doctor now self-checks the repo's shipped schemas. On a healthy tree the
+    # real schemas are valid, so the line reads OK and the result stays healthy.
+    skills, hooks, commands, settings = _populate_healthy(tmp_path)
+    rc = mergen_cli.doctor(skills, hooks, commands, settings)
+    out = capsys.readouterr().out
+    assert rc == 0
+    assert "schemas" in out
+    assert "valid under" in out
+
+
+def test_doctor_bad_schema_degrades_to_1(tmp_path, capsys):
+    # A malformed shipped schema must make doctor report BAD and exit 1 even when
+    # the rest of the tree is healthy. schemas_dir is an injectable parameter
+    # precisely so this red path is testable without monkeypatching a module global.
+    skills, hooks, commands, settings = _populate_healthy(tmp_path)
+    schemas = tmp_path / "schemas"
+    schemas.mkdir()
+    (schemas / "broken.json").write_text("{ not json", encoding="utf-8")
+    rc = mergen_cli.doctor(skills, hooks, commands, settings, schemas)
+    out = capsys.readouterr().out
+    assert rc == 1
+    assert "BAD" in out
+    assert "broken.json" in out
+
+
+def test_doctor_empty_schemas_dir_does_not_false_degrade(tmp_path, capsys):
+    # An empty schemas dir is "nothing to validate", not a failure. With the rest
+    # of the tree healthy, doctor must stay at 0 rather than report a phantom
+    # degradation on a partial clone or after a directory rename.
+    skills, hooks, commands, settings = _populate_healthy(tmp_path)
+    empty = tmp_path / "no-schemas"
+    empty.mkdir()
+    rc = mergen_cli.doctor(skills, hooks, commands, settings, empty)
+    out = capsys.readouterr().out
+    assert rc == 0
+    assert "none found" in out

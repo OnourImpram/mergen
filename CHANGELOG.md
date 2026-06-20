@@ -33,6 +33,13 @@ tagged as a release.
   dashboard <dir>`): one self-contained HTML page over a directory of reports,
   showing each verdict, phantom-completion count, and provenance, with every
   report value HTML-escaped. No network, no JavaScript, pure standard library.
+- Spec Kit diagnostic parity in the agent-agnostic CLI. `mergen status`
+  (`scripts/tasks_status.py`) summarizes a `tasks-state.json` (done versus
+  pending, per task), the `specify status` analog. `mergen issues`
+  (`scripts/tasks_to_issues.py`) renders GitHub issue stubs from a `tasks.md`,
+  the taskstoissues analog, and renders rather than creates because creating an
+  issue is a side effect that needs your GitHub auth. `mergen doctor` now also
+  self-checks the shipped JSON schemas are well-formed.
 - A worked end-to-end example (`examples/verify-demo/`) and a compatibility
   matrix (`docs/COMPAT.md`) mapping which features need which runtime.
 - A tamper-evident evidence manifest. `verify_core.py` records provenance
