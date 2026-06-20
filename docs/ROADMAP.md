@@ -59,8 +59,8 @@ Both hooks are reinforcement nudges, not enforcement mechanisms. A prompt protoc
 
 `/mergen.verify` emits two machine-readable files alongside the human-readable `verification-report.md`:
 
-- **`verification-report.json`**: the full per-task verdict with evidence arrays and failure lists.
-- **`tasks-state.json`**: a compact per-task state record, each entry carrying a `confidence` label (`high`, `medium`, `low`, `unverified`).
+- **`verification-report.json`**: the full per-task verdict with evidence arrays and failure lists. Each task carries a `confidence` label from the one confidence vocabulary (`extracted`, `inferred`, `ambiguous`), defined once in `MERGEN_PRINCIPLES.md`.
+- **`tasks-state.json`**: a compact per-task state record (`id`, `status`, `files`, `test_task`, `last_verified_at`) mirroring the post-verification `[ ]` / `[X]` state. The confidence label lives on the verification report, not here.
 
 Schemas for both files live in `core/schemas/`. The JSON output is the input consumed by `eval/evidence_metric.py`.
 

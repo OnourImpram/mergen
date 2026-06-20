@@ -662,3 +662,29 @@ class TestPolicyTraceCLI:
     def test_policy_trace_with_gate_still_refuses_high_trust(self, capsys):
         rc = main(["--paths", "src/auth/login.py", "--policy-trace", "--gate"])
         assert rc == 1
+
+    def test_policy_trace_with_config_overlay_triggers_absent_from_policy_results(
+        self, tmp_path, capsys
+    ):
+        # Documented scope gap: policy_results() covers only the built-in path
+        # and diff floor catalog. Config-overlay triggers (e.g. "domain:clinical")
+        # are appended to triggers_matched by main() AFTER policy_results() is
+        # called, so they are intentionally absent from policy_results.
+        # This test converts the prose-only disclosure in policy_results()'s
+        # docstring into a checked invariant.
+        cfg = tmp_path / "mergen.toml"
+        cfg.write_text('domain = "clinical"\n', encoding="utf-8")
+        rc = main([
+            "--paths", "docs/readme.md",
+            "--config", str(cfg),
+            "--policy-trace", "all",
+        ])
+        out = capsys.readouterr().out
+        assert rc == 0
+        decision = json.loads(out)
+        # The overlay trigger must appear in triggers_matched.
+        assert "domain:clinical" in decision["triggers_matched"]
+        # The overlay trigger must NOT appear in policy_results (out of scope
+        # for the built-in catalog, per the docstring disclosure).
+        policy_ids = {r["policy_id"] for r in decision["policy_results"]}
+        assert "domain:clinical" not in policy_ids

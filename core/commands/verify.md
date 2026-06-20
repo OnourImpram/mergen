@@ -103,4 +103,4 @@ When running as the spec-kit extension, also honor `.specify/extensions.yml` `af
 - [ ] `FEATURE_DIR/verification-report.md` exists, follows `.specify/templates/verification-template.md`, and contains actual command output for every lens of every checked task.
 - [ ] The final gate result ("All `[X]` tasks confirmed: YES / NO") is stated in the report and echoed to the user.
 - [ ] No task was accepted as PASS on the basis of the `[X]` mark alone, an assertion, or a summary without evidence.
-- [ ] `verification-report.json` and `tasks-state.json` were emitted next to the markdown, conforming to their schemas, with a confidence label on every task.
+- [ ] `verification-report.json` and `tasks-state.json` were emitted next to the markdown, conforming to their schemas, and the verification report carries a confidence label on every task.

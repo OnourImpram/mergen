@@ -51,6 +51,8 @@
       "type": "array",
       "items": {
         "type": "object",
+        "required": ["policy_id", "result", "reason"],
+        "additionalProperties": false,
         "properties": {
           "policy_id": { "type": "string" },
           "result": { "enum": ["pass", "warn", "fail"] },

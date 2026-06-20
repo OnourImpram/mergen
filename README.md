@@ -160,7 +160,7 @@ orchestration), with the Governor setting how much of the pattern a given task e
 | `/mergen.tasks` | Break the plan into tasks and a dependency DAG. | Loop-until-dry completeness critic plus DAG builder. Outputs `tasks-dag.json`. |
 | `/mergen.analyze` | Check cross-artifact consistency before code. | Four parallel adversarial checker lanes, deduplicated. |
 | `/mergen.implement` | Execute the task list. | Wave-parallel pipeline from `tasks-dag.json`: isolated implementer per task, then a separate-context refute-biased verifier that checks filesystem and tests before marking `[X]`. Re-queues on failure. |
-| `/mergen.verify` | Re-check every `[X]` task as a standalone gate. | Parallel four-lens check per task (file-exists, spec-match, tests-pass, git-consistent). Majority-or-FAIL. Emits `verification-report.json` and `tasks-state.json` with a confidence label per task. |
+| `/mergen.verify` | Re-check every `[X]` task as a standalone gate. | Parallel four-lens check per task (file-exists, spec-match, tests-pass, git-consistent). Majority-or-FAIL. Emits `verification-report.json` (a confidence label per task) and `tasks-state.json`. |
 | `/mergen.rollup` | Synthesize feature specs into canonical project state. | Parallel reader lanes plus conflict adjudication, writes `.specify/memory/project-state.md`. |
 | `/mergen.go` | Route a request to the tier the Governor chose. | Executes the Governor's tier (tiny/standard/spec/high-trust), adding the high-trust human checkpoint. |
 | `/mergen.lean` | Review the diff or repo for over-engineering. | Parallel per-file reviewers, deduped into a ranked delete-list (`delete`/`stdlib`/`native`/`yagni`/`shrink`). Complexity only, never correctness. |
