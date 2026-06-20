@@ -270,6 +270,12 @@ def _build_cli_parser() -> argparse.ArgumentParser:
         help="Path to a project .specify/mergen.toml. Its domain and "
              "protected-path overlay can raise the floor, never lower it.",
     )
+    parser.add_argument(
+        "--scan-injection",
+        action="store_true",
+        help="Also scan the diff for prompt injection (A3). A detection forces "
+             "high-trust. Opt-in, because the patterns fire on security prose.",
+    )
     return parser
 
 
@@ -291,6 +297,19 @@ def main(argv: list[str] | None = None) -> int:
         import project_config
         cfg = project_config.load_config(Path(args.config))
         decision = project_config.apply_overlay(decision, cfg, args.paths)
+
+    if args.scan_injection and diff_text:
+        # A3 binds back here: a diff that carries injection text is forced to
+        # high-trust. The injection module owns the detection; the floor owns
+        # the consequence.
+        sys.path.insert(0, str(Path(__file__).resolve().parent))
+        import injection_quarantine
+        inj = injection_quarantine.classify(diff_text)
+        if inj["injection_detected"]:
+            triggers = list(decision.get("triggers_matched", []))
+            if "injection-detected" not in triggers:
+                triggers.append("injection-detected")
+            decision = {**decision, "tier": "high-trust", "triggers_matched": triggers}
 
     print(json.dumps(decision, indent=2))
 
