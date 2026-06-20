@@ -11,11 +11,16 @@ from __future__ import annotations
 
 import argparse
 import datetime
+import hashlib
 import subprocess
 import sys
 import json
 from pathlib import Path
 from typing import Any
+
+#: Bumped when the meaning of a lens or the report shape changes. Recorded in
+#: every report's provenance so a consumer knows which verifier produced it.
+VERIFIER_VERSION = "1.0"
 
 
 # ---------------------------------------------------------------------------
@@ -332,6 +337,135 @@ def build_report(
 
 
 # ---------------------------------------------------------------------------
+# Provenance and the tamper-evident manifest
+# ---------------------------------------------------------------------------
+
+
+def _git_head(root: Path) -> str | None:
+    """Current commit of root, or None when root is not a git work tree."""
+    try:
+        proc = subprocess.run(
+            ["git", "-C", str(root), "rev-parse", "HEAD"],
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+    except Exception:
+        return None
+    if proc.returncode != 0:
+        return None
+    head = proc.stdout.strip()
+    return head or None
+
+
+def _working_tree_clean(root: Path) -> bool | None:
+    """True or False when root is a git work tree, None when it is not."""
+    try:
+        proc = subprocess.run(
+            ["git", "-C", str(root), "status", "--porcelain"],
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+    except Exception:
+        return None
+    if proc.returncode != 0:
+        return None
+    return proc.stdout.strip() == ""
+
+
+def compute_provenance(root: Path, tasks_state_path: Path) -> dict[str, Any]:
+    """Record what produced a report so tampering or staleness is detectable.
+
+    source_commit and working_tree_clean are None when root is not a git work
+    tree (the harness still runs, the staleness signal just is not available).
+    tasks_state_sha256 hashes the actual input bytes, pinning the report to the
+    exact task state it verified.
+    """
+    digest = hashlib.sha256(tasks_state_path.read_bytes()).hexdigest()
+    return {
+        "verifier_version": VERIFIER_VERSION,
+        "source_commit": _git_head(root),
+        "working_tree_clean": _working_tree_clean(root),
+        "tasks_state_sha256": digest,
+    }
+
+
+def write_manifest(report_path: Path, report_bytes: bytes) -> Path:
+    """Write the sha256 sidecar for a report in sha256sum format.
+
+    The sidecar hashes the exact bytes written, so any later edit to the report
+    breaks the match. Returns the sidecar path.
+    """
+    digest = hashlib.sha256(report_bytes).hexdigest()
+    sidecar = report_path.with_name(report_path.name + ".sha256")
+    sidecar.write_bytes(f"{digest}  {report_path.name}\n".encode("utf-8"))
+    return sidecar
+
+
+def check_manifest(report_path: Path, root: Path, require_fresh: bool) -> int:
+    """Verify a report against its sha256 sidecar and, optionally, its freshness.
+
+    Tamper-evidence is always checked: the report bytes must hash to the value in
+    <report>.sha256. With require_fresh, the recorded source_commit must also
+    match the current HEAD of root, so a report describing a since-moved tree
+    fails. Returns 0 when every requested check passes, 1 on a failed check, 2
+    for a missing report or sidecar.
+
+    This is tamper-evident, not tamper-proof. An attacker who controls both the
+    report and the sidecar can recompute the hash. The guarantee is meaningful in
+    CI, where the sidecar is recomputed from the live tree rather than trusted.
+    """
+    if not report_path.exists():
+        print(f"error: report not found: {report_path}", file=sys.stderr)
+        return 2
+    sidecar = report_path.with_name(report_path.name + ".sha256")
+    if not sidecar.exists():
+        print(f"error: manifest sidecar not found: {sidecar}", file=sys.stderr)
+        return 2
+
+    print("manifest check")
+    report_bytes = report_path.read_bytes()
+    actual = hashlib.sha256(report_bytes).hexdigest()
+    sidecar_text = sidecar.read_text(encoding="utf-8").strip()
+    expected = sidecar_text.split()[0] if sidecar_text else ""
+    ok = True
+    if actual == expected:
+        print(f"  [OK ] report hash matches manifest ({actual[:12]})")
+    else:
+        print(f"  [TAMPER] report hash {actual[:12]} does not match manifest "
+              f"{expected[:12] or '(empty)'}", file=sys.stderr)
+        ok = False
+
+    if require_fresh:
+        try:
+            report = json.loads(report_bytes.decode("utf-8-sig"))
+        except Exception:
+            report = {}
+        recorded = (report.get("provenance") or {}).get("source_commit")
+        current = _git_head(root)
+        if not recorded:
+            print("  [STALE] --require-fresh set but the report records no source_commit",
+                  file=sys.stderr)
+            ok = False
+        elif current is None:
+            print(f"  [STALE] --require-fresh set but root is not a git work tree: {root}",
+                  file=sys.stderr)
+            ok = False
+        elif current != recorded:
+            print(f"  [STALE] report generated at {recorded[:12]}, root HEAD is now "
+                  f"{current[:12]}", file=sys.stderr)
+            ok = False
+        else:
+            print(f"  [OK ] source commit matches root HEAD ({current[:12]})")
+
+    print(f"  result: {'OK' if ok else 'FAIL'}")
+    return 0 if ok else 1
+
+
+# ---------------------------------------------------------------------------
 # CLI entry point
 # ---------------------------------------------------------------------------
 
@@ -342,8 +476,8 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument(
         "--tasks-state",
-        required=True,
-        help="Path to tasks-state JSON file.",
+        default=None,
+        help="Path to tasks-state JSON file. Required unless --check-manifest is given.",
     )
     parser.add_argument(
         "--root",
@@ -353,15 +487,39 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--out",
         default=None,
-        help="Write JSON report to this path (default: stdout).",
+        help="Write JSON report to this path (default: stdout). Also writes a "
+             "<path>.sha256 tamper-evidence sidecar.",
     )
     parser.add_argument(
         "--json",
         action="store_true",
         help="Force JSON output to stdout even when --out is set.",
     )
+    parser.add_argument(
+        "--check-manifest",
+        default=None,
+        metavar="REPORT",
+        help="Verify REPORT against its .sha256 sidecar instead of running the "
+             "harness. Exits non-zero if the report was edited after it was written.",
+    )
+    parser.add_argument(
+        "--require-fresh",
+        action="store_true",
+        help="With --check-manifest, also fail when the report's source_commit "
+             "does not match the current HEAD of --root (stale report).",
+    )
 
     args = parser.parse_args(argv)
+
+    root = Path(args.root).resolve()
+
+    # Manifest check is a separate mode: it reads an existing report, it does not
+    # run the harness, so it needs no tasks-state.
+    if args.check_manifest is not None:
+        return check_manifest(Path(args.check_manifest), root, args.require_fresh)
+
+    if args.tasks_state is None:
+        parser.error("--tasks-state is required unless --check-manifest is given")
 
     tasks_state_path = Path(args.tasks_state)
     if not tasks_state_path.exists():
@@ -374,16 +532,28 @@ def main(argv: list[str] | None = None) -> int:
     with open(tasks_state_path, encoding="utf-8-sig") as fh:
         tasks_state = json.load(fh)
 
-    root = Path(args.root).resolve()
+    # Capture provenance BEFORE the lenses run. The tests-pass lens executes
+    # pytest inside root and leaves __pycache__ behind, so computing the
+    # working-tree state afterward would record our own verification artifacts as
+    # uncommitted changes. Provenance is the tree state at verification start.
+    provenance = compute_provenance(root, tasks_state_path)
 
     report, overall_pass = build_report(tasks_state, root)
+
+    # Provenance pins the report to the commit, the tree state, and the exact
+    # task-state file that produced it. It is an I/O concern bound to real paths,
+    # so it lives here and not in the pure build_report.
+    report["provenance"] = provenance
 
     report_json = json.dumps(report, indent=2)
 
     if args.out:
         out_path = Path(args.out)
         out_path.parent.mkdir(parents=True, exist_ok=True)
-        out_path.write_bytes(report_json.encode("utf-8"))
+        report_bytes = report_json.encode("utf-8")
+        out_path.write_bytes(report_bytes)
+        sidecar = write_manifest(out_path, report_bytes)
+        print(f"wrote {out_path} and {sidecar.name}", file=sys.stderr)
         if args.json:
             print(report_json)
     else:

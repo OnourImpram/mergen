@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import subprocess
 import sys
@@ -361,3 +362,108 @@ def test_main_reads_tasks_state_with_utf8_bom(tmp_path: Path) -> None:
     # The BOM file parsed and the genuine task verified: exit 0, not the
     # file-read error code 2 and not an uncaught BOM decode crash.
     assert exit_code == 0
+
+
+# ---------------------------------------------------------------------------
+# Tamper-evident manifest: provenance, sidecar, check, tamper, staleness.
+# ---------------------------------------------------------------------------
+
+
+def _repo_with_done_task(tmp_path: Path) -> tuple[Path, Path]:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    init_git_repo(repo)
+    write_and_stage(repo, "src/module.py", "x = 1\n")
+    commit_all(repo)
+    write_passing_test(repo, "tests/test_module.py")
+    tasks_file = tmp_path / "tasks-state.json"
+    write_tasks_state(
+        tasks_file,
+        [{"id": "T1", "status": "done", "files": ["src/module.py"],
+          "test_task": "tests/test_module.py"}],
+    )
+    return repo, tasks_file
+
+
+def test_provenance_records_commit_tree_and_state_hash(tmp_path: Path) -> None:
+    repo, tasks_file = _repo_with_done_task(tmp_path)
+    out = tmp_path / "report.json"
+    rc = verify_core.main(
+        ["--tasks-state", str(tasks_file), "--root", str(repo), "--out", str(out)]
+    )
+    assert rc == 0
+    prov = json.loads(out.read_text(encoding="utf-8"))["provenance"]
+    assert prov["verifier_version"] == verify_core.VERIFIER_VERSION
+    head = subprocess.run(
+        ["git", "-C", str(repo), "rev-parse", "HEAD"],
+        stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+        text=True, check=True,
+    ).stdout.strip()
+    assert prov["source_commit"] == head
+    assert prov["working_tree_clean"] is True
+    assert prov["tasks_state_sha256"] == hashlib.sha256(tasks_file.read_bytes()).hexdigest()
+
+
+def test_provenance_is_null_outside_a_git_repo(tmp_path: Path) -> None:
+    # A non-git root still verifies; the staleness signal is just unavailable.
+    work = tmp_path / "plain"
+    work.mkdir()
+    (work / "src").mkdir()
+    (work / "src" / "x.py").write_text("x = 1\n", encoding="utf-8")
+    tasks_file = tmp_path / "tasks-state.json"
+    write_tasks_state(tasks_file, [{"id": "T1", "status": "done", "files": ["src/x.py"]}])
+    out = tmp_path / "report.json"
+    verify_core.main(["--tasks-state", str(tasks_file), "--root", str(work), "--out", str(out)])
+    prov = json.loads(out.read_text(encoding="utf-8"))["provenance"]
+    assert prov["source_commit"] is None
+    assert prov["working_tree_clean"] is None
+
+
+def test_out_writes_sidecar_matching_report_bytes(tmp_path: Path) -> None:
+    repo, tasks_file = _repo_with_done_task(tmp_path)
+    out = tmp_path / "report.json"
+    verify_core.main(["--tasks-state", str(tasks_file), "--root", str(repo), "--out", str(out)])
+    sidecar = tmp_path / "report.json.sha256"
+    assert sidecar.is_file()
+    recorded = sidecar.read_text(encoding="utf-8").split()[0]
+    assert recorded == hashlib.sha256(out.read_bytes()).hexdigest()
+
+
+def test_check_manifest_passes_on_intact_report(tmp_path: Path) -> None:
+    repo, tasks_file = _repo_with_done_task(tmp_path)
+    out = tmp_path / "report.json"
+    verify_core.main(["--tasks-state", str(tasks_file), "--root", str(repo), "--out", str(out)])
+    assert verify_core.main(["--check-manifest", str(out)]) == 0
+
+
+def test_check_manifest_detects_tamper(tmp_path: Path) -> None:
+    repo, tasks_file = _repo_with_done_task(tmp_path)
+    out = tmp_path / "report.json"
+    verify_core.main(["--tasks-state", str(tasks_file), "--root", str(repo), "--out", str(out)])
+    # Flip the verdict in the written report. The sidecar no longer matches.
+    edited = out.read_bytes().replace(b'"verdict": "pass"', b'"verdict": "fail"', 1)
+    assert edited != out.read_bytes()
+    out.write_bytes(edited)
+    assert verify_core.main(["--check-manifest", str(out)]) == 1
+
+
+def test_check_manifest_require_fresh_detects_stale_commit(tmp_path: Path) -> None:
+    repo, tasks_file = _repo_with_done_task(tmp_path)
+    out = tmp_path / "report.json"
+    verify_core.main(["--tasks-state", str(tasks_file), "--root", str(repo), "--out", str(out)])
+    # Fresh right after generation.
+    assert verify_core.main(
+        ["--check-manifest", str(out), "--root", str(repo), "--require-fresh"]
+    ) == 0
+    # A new commit moves HEAD, so the report is now stale.
+    write_and_stage(repo, "src/extra.py", "y = 2\n")
+    commit_all(repo, "move HEAD")
+    assert verify_core.main(
+        ["--check-manifest", str(out), "--root", str(repo), "--require-fresh"]
+    ) == 1
+
+
+def test_check_manifest_missing_sidecar_returns_2(tmp_path: Path) -> None:
+    report = tmp_path / "report.json"
+    report.write_text("{}", encoding="utf-8")
+    assert verify_core.main(["--check-manifest", str(report)]) == 2

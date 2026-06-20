@@ -60,6 +60,16 @@
         }
       }
     },
+    "provenance": {
+      "type": "object",
+      "description": "What produced this report, so tampering or staleness is detectable. Written by verify_core.compute_provenance. The report bytes are also hashed into a <report>.sha256 sidecar; verify_core --check-manifest recomputes and compares.",
+      "properties": {
+        "verifier_version": { "type": "string" },
+        "source_commit": { "type": ["string", "null"], "description": "git HEAD of the verified root, or null outside a git work tree" },
+        "working_tree_clean": { "type": ["boolean", "null"], "description": "whether the verified root had no uncommitted changes, or null outside a git work tree" },
+        "tasks_state_sha256": { "type": "string", "description": "sha256 of the exact tasks-state file bytes the report verified" }
+      }
+    },
     "memory_updates": {
       "type": "array",
       "items": {
