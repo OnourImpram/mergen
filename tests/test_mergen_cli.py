@@ -2,7 +2,7 @@
 
 doctor is exercised against tmp trees so it never reads the real ~/.claude.
 install, uninstall, and upgrade are exercised only in --dry-run, so they make
-no writes; their real effects are delegated to already-tested helpers.
+no writes. Their real effects are delegated to already-tested helpers.
 """
 
 import json
