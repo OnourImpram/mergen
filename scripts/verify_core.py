@@ -368,7 +368,10 @@ def main(argv: list[str] | None = None) -> int:
         print(f"error: tasks-state file not found: {tasks_state_path}", file=sys.stderr)
         return 2
 
-    with open(tasks_state_path, encoding="utf-8") as fh:
+    # utf-8-sig tolerates a UTF-8 BOM, which Windows PowerShell writes into JSON
+    # files. The verifier runs on Windows (and as `mergen verify`), so a BOM in
+    # tasks-state.json must not crash the read.
+    with open(tasks_state_path, encoding="utf-8-sig") as fh:
         tasks_state = json.load(fh)
 
     root = Path(args.root).resolve()

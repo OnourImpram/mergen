@@ -63,7 +63,7 @@ def read_feature_json_feature_directory(repo_root: Path) -> str:
     if not fj.is_file():
         return ""
     try:
-        data = json.loads(fj.read_text(encoding="utf-8"))
+        data = json.loads(fj.read_text(encoding="utf-8-sig"))
         return data.get("feature_directory") or ""
     except Exception:
         return ""
@@ -197,7 +197,7 @@ def _sorted_preset_ids(presets_dir: Path) -> list[str]:
     registry = presets_dir / ".registry"
     if registry.is_file():
         try:
-            data = json.loads(registry.read_text(encoding="utf-8"))
+            data = json.loads(registry.read_text(encoding="utf-8-sig"))
             presets = data.get("presets", {})
             enabled = [
                 (pid, meta if isinstance(meta, dict) else {})
@@ -222,7 +222,7 @@ def get_invoke_separator(repo_root: Path) -> str:
     if not integration_json.is_file():
         return "."
     try:
-        state = json.loads(integration_json.read_text(encoding="utf-8"))
+        state = json.loads(integration_json.read_text(encoding="utf-8-sig"))
         key = state.get("default_integration") or state.get("integration") or ""
         settings = state.get("integration_settings")
         if key and isinstance(settings, dict):

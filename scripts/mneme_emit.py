@@ -137,7 +137,9 @@ def main(argv: list[str] | None = None) -> int:
     if not args.report:
         ap.error("provide a verification-report.json to emit, or --read DIR")
     try:
-        report = json.loads(Path(args.report).read_text(encoding="utf-8"))
+        # utf-8-sig so a BOM-prefixed report (the form Windows PowerShell writes,
+        # and which evidence_metric.py already tolerates) reads here too.
+        report = json.loads(Path(args.report).read_text(encoding="utf-8-sig"))
     except Exception as exc:  # noqa: BLE001
         print(f"cannot read report: {exc}", file=sys.stderr)
         return 1

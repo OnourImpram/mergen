@@ -34,7 +34,7 @@ def load_reports(path_str: str):
     reports = []
     for f in files:
         try:
-            reports.append((f, json.loads(f.read_text(encoding="utf-8"))))
+            reports.append((f, json.loads(f.read_text(encoding="utf-8-sig"))))
         except Exception as exc:  # noqa: BLE001 - report and skip, do not crash the metric
             print(f"skip {f}: {exc}", file=sys.stderr)
     return reports
@@ -59,7 +59,7 @@ def minimal_change(overbuild_path: str | None):
     if not overbuild_path:
         return None
     try:
-        data = json.loads(Path(overbuild_path).read_text(encoding="utf-8"))
+        data = json.loads(Path(overbuild_path).read_text(encoding="utf-8-sig"))
         added = data.get("added_lines")
         flagged = data.get("lean_flagged_lines")
         if isinstance(added, int) and added > 0 and isinstance(flagged, int):
@@ -69,7 +69,8 @@ def minimal_change(overbuild_path: str | None):
     return None
 
 
-def run_gate(claimed, verified, with_evidence, max_phantoms, min_work_done) -> int:
+def run_gate(claimed, verified, with_evidence, max_phantoms, min_work_done,
+             min_claimed) -> int:
     """CI gate over the committed report. Honest about what it checks.
 
     A phantom is a task claimed done that the verifier did not confirm pass.
@@ -77,10 +78,22 @@ def run_gate(claimed, verified, with_evidence, max_phantoms, min_work_done) -> i
     can still pass. The deepest guarantee rests on the verifier that produced
     the report, not on this check. What the gate buys is that phantom or
     unverified work fails the build by default rather than passing in silence.
+
+    min_claimed guards the empty-report bypass. By default it is 0, so a report
+    with nothing claimed done abstains and passes (you cannot enforce work that
+    was not claimed). A CI step that must prove work was done sets it to 1 or
+    more, so an empty or under-claiming report fails instead of passing silently.
     """
     print("gate")
+    if claimed < min_claimed:
+        print(f"  claimed-done tasks:  {claimed}  (required minimum {min_claimed})")
+        print("  result:              FAIL")
+        print("  the report claims fewer done tasks than the gate requires. An empty "
+              "report does not pass a gate meant to prove work.", file=sys.stderr)
+        return 1
     if claimed == 0:
-        print("  no tasks claimed done. nothing to enforce. passing.")
+        print("  no tasks claimed done. nothing to enforce. passing. "
+              "(set --min-claimed 1 to refuse an empty report.)")
         return 0
     phantoms = claimed - verified
     rate = with_evidence / claimed
@@ -104,6 +117,10 @@ def main(argv=None) -> int:
                     help="phantom completions tolerated under --gate (default 0)")
     ap.add_argument("--min-work-done", type=float, default=1.0,
                     help="minimum work-done rate required under --gate (default 1.0)")
+    ap.add_argument("--min-claimed", type=int, default=0,
+                    help="minimum claimed-done tasks required under --gate. Default 0 "
+                         "passes (returns 0) on an empty report. CI that must prove work "
+                         "should set 1 so an empty report fails instead of passing silently.")
     args = ap.parse_args(argv)
 
     reports = load_reports(args.report)
@@ -134,7 +151,8 @@ def main(argv=None) -> int:
         print(f"  over-build ratio:    {ratio:.2f}  (flagged / added)")
 
     if args.gate:
-        return run_gate(claimed, verified, with_evidence, args.max_phantoms, args.min_work_done)
+        return run_gate(claimed, verified, with_evidence, args.max_phantoms,
+                        args.min_work_done, args.min_claimed)
     return 0
 
 

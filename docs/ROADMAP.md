@@ -114,7 +114,7 @@ Wires `hooks.after_implement -> speckit.mergen.verify` with `optional: false`, m
 
 ### Inherited-defect fixes
 
-- `install.sh` uses `bash` as its shebang interpreter. The prior `sh` shebang caused failures on systems where `sh` does not support bash constructs.
+- The root `install.sh` is POSIX `sh` (`#!/usr/bin/env sh`) so it stays portable. It invokes the bash-requiring child installer (`effort-mode/install.sh`, which is `#!/usr/bin/env bash`) explicitly with `bash`, so bash constructs run under bash regardless of what `/bin/sh` points to. The prior documentation wrongly described the root script's own shebang as `bash`.
 - Executable bits are set correctly on all installer scripts.
 - Both settings patchers (`effort-mode/scripts/patch_settings.py` and `dist/native/patch_settings_hooks.py`) are BOM-safe: they strip a UTF-8 BOM before parsing and write without BOM.
 - The "non-bypassable" language in prior documentation has been corrected. The non-bypassable guarantee is honestly scoped to the spec-kit `after_implement` hook contract plus CI, not an absolute in-session lock. A prompt protocol asks, a hook nudges, a CI gate refuses.
