@@ -1,0 +1,18 @@
+{
+  "schema_version": "1.0",
+  "feature_id": "verify-demo",
+  "tasks": [
+    {
+      "id": "T001",
+      "status": "done",
+      "files": ["src/greeter.py"],
+      "test_task": "tests/test_greeter.py"
+    },
+    {
+      "id": "T002",
+      "status": "done",
+      "files": ["src/teardown.py"],
+      "test_task": null
+    }
+  ]
+}
