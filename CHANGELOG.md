@@ -24,6 +24,11 @@ tagged as a release.
   `upgrade`, and an agent-agnostic `verify` verb that forwards to the harness.
 - The mneme seam read direction (`scripts/mneme_emit.py` parses Mergen's own
   emitted record shape) and shareable domain packs (`domains/clinical`).
+- A bounded mneme write-to-vault direction (`scripts/mneme_emit.py --write DIR`):
+  persists a decision record into a directory you name, with a producer-side
+  redaction preflight that fails closed on a secret pattern and duplicate
+  detection that skips a substantively-equal record. The store integration
+  (direct vault write versus MCP) stays open.
 - A worked end-to-end example (`examples/verify-demo/`) and a compatibility
   matrix (`docs/COMPAT.md`) mapping which features need which runtime.
 - A tamper-evident evidence manifest. `verify_core.py` records provenance

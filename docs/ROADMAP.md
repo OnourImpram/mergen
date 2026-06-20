@@ -78,7 +78,7 @@ The Governor classifies an incoming task into one of four tiers (tiny, standard,
 
 ### Mneme seam
 
-Mergen is the execution layer and pairs with mneme (the memory layer) across one seam. Mergen stores no memory of its own. `docs/MNEME-SEAM.md` documents the seam contract. `scripts/mneme_emit.py` is the emit hook that writes structured events across the seam. The full mneme writeback adapter is deferred.
+Mergen is the execution layer and pairs with mneme (the memory layer) across one seam. Mergen stores no memory of its own. `docs/MNEME-SEAM.md` documents the seam contract. `scripts/mneme_emit.py` is the emit hook that writes structured events across the seam, including a bounded write-to-vault direction (`--write DIR`, with a redaction preflight and duplicate detection). The full store integration, direct vault write versus the mneme MCP surface, is deferred.
 
 ### Native renderer
 
@@ -142,8 +142,8 @@ The `eval/` directory defines the evaluation methodology and how to run it. `eva
 **Templates `verification-template.md` and `project-state-template.md` are self-described by their commands.**
 The `/verify` and `/rollup` commands reference these templates and explain their structure. The `build_native.py init` subcommand copies templates into a bootstrapped `.specify/` directory, so a project initialized with `init` will have them present. A project that adopts the spec-kit preset and extension but does not run `init` must copy or create these templates separately, as the spec-kit preset mechanism does not include an `init` equivalent.
 
-**Mneme writeback adapter is a stub.**
-`scripts/mneme_emit.py` and `docs/MNEME-SEAM.md` establish the seam contract and emit structured events. The full writeback adapter that persists those events into a mneme memory store is deferred.
+**Mneme writeback persists to a directory, not yet to a store.**
+`scripts/mneme_emit.py` and `docs/MNEME-SEAM.md` establish the seam contract, emit and read records, and a bounded `--write DIR` direction persists a record into a directory you name, with a redaction preflight and duplicate detection. The store integration that decides between a direct vault write and the mneme MCP surface is deferred.
 
 ---
 
@@ -167,8 +167,8 @@ Track which tasks are most frequently re-queued or reverted across eval runs to 
 **Full benchmark suite.**
 Extend `eval/evidence_metric.py` into the complete four-metric benchmark with published reproducible results.
 
-**Full mneme writeback adapter.**
-A complete adapter that persists structured events from `scripts/mneme_emit.py` into a mneme memory store so that cross-session context is available without manual rollup.
+**Full mneme store integration.**
+`scripts/mneme_emit.py --write DIR` already persists records to a directory with a redaction preflight and duplicate detection. The remaining step is the store integration itself, persisting into a mneme memory store (a direct vault write or the mneme MCP surface) so cross-session context is available without a manual directory hand-off.
 
 **Broader spec-kit command coverage.**
 The v1.0.0 preset covers the 8 core workflow commands. Remaining Spec Kit command surfaces and any new commands Spec Kit ships after this release are candidates for inclusion in a future preset version.

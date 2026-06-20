@@ -290,7 +290,9 @@ v1.0.0, experimental.
   `debt`, `govern`).
 - The Governor sets risk-calibrated ceremony with a deterministic high-trust floor.
 - Machine-readable verify (`verification-report.json`, `tasks-state.json`) and a minimal eval evidence metric.
-- The mneme seam ships as a documented, network-free stub. The full writeback adapter is on the roadmap.
+- The mneme seam is bidirectional and network-free. `scripts/mneme_emit.py` emits and reads decision records,
+  and `--write DIR` persists one into a directory you name, with a redaction preflight (fails closed on a secret)
+  and duplicate detection. The full store integration (direct vault write versus MCP) is intentionally left open.
 - The verify-gate ships as a drop-in CI workflow (`eval/ci/verify-gate.yml`) plus a `--gate` mode, so your project
   can fail the build on phantom or unverified work. It checks the committed report, not your live filesystem.
 - The verify harness is agent agnostic. `scripts/verify_core.py` is pure standard library and runs anywhere
