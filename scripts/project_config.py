@@ -36,6 +36,11 @@ DOMAIN_OVERLAYS: dict[str, dict[str, Any]] = {
     "clinical": {"floor_all_content_changes": True},
 }
 
+# Built-in domain packs live here. A pack is a shareable bundle of a domain's
+# floor behavior, protected paths, and safety note, so a domain is data, not
+# code. A pack's values take precedence over the built-in DOMAIN_OVERLAYS above.
+_PACKS_DIR = Path(__file__).resolve().parents[1] / "domains"
+
 
 # --------------------------------------------------------------------------- #
 # Loading
@@ -119,25 +124,39 @@ def _path_matches(norm_path: str, pattern: str) -> bool:
     return fnmatch.fnmatch(norm_path, pat) or norm_path.startswith(pat)
 
 
+def load_domain_pack(name: str, packs_dir: Path | None = None) -> dict[str, Any]:
+    """Load a domain pack (domains/<name>/pack.toml). Absent yields {}."""
+    if not name:
+        return {}
+    base = Path(packs_dir) if packs_dir is not None else _PACKS_DIR
+    return load_config(base / name / "pack.toml")
+
+
 def apply_overlay(
     base_decision: dict[str, Any],
     config: dict[str, Any],
     changed_paths: list[str],
+    packs_dir: Path | None = None,
 ) -> dict[str, Any]:
-    """Raise a base floor decision per the project config. Never lowers it.
+    """Raise a base floor decision per the project config and its domain pack.
 
-    Returns a new decision dict with the possibly-raised tier, the merged
-    trigger list, and the active domain (or None).
+    Never lowers the tier. Returns a new decision dict with the possibly-raised
+    tier, the merged trigger list, the active domain (or None), and the domain
+    pack's safety note when one applies.
     """
     triggers = list(base_decision.get("triggers_matched", []))
     base_tier = base_decision.get("tier", "tiny")
 
+    domain = str(config.get("domain") or "").strip().lower()
+    pack = load_domain_pack(domain, packs_dir) if domain else {}
+
+    # Protected paths come from both the project config and the domain pack.
+    extra_paths: list[str] = []
     governor = config.get("governor")
-    extra_paths = []
-    if isinstance(governor, dict):
-        candidate = governor.get("extra_high_trust_paths")
-        if isinstance(candidate, list):
-            extra_paths = [str(p) for p in candidate]
+    if isinstance(governor, dict) and isinstance(governor.get("extra_high_trust_paths"), list):
+        extra_paths += [str(p) for p in governor["extra_high_trust_paths"]]
+    if isinstance(pack.get("extra_high_trust_paths"), list):
+        extra_paths += [str(p) for p in pack["extra_high_trust_paths"]]
 
     if extra_paths:
         for raw in changed_paths:
@@ -147,16 +166,22 @@ def apply_overlay(
                     triggers.append("project-protected-path")
                 break
 
-    domain = str(config.get("domain") or "").strip().lower()
-    overlay = DOMAIN_OVERLAYS.get(domain)
-    if overlay and overlay.get("floor_all_content_changes") and changed_paths:
+    # The pack's floor wins; fall back to the built-in overlay for the domain.
+    floor_all = bool(pack.get("floor_all_content_changes")) or bool(
+        DOMAIN_OVERLAYS.get(domain, {}).get("floor_all_content_changes")
+    )
+    if domain and floor_all and changed_paths:
         tag = f"domain:{domain}"
         if tag not in triggers:
             triggers.append(tag)
 
     tier = "high-trust" if triggers else base_tier
-    return {
+    result: dict[str, Any] = {
         "tier": tier,
         "triggers_matched": triggers,
         "domain": domain or None,
     }
+    note = pack.get("safety_note")
+    if domain and isinstance(note, str) and note:
+        result["safety_note"] = note
+    return result

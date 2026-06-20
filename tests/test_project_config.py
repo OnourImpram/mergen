@@ -100,3 +100,56 @@ def test_committed_example_config_parses():
     cfg = pc.load_config(repo / "docs" / "mergen-config.example.toml")
     assert cfg["domain"] == "clinical"
     assert "src/billing/" in cfg["governor"]["extra_high_trust_paths"]
+
+
+# --------------------------------------------------------------------------- #
+# Domain packs (Phase 4): a domain is a shareable data pack, not code.
+# --------------------------------------------------------------------------- #
+
+def test_load_committed_clinical_pack():
+    pack = pc.load_domain_pack("clinical")
+    assert pack.get("floor_all_content_changes") is True
+    assert "licensed reviewer" in pack.get("safety_note", "")
+
+
+def test_load_domain_pack_absent_is_empty(tmp_path):
+    assert pc.load_domain_pack("nope", packs_dir=tmp_path) == {}
+
+
+def test_overlay_surfaces_clinical_pack_safety_note():
+    base = {"tier": "tiny", "triggers_matched": []}
+    out = pc.apply_overlay(base, {"domain": "clinical"}, ["docs/x.md"])
+    assert out["tier"] == "high-trust"
+    assert "licensed reviewer" in out.get("safety_note", "")
+
+
+def test_overlay_custom_pack_floors_and_notes(tmp_path):
+    d = tmp_path / "finance"
+    d.mkdir()
+    (d / "pack.toml").write_text(
+        'name = "finance"\nfloor_all_content_changes = true\n'
+        'safety_note = "Money movement needs review."\n',
+        encoding="utf-8",
+    )
+    base = {"tier": "tiny", "triggers_matched": []}
+    out = pc.apply_overlay(base, {"domain": "finance"}, ["src/x.py"], packs_dir=tmp_path)
+    assert out["tier"] == "high-trust"
+    assert out["safety_note"] == "Money movement needs review."
+
+
+def test_overlay_pack_extra_paths_are_precise(tmp_path):
+    d = tmp_path / "sec"
+    d.mkdir()
+    (d / "pack.toml").write_text(
+        'name = "sec"\nfloor_all_content_changes = false\n'
+        'extra_high_trust_paths = ["vault/"]\n',
+        encoding="utf-8",
+    )
+    base = {"tier": "tiny", "triggers_matched": []}
+    # A change outside the protected path is not floored (floor_all is false).
+    out1 = pc.apply_overlay(base, {"domain": "sec"}, ["docs/x.md"], packs_dir=tmp_path)
+    assert out1["tier"] == "tiny"
+    # A change inside the protected path is forced to high-trust.
+    out2 = pc.apply_overlay(base, {"domain": "sec"}, ["vault/secret.md"], packs_dir=tmp_path)
+    assert out2["tier"] == "high-trust"
+    assert "project-protected-path" in out2["triggers_matched"]
