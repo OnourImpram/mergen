@@ -521,3 +521,27 @@ def test_cli_gate_fires_on_diff_text_keyword(capsys, tmp_path):
 def test_cli_without_gate_never_fails(capsys):
     rc = main(["--paths", "src/auth/login.py"])
     assert rc == 0
+
+
+# ---------------------------------------------------------------------------
+# Project config overlay through the CLI (C3): a domain can raise the floor.
+# ---------------------------------------------------------------------------
+
+def test_cli_config_clinical_floors_tiny_change_to_high_trust(tmp_path, capsys):
+    cfg = tmp_path / "mergen.toml"
+    cfg.write_text('domain = "clinical"\n', encoding="utf-8")
+    # A tiny docs change matches no built-in trigger, but the clinical domain
+    # overlay floors any change to high-trust, so the gate refuses it.
+    rc = main(["--paths", "docs/readme.md", "--config", str(cfg), "--gate"])
+    out = capsys.readouterr().out
+    assert rc == 1
+    assert "high-trust" in out
+    assert "domain:clinical" in out
+
+
+def test_cli_config_clinical_passes_with_ack(tmp_path, capsys):
+    cfg = tmp_path / "mergen.toml"
+    cfg.write_text('domain = "clinical"\n', encoding="utf-8")
+    rc = main(["--paths", "docs/readme.md", "--config", str(cfg),
+               "--gate", "--ack", "high-trust"])
+    assert rc == 0
