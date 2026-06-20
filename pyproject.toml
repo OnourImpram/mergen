@@ -33,3 +33,17 @@ files = [
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+[tool.coverage.run]
+# Coverage of the Python source surface, everything that ships and runs. The
+# renderers and feature_ops are included even where lightly tested, so the number
+# is honest rather than narrowed to the well-covered modules.
+source = ["scripts", "mergen_cli", "dist", "eval", "core", "effort-mode"]
+omit = ["tests/*", "*/__pycache__/*"]
+
+[tool.coverage.report]
+show_missing = true
+# Initial floor, set a few points below the measured ~78 percent so a normal
+# change does not false-fail and so variance across the CI matrix is absorbed.
+# Meant to ratchet upward as coverage of the renderers and feature_ops improves.
+fail_under = 75

@@ -45,6 +45,11 @@ tagged as a release.
 - A mypy --strict CI gate over the Python surface. The bash and PowerShell command
   logic collapsed into one Python layer. The test suite inverted into focused
   per-module files.
+- CI hardened with a Windows test job (the platform that produces the BOM the
+  readers now tolerate) and a coverage job with a fail-under floor in
+  `[tool.coverage.report]`, measuring statement coverage over the full Python
+  source surface. The floor starts below the measured value and is meant to
+  ratchet upward.
 
 ### Fixed
 
