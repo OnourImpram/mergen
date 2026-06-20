@@ -83,6 +83,23 @@ jobs:
       - name: Type check (strict, library modules from pyproject [tool.mypy])
         run: mypy
 
+  coverage:
+    # Statement coverage of the Python source surface, with the fail-under floor
+    # from pyproject [tool.coverage.report]. One Linux job so the number is
+    # deterministic (the Windows job stays pytest-only). The floor is a starting
+    # point set below the measured value, meant to ratchet upward over time.
+    name: "coverage (fail-under floor)"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install pytest and coverage
+        run: pip install pytest pytest-cov
+      - name: Run tests under coverage and enforce the floor
+        run: python -m pytest tests/ --cov --cov-report=term-missing
+
   shell-smoke:
     name: "shell parse (bash + pwsh)"
     runs-on: ubuntu-latest
