@@ -19,5 +19,17 @@ build-backend = "setuptools.build_meta"
 [tool.setuptools]
 py-modules = ["mergen_cli"]
 
+[tool.mypy]
+# Strict type checking, scoped to mergen's Python library surface. The bash and
+# PowerShell shims and the test suite are out of scope; widening the gate to
+# feature_ops, the hooks, and the other renderers is a follow-up.
+strict = true
+files = [
+    "scripts",
+    "mergen_cli.py",
+    "dist/native/build_native.py",
+    "dist/native/patch_settings_hooks.py",
+]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]

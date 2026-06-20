@@ -15,6 +15,7 @@ Stdlib only. Exit 0 if clean, 1 if any fingerprint is found.
 from __future__ import annotations
 
 import sys
+from collections.abc import Iterator
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
@@ -35,12 +36,12 @@ SKIP_DIRS = {".git", ".pytest_cache", "__pycache__", ".specify", "node_modules"}
 EXTRA_NAMES = {"NOTICE", "LICENSE"}
 
 
-def find_fingerprints(text: str):
+def find_fingerprints(text: str) -> list[str]:
     """Return the fingerprints present in text (empty list when clean)."""
     return [fp for fp in FINGERPRINTS if fp in text]
 
 
-def iter_text_files(root: Path):
+def iter_text_files(root: Path) -> Iterator[Path]:
     for path in root.rglob("*"):
         if not path.is_file():
             continue

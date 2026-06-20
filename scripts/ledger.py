@@ -26,7 +26,7 @@ SCHEMA_VERSION = "1.0"
 
 
 def append_event(
-    record: dict,
+    record: dict[str, Any],
     path: str | Path,
     kind: str,
     timestamp: str | None = None,
@@ -64,7 +64,7 @@ def append_event(
         fh.write(line.encode("utf-8"))
 
 
-def read_events(path: str | Path) -> list[dict]:
+def read_events(path: str | Path) -> list[dict[str, Any]]:
     """Read all events from a JSONL file and return them as a list of dicts.
 
     Tolerates a trailing newline. Raises ValueError with the line number on
@@ -73,7 +73,7 @@ def read_events(path: str | Path) -> list[dict]:
     p = Path(path)
     if not p.exists():
         return []
-    events: list[dict] = []
+    events: list[dict[str, Any]] = []
     with p.open("r", encoding="utf-8") as fh:
         for lineno, raw in enumerate(fh, start=1):
             stripped = raw.rstrip("\n")
@@ -88,7 +88,7 @@ def read_events(path: str | Path) -> list[dict]:
     return events
 
 
-def summarize(events: list[dict]) -> dict:
+def summarize(events: list[dict[str, Any]]) -> dict[str, Any]:
     """Return a summary dict useful as a dashboard seed.
 
     Keys returned:

@@ -27,6 +27,7 @@ import importlib.util
 import io
 import tempfile
 from pathlib import Path
+from types import ModuleType
 
 REPO = Path(__file__).resolve().parents[1]
 SPECKIT_SRC = REPO / "dist" / "speckit" / "build_speckit.py"
@@ -44,8 +45,10 @@ LADDER_RUNGS = [
 ]
 
 
-def _load(path: Path):
+def _load(path: Path) -> ModuleType:
     spec = importlib.util.spec_from_file_location(path.stem, path)
+    if spec is None or spec.loader is None:
+        raise ImportError(f"cannot load module from {path}")
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
     return mod
