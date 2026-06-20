@@ -218,6 +218,19 @@ def cmd_init(project: Path, dry_run: bool) -> int:
                     os.chmod(dst / item.name, 0o755)
         print(f"copied {src.name} -> {dst}")
 
+    # The bash and powershell shims delegate to feature_ops.py one level up.
+    # Install it into .specify/scripts/ so the relative path ../feature_ops.py
+    # resolves correctly from both .specify/scripts/bash/ and
+    # .specify/scripts/powershell/.
+    fops_src = SCRIPTS_DIR / "feature_ops.py"
+    if fops_src.is_file():
+        fops_dst = specify / "scripts" / "feature_ops.py"
+        if dry_run:
+            print(f"[dry-run] would copy feature_ops.py -> {fops_dst}")
+        else:
+            shutil.copy2(fops_src, fops_dst)
+            print(f"copied feature_ops.py -> {fops_dst}")
+
     memory = specify / "memory"
     if dry_run:
         print(f"[dry-run] would create {memory}")

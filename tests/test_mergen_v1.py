@@ -266,6 +266,22 @@ def _command_script_invocations():
     return out
 
 
+def _shim_resolves_to_feature_ops(script_path: Path) -> Path | None:
+    """If script_path is a thin shim that delegates to feature_ops.py, return the
+    feature_ops.py path. Return None when the script is not a shim.
+
+    A shim is identified by the presence of 'feature_ops.py' in its text together
+    with a delegation call (exec python... or & $pyCmd ...).
+    """
+    text = script_path.read_text(encoding="utf-8")
+    if "feature_ops.py" not in text:
+        return None
+    candidate = script_path.parent.parent / "feature_ops.py"
+    if candidate.is_file():
+        return candidate
+    return None
+
+
 def test_every_command_flag_is_implemented_by_its_script():
     invocations = _command_script_invocations()
     # At least clarify and implement declare script flags; guard against a parser regression.
@@ -276,14 +292,34 @@ def test_every_command_flag_is_implemented_by_its_script():
         if not script_path.is_file():
             failures.append(f"{cmd_name} [{lang}] names a missing script: {script_rel}")
             continue
-        script_text = script_path.read_text(encoding="utf-8")
+
+        # Follow the shim: if the script delegates to feature_ops.py, check flags
+        # there instead. This preserves the real assertion while allowing the shim
+        # pattern introduced by C1.
+        target = _shim_resolves_to_feature_ops(script_path)
+        if target is not None:
+            search_text = target.read_text(encoding="utf-8")
+        else:
+            search_text = script_path.read_text(encoding="utf-8")
+
         for flag in flags:
             if lang == "sh":
-                accepted = flag in script_text
-            else:  # PowerShell: -RequireSpec is implemented as the param $RequireSpec
-                accepted = ("$" + flag.lstrip("-")) in script_text
+                # bash flags appear as --flag in argparse add_argument calls.
+                accepted = flag in search_text
+            else:
+                # PowerShell flags like -RequireSpec map to argparse dest or
+                # the '-RequireSpec' / '--require-spec' string in feature_ops.py.
+                bare = flag.lstrip("-")
+                # Accept either the PowerShell-style dash-name or the
+                # argparse long-flag equivalent (CamelCase -> hyphen-case not
+                # needed: feature_ops uses both aliases in add_argument).
+                accepted = (
+                    ("-" + bare) in search_text
+                    or ("$" + bare) in search_text
+                )
             if not accepted:
                 failures.append(
-                    f"{cmd_name} [{lang}] invokes {flag} but {script_rel} does not accept it"
+                    f"{cmd_name} [{lang}] invokes {flag} but"
+                    f" {script_rel} (-> {target or script_path}) does not accept it"
                 )
     assert not failures, "command/script contract violations:\n" + "\n".join(failures)
