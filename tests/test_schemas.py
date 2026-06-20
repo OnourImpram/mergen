@@ -61,6 +61,10 @@ def test_policy_results_shape_is_shared_across_schemas():
     ver_item = _schema("verification-report")["properties"]["policy_results"]["items"]
     assert set(gov_item["properties"]) == set(ver_item["properties"])
     assert gov_item["properties"]["result"]["enum"] == ver_item["properties"]["result"]["enum"]
+    # required and additionalProperties must be identical so neither schema
+    # silently accepts a weaker shape than the other.
+    assert gov_item.get("required") == ver_item.get("required")
+    assert gov_item.get("additionalProperties") == ver_item.get("additionalProperties")
 
 
 def test_governor_decision_policy_results_is_optional():

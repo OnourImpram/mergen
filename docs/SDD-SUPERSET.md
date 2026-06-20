@@ -175,5 +175,5 @@ No benchmark numbers are claimed in this document. The eval directory (`eval/`) 
 - `scripts/mneme_emit.py`: emit hook that writes structured events across the mneme seam
 - `eval/evidence_metric.py`: minimal honest eval metric (work-done rate, phantom-completion count) derived from verify JSON
 - `core/schemas/verification-report.schema.json`: schema for machine-readable verify output
-- `core/schemas/tasks-state.schema.json`: schema for per-task state with confidence labels
+- `core/schemas/tasks-state.schema.json`: schema for per-task post-verification state (id, status, files, test task, last-verified timestamp)
 - `ATTRIBUTION.md`: MIT attribution for vendored Spec Kit material

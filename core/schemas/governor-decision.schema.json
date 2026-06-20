@@ -24,6 +24,8 @@
       "description": "Optional per-policy audit trail. One entry per floor guard evaluated, in the same {policy_id, result, reason} shape that verification-report.json uses, so the Governor and the verifier share one policy vocabulary. A guard that matched the change reports result 'fail' (a non-downgradable high-trust escalation, the policy-engine sense of a deny rule firing); a guard that did not match reports 'pass'.",
       "items": {
         "type": "object",
+        "required": ["policy_id", "result", "reason"],
+        "additionalProperties": false,
         "properties": {
           "policy_id": { "type": "string" },
           "result": { "enum": ["pass", "warn", "fail"] },
