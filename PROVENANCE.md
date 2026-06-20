@@ -31,8 +31,9 @@ Files renamed. `effort-mode/commands/hypercode.md` to `mergen.md`, and
 deleted and regenerated from the transformed source, so `dist/speckit/preset/mergen` and
 `dist/speckit/extensions/mergen` are fresh renders, not edited copies.
 
-Verified after transform. Zero `hyper*` tokens remain in the tree. `check_sync` reports the committed output
-in sync with `core/`. The native renderer plans 14 skills. The test suite passes.
+Verified after transform. Zero `hyper*` tokens remain in the source and rendered tree. The only mentions are
+in this file and `CHANGELOG.md`, which record the rename on purpose. `check_sync` reports the committed
+output in sync with `core/`. The native renderer plans 14 skills. The test suite passes.
 
 ## Naming
 

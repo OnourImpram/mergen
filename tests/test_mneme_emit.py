@@ -78,3 +78,23 @@ def test_prior_decisions_filters_by_feature(tmp_path):
     recs = emit.prior_decisions_for(tmp_path, fid)
     assert len(recs) == 1
     assert recs[0]["feature_id"] == fid
+
+
+def test_cli_emits_markdown_for_a_report(capsys):
+    emit = _load("scripts/mneme_emit.py")
+    sample = str(REPO / "eval" / "sample" / "verification-report.json")
+    rc = emit.main([sample])
+    out = capsys.readouterr().out
+    assert rc == 0
+    assert "# Decision:" in out
+
+
+def test_cli_read_lists_vault_records(tmp_path, capsys):
+    emit = _load("scripts/mneme_emit.py")
+    (tmp_path / "a.md").write_text(
+        emit.to_decision_markdown(_sample_report()), encoding="utf-8"
+    )
+    rc = emit.main(["--read", str(tmp_path)])
+    out = capsys.readouterr().out
+    assert rc == 0
+    assert "feature_id" in out
