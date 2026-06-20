@@ -29,6 +29,10 @@ tagged as a release.
   redaction preflight that fails closed on a secret pattern and duplicate
   detection that skips a substantively-equal record. The store integration
   (direct vault write versus MCP) stays open.
+- A static, offline verification dashboard (`scripts/dashboard.py`, `mergen
+  dashboard <dir>`): one self-contained HTML page over a directory of reports,
+  showing each verdict, phantom-completion count, and provenance, with every
+  report value HTML-escaped. No network, no JavaScript, pure standard library.
 - A worked end-to-end example (`examples/verify-demo/`) and a compatibility
   matrix (`docs/COMPAT.md`) mapping which features need which runtime.
 - A tamper-evident evidence manifest. `verify_core.py` records provenance

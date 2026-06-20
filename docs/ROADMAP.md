@@ -158,8 +158,8 @@ A CI action that runs `scripts/check_sync.py` and posts a summary comment on pul
 **Clinical and security domain packs.**
 Preset overlays that add domain-specific constitution clauses, checklist items, and evidence standards for clinical and security contexts.
 
-**Dashboard.**
-A local web view over `verification-report.json` and `tasks-state.json` that shows task confidence, phantom-completion history, and over-build trends across runs.
+**Dashboard trends and history.**
+A basic static dashboard shipped (`scripts/dashboard.py`, `mergen dashboard <dir>`): a self-contained offline HTML view over a directory of verification reports, showing each report's verdict, phantom completions, and provenance. The remaining work is the cross-run dimension, confidence and phantom-completion history and over-build trends over time, rather than a snapshot per report.
 
 **Churn analytics.**
 Track which tasks are most frequently re-queued or reverted across eval runs to identify spec patterns that reliably produce verifier failures.
