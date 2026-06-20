@@ -42,6 +42,14 @@ tagged as a release.
   report (and with `--require-fresh`, a report whose source commit no longer
   matches HEAD). Tamper-evident, not tamper-proof: meaningful when CI recomputes
   the sidecar from the live tree rather than trusting it.
+- Two stronger CI drop-ins that close the committed-report gap. `eval/ci/verify-gate-live.yml`
+  regenerates the verification report in CI from the live tree (running `verify_core`
+  against the real files and tests) and gates on that fresh report, so a hand-edited
+  committed report is never read. `eval/ci/verify-attest.yml` adds an OIDC-bound
+  Sigstore attestation over the fresh report via `actions/attest-build-provenance`,
+  so `gh attestation verify` fails on any later edit. Enforcing them (branch
+  protection, required check) stays a repository-admin setting. Mergen's own CI
+  dogfoods the live pattern against `examples/verify-demo/`.
 
 ### Changed
 
