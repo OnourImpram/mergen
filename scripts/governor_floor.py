@@ -15,6 +15,7 @@ import argparse
 import fnmatch
 import json
 import re
+import sys
 from pathlib import Path
 
 # Ordered tier list, lowest to highest. Index position encodes rank.
@@ -249,6 +250,19 @@ def _build_cli_parser() -> argparse.ArgumentParser:
         default=None,
         help="Path to a file containing the unified diff to scan.",
     )
+    parser.add_argument(
+        "--gate",
+        action="store_true",
+        help="Exit non-zero when the diff reaches the high-trust floor and is "
+             "not acknowledged. For CI on a real pull-request diff.",
+    )
+    parser.add_argument(
+        "--ack",
+        metavar="TIER",
+        default="",
+        help="Acknowledgement tier supplied by a human reviewer (for example "
+             "'high-trust'). Under --gate it authorises a matching floor.",
+    )
     return parser
 
 
@@ -263,6 +277,23 @@ def main(argv: list[str] | None = None) -> int:
 
     decision = classify_floor(args.paths, diff_text)
     print(json.dumps(decision, indent=2))
+
+    if args.gate and decision["tier"] == "high-trust":
+        if (args.ack or "").strip().lower() == "high-trust":
+            print(
+                "governor floor: high-trust acknowledged by a human reviewer, gate passes.",
+                file=sys.stderr,
+            )
+            return 0
+        triggers = ", ".join(decision["triggers_matched"]) or "none"
+        print(
+            "governor floor: this diff reaches the high-trust tier "
+            f"(triggers: {triggers}). A human must review it and record the "
+            "acknowledgement line 'Governor-Ack: high-trust' in the pull-request "
+            "body before it can merge. The floor is non-downgradable.",
+            file=sys.stderr,
+        )
+        return 1
     return 0
 
 

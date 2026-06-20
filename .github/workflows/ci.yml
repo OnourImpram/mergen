@@ -35,6 +35,9 @@ jobs:
       - name: Check no reference-prompt text is committed
         run: python scripts/check_no_reference_text.py
 
+      - name: Phantom-detection benchmark gate (verify harness regression)
+        run: python eval/benchmark.py --gate
+
   lint:
     name: "ruff"
     runs-on: ubuntu-latest
@@ -74,3 +77,44 @@ jobs:
             if ($errs.Count -gt 0) { Write-Output "parse errors in $($f.FullName)"; $errs | ForEach-Object { Write-Output $_.Message }; $fail = 1 }
           }
           exit $fail
+
+  govern-diff:
+    name: "Governor floor (PR diff)"
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      # Re-verify the REAL pull-request diff against the deterministic Governor
+      # floor. A high-trust change (auth, payment, secrets, privacy, clinical,
+      # migration, deploy, permission, release-artifact, or a matching diff
+      # keyword) fails the build unless a human records 'Governor-Ack: high-trust'
+      # in the PR body. The floor is non-downgradable: this gate refuses a silent
+      # merge of a high-trust change. See eval/ci/govern-gate.yml for the
+      # reusable drop-in version.
+      - name: Classify the real PR diff against the Governor floor
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          set -euo pipefail
+          git fetch --no-tags --depth=1 origin "$BASE_REF"
+          changed=$(git diff --name-only "origin/$BASE_REF...HEAD")
+          if [ -z "$changed" ]; then
+            echo "no changed files, nothing to classify."
+            exit 0
+          fi
+          echo "changed files:"; echo "$changed"
+          git diff "origin/$BASE_REF...HEAD" > pr.diff
+          ack=""
+          if printf '%s' "$PR_BODY" | grep -qiE '^[[:space:]]*Governor-Ack:[[:space:]]*high-trust'; then
+            ack="high-trust"
+          fi
+          python scripts/governor_floor.py \
+            --paths $changed \
+            --diff-file pr.diff \
+            --gate --ack "$ack"
