@@ -155,7 +155,7 @@ def render_skill(cmd: Command) -> str:
     return "\n".join(lines) + "\n" + cmd.body.rstrip("\n") + "\n"
 
 
-def cmd_build(skills_dir: Path, dry_run: bool) -> int:
+def cmd_build(skills_dir: Path, hooks_dir: Path, dry_run: bool) -> int:
     if not COMMANDS_DIR.is_dir():
         print(f"ERROR: no commands dir at {COMMANDS_DIR}", file=sys.stderr)
         return 1
@@ -184,13 +184,12 @@ def cmd_build(skills_dir: Path, dry_run: bool) -> int:
     if HOOKS_DIR.is_dir():
         hook_files = sorted(HOOKS_DIR.glob("*.py"))
         if hook_files and not dry_run:
-            hooks_target = Path.home() / ".claude" / "hooks"
-            hooks_target.mkdir(parents=True, exist_ok=True)
+            hooks_dir.mkdir(parents=True, exist_ok=True)
             for h in hook_files:
-                shutil.copy2(h, hooks_target / h.name)
-                print(f"installed hook {h.name} -> {hooks_target / h.name}")
+                shutil.copy2(h, hooks_dir / h.name)
+                print(f"installed hook {h.name} -> {hooks_dir / h.name}")
         elif hook_files:
-            print(f"[dry-run] would install {len(hook_files)} hook(s) to ~/.claude/hooks")
+            print(f"[dry-run] would install {len(hook_files)} hook(s) to {hooks_dir}")
 
     print(f"\n{rendered} skill(s) {'planned' if dry_run else 'rendered'}.")
     return 0
@@ -236,6 +235,8 @@ def main(argv: list[str] | None = None) -> int:
     p_build = sub.add_parser("build", help="render command prompts into ~/.claude/skills")
     p_build.add_argument("--skills-dir", default=str(Path.home() / ".claude" / "skills"),
                          help="target skills directory (default: ~/.claude/skills)")
+    p_build.add_argument("--hooks-dir", default=str(Path.home() / ".claude" / "hooks"),
+                         help="target hooks directory (default: ~/.claude/hooks)")
     p_build.add_argument("--dry-run", action="store_true")
 
     p_init = sub.add_parser("init", help="bootstrap .specify in a project")
@@ -248,8 +249,9 @@ def main(argv: list[str] | None = None) -> int:
         return cmd_init(Path(args.project).resolve(), args.dry_run)
     # Default to build (no subcommand or "build").
     skills_dir = getattr(args, "skills_dir", str(Path.home() / ".claude" / "skills"))
+    hooks_dir = getattr(args, "hooks_dir", str(Path.home() / ".claude" / "hooks"))
     dry_run = getattr(args, "dry_run", False)
-    return cmd_build(Path(skills_dir), dry_run)
+    return cmd_build(Path(skills_dir), Path(hooks_dir), dry_run)
 
 
 if __name__ == "__main__":
