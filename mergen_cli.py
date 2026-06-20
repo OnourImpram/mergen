@@ -26,6 +26,10 @@ The verbs:
   verify     run the deterministic verify harness on any project. This verb is
              agent agnostic. It forwards to scripts/verify_core.py, which is pure
              standard library and needs no Claude Code, no network, and no model.
+  verify-lint
+             refuse a verification report that is not a clean, proven pass
+             (proofless pass, ambiguous pass, summary fail, conditional, unsigned
+             high-trust). Stdlib enforcement of the verification-report schema.
   dashboard  render a static HTML dashboard over a directory of verification
              reports. Agent agnostic, pure standard library, no network.
   status     summarize a tasks-state.json (done versus pending, per task). Agent
@@ -58,6 +62,7 @@ _REPO = Path(__file__).resolve().parent
 _BUILD_NATIVE = _REPO / "dist" / "native" / "build_native.py"
 _PATCH_HOOKS = _REPO / "dist" / "native" / "patch_settings_hooks.py"
 _VERIFY_CORE = _REPO / "scripts" / "verify_core.py"
+_VERIFY_LINT = _REPO / "scripts" / "verify_report_lint.py"
 _DASHBOARD = _REPO / "scripts" / "dashboard.py"
 _STATUS = _REPO / "scripts" / "tasks_status.py"
 _ISSUES = _REPO / "scripts" / "tasks_to_issues.py"
@@ -354,6 +359,14 @@ def build_parser() -> argparse.ArgumentParser:
              "try: mergen verify --help)",
     )
 
+    # verify-lint forwards to the report linter the same way.
+    sub.add_parser(
+        "verify-lint",
+        add_help=False,
+        help="refuse a verification report that is not a clean, proven pass "
+             "(forwards to verify_report_lint.py, try: mergen verify-lint --help)",
+    )
+
     # dashboard, like verify, forwards everything after the verb to its script.
     sub.add_parser(
         "dashboard",
@@ -393,6 +406,8 @@ def main(argv: list[str] | None = None) -> int:
     # through rather than parsed as mergen options.
     if raw and raw[0] == "verify":
         return _run(_VERIFY_CORE, *raw[1:])
+    if raw and raw[0] == "verify-lint":
+        return _run(_VERIFY_LINT, *raw[1:])
     if raw and raw[0] == "dashboard":
         return _run(_DASHBOARD, *raw[1:])
     if raw and raw[0] == "status":

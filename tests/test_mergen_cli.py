@@ -178,6 +178,7 @@ def test_forward_verbs_dispatch_to_the_right_script(monkeypatch):
     monkeypatch.setattr(mergen_cli, "_run", fake_run)
     for verb, target in (
         ("verify", mergen_cli._VERIFY_CORE),
+        ("verify-lint", mergen_cli._VERIFY_LINT),
         ("dashboard", mergen_cli._DASHBOARD),
         ("status", mergen_cli._STATUS),
         ("issues", mergen_cli._ISSUES),
@@ -188,6 +189,15 @@ def test_forward_verbs_dispatch_to_the_right_script(monkeypatch):
         assert rc == 0
         assert seen["script"] == target
         assert seen["args"] == ("PASSTHROUGH_ARG", "--flag")
+
+
+def test_verify_lint_subcommand_forwards_and_returns_its_code():
+    # `mergen verify-lint` forwards verbatim to the report linter. The committed
+    # sample is a conditional, unsigned high-trust report, so the linter exits 1
+    # and the CLI surfaces that unchanged.
+    sample = Path(__file__).resolve().parent.parent / "eval" / "sample" / "verification-report.json"
+    rc = mergen_cli.main(["verify-lint", str(sample)])
+    assert rc == 1
 
 
 def test_status_subcommand_reports_missing_state():

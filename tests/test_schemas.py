@@ -9,6 +9,8 @@ import importlib.util
 import json
 from pathlib import Path
 
+import pytest
+
 REPO = Path(__file__).resolve().parent.parent
 
 
@@ -16,6 +18,18 @@ def _schema(name: str) -> dict:
     return json.loads(
         (REPO / "core" / "schemas" / f"{name}.schema.json").read_text(encoding="utf-8")
     )
+
+
+def _validator(name: str):
+    """A Draft 2020-12 validator for a shipped schema, or skip if jsonschema is absent.
+
+    jsonschema is a dev-only dependency. The shipped linter (verify_report_lint.py)
+    enforces these same invariants in pure stdlib, so the runtime never needs it.
+    These tests prove the declarative schema's if/then logic is itself correct, so
+    a generic validator (a third party's CI) reads the same contract the linter does.
+    """
+    jsonschema = pytest.importorskip("jsonschema")
+    return jsonschema.Draft202012Validator(_schema(name))
 
 
 def _load_verify_core():
@@ -71,3 +85,90 @@ def test_governor_decision_policy_results_is_optional():
     gov = _schema("governor-decision")
     assert "policy_results" in gov["properties"]
     assert "policy_results" not in gov["required"]
+
+
+# --------------------------------------------------------------------------- #
+# Schema invariants enforced by if/then (validated with jsonschema when present).
+# These pin that the declarative contract refuses what the linter refuses.
+# --------------------------------------------------------------------------- #
+
+_GOV_BASE = {
+    "schema_version": "1.0", "task": "t", "tier": "standard", "triggers_matched": [],
+    "memory_scope": "s", "workflow": "w", "evidence_standard": "e",
+    "human_approval_required": False,
+}
+
+
+def test_governor_a_fired_trigger_forces_high_trust():
+    v = _validator("governor-decision")
+    assert v.is_valid(_GOV_BASE)  # no triggers, standard tier: fine
+    # A matched trigger but a non-high-trust tier is a contradiction.
+    assert not v.is_valid({**_GOV_BASE, "triggers_matched": ["secrets"], "tier": "standard"})
+    # The same trigger at high-trust with a sign-off is valid.
+    assert v.is_valid({**_GOV_BASE, "triggers_matched": ["secrets"], "tier": "high-trust",
+                       "human_approval_required": True})
+
+
+def test_governor_high_trust_must_require_human_approval():
+    v = _validator("governor-decision")
+    assert not v.is_valid({**_GOV_BASE, "tier": "high-trust", "triggers_matched": ["auth"],
+                           "human_approval_required": False})
+
+
+_VER_BASE = {
+    "schema_version": "1.0", "feature_id": "f", "verified_at": "2026-06-20T00:00:00Z",
+    "summary": {"verdict": "pass", "human_review_required": False},
+    "tasks": [],
+}
+
+
+def _task(**over):
+    base = {"task_id": "T1", "claimed_status": "done",
+            "verified_status": "pass", "confidence": "extracted"}
+    base.update(over)
+    return base
+
+
+def test_verification_report_rejects_a_proofless_pass():
+    v = _validator("verification-report")
+    assert not v.is_valid({**_VER_BASE, "tasks": [_task()]})  # pass, no evidence
+    assert v.is_valid({**_VER_BASE, "tasks": [_task(files_checked=["a.py"])]})
+
+
+def test_verification_report_rejects_an_ambiguous_pass():
+    v = _validator("verification-report")
+    assert not v.is_valid(
+        {**_VER_BASE, "tasks": [_task(confidence="ambiguous", evidence=["x"])]})
+
+
+def test_verification_report_high_trust_must_flag_review_required():
+    # Symmetric with the Governor invariant: a report that classifies itself
+    # high-trust must at minimum flag that human review is required.
+    v = _validator("verification-report")
+    bad = {**_VER_BASE, "tasks": [_task(files_checked=["a.py"])],
+           "summary": {"verdict": "pass", "risk_level": "high-trust",
+                       "human_review_required": False}}
+    assert not v.is_valid(bad)
+    ok = {**_VER_BASE, "tasks": [_task(files_checked=["a.py"])],
+          "summary": {"verdict": "conditional_pass", "risk_level": "high-trust",
+                      "human_review_required": True}}
+    assert v.is_valid(ok)
+
+
+def test_verification_report_accepts_the_committed_sample():
+    v = _validator("verification-report")
+    sample = json.loads(
+        (REPO / "eval" / "sample" / "verification-report.json").read_text(encoding="utf-8"))
+    assert v.is_valid(sample)
+
+
+def test_tasks_state_status_enum_includes_blocked_and_conditional():
+    enum = _schema("tasks-state")["properties"]["tasks"]["items"]["properties"]["status"]["enum"]
+    assert {"pending", "done", "blocked", "conditional"} == set(enum)
+
+
+def test_tasks_state_accepts_the_new_statuses():
+    v = _validator("tasks-state")
+    state = {"schema_version": "1.0", "feature_id": "f",
+             "tasks": [{"id": "T1", "status": "blocked"}, {"id": "T2", "status": "conditional"}]}
+    assert v.is_valid(state)

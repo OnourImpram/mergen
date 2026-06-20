@@ -17,8 +17,8 @@
         "properties": {
           "id": { "type": "string" },
           "status": {
-            "enum": ["pending", "done"],
-            "description": "done corresponds to a verifier-confirmed [X], pending to [ ]"
+            "enum": ["pending", "done", "blocked", "conditional"],
+            "description": "done corresponds to a verifier-confirmed [X], pending to [ ]. blocked is a task an unmet dependency or external wait holds back. conditional is a verified pass under a stated caveat the human still owns, the tasks-state mirror of the report's conditional_pass verdict."
           },
           "test_task": { "type": ["string", "null"] },
           "files": { "type": "array", "items": { "type": "string" } },
