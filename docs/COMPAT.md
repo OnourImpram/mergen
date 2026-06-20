@@ -25,7 +25,8 @@ governance real regardless of which agent, if any, sits above it.
 | `scripts/project_config.py` | Reads `.specify/mergen.toml`, applies the floor-raising overlay | imported by `governor_floor --config` |
 | `scripts/injection_quarantine.py` | Scans, fences, and classifies untrusted text | `python scripts/injection_quarantine.py` |
 | `scripts/ledger.py` | Append-only event ledger | `python scripts/ledger.py` |
-| `scripts/mneme_emit.py` | Emits and reads decision records across the mneme seam | `python scripts/mneme_emit.py` |
+| `scripts/mneme_emit.py` | Emits, reads, and writes decision records across the mneme seam (`--write DIR`, redaction preflight) | `python scripts/mneme_emit.py` |
+| `scripts/dashboard.py` | Static, offline HTML dashboard over a directory of verification reports (verdicts, phantom counts, provenance) | `python scripts/dashboard.py <dir>` or `mergen dashboard <dir>` |
 | `eval/benchmark.py` | Deterministic phantom-detection benchmark, no LLM | `python eval/benchmark.py --gate` |
 | `eval/evidence_metric.py` | Evidence metric and CI gate over a committed report | `python eval/evidence_metric.py --gate` |
 
@@ -60,7 +61,7 @@ slash commands. The single-source contract is in `core/CONVENTIONS.md`.
 
 | Component | Behavior when absent |
 |---|---|
-| mneme memory seam | `scripts/mneme_emit.py` round-trips Mergen's own emitted record shape. With no mneme vault present it returns an empty result. mneme is optional and consumed only across the documented seam |
+| mneme memory seam | `scripts/mneme_emit.py` round-trips Mergen's own emitted record shape and, with `--write DIR`, persists records into a directory you name. With no mneme vault present it returns an empty result. mneme is optional and consumed only across the documented seam |
 | Non-Claude agent rule files | `dist/agents/build_agents.py` ports only the lazy-ladder minimalism discipline to Cursor, Windsurf, Cline, Copilot, and Kiro as passive rule files. The SDD engine and the Workflow orchestration do not port, and the renderer does not claim they do |
 
 ## One-line summary

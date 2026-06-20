@@ -13,7 +13,7 @@ editable/clone install is the supported path on purpose: mergen renders from
 this repo's core/ tree, so the command has to be able to find it. A fully
 standalone wheel that bundles core/ as package data is on the roadmap.
 
-The four verbs:
+The verbs:
 
   install    copy the effort command and hook, register the effort hook, render
              the 14 SDD skills, and register the two SDD hooks. Idempotent.
@@ -26,10 +26,12 @@ The four verbs:
   verify     run the deterministic verify harness on any project. This verb is
              agent agnostic. It forwards to scripts/verify_core.py, which is pure
              standard library and needs no Claude Code, no network, and no model.
+  dashboard  render a static HTML dashboard over a directory of verification
+             reports. Agent agnostic, pure standard library, no network.
 
 install, uninstall, and upgrade act on the real ~/.claude. doctor takes optional
 directory flags so it can inspect any tree, which is also how it is tested.
-verify acts on whatever project the forwarded --tasks-state and --root name.
+verify and dashboard act on whatever project paths the forwarded flags name.
 """
 
 from __future__ import annotations
@@ -48,6 +50,7 @@ _REPO = Path(__file__).resolve().parent
 _BUILD_NATIVE = _REPO / "dist" / "native" / "build_native.py"
 _PATCH_HOOKS = _REPO / "dist" / "native" / "patch_settings_hooks.py"
 _VERIFY_CORE = _REPO / "scripts" / "verify_core.py"
+_DASHBOARD = _REPO / "scripts" / "dashboard.py"
 _EFFORT_PATCH = _REPO / "effort-mode" / "scripts" / "patch_settings.py"
 _EFFORT_CMD = _REPO / "effort-mode" / "commands" / "mergen.md"
 _EFFORT_HOOK = _REPO / "effort-mode" / "hooks" / "mergen_prompt_hook.py"
@@ -311,6 +314,14 @@ def build_parser() -> argparse.ArgumentParser:
              "try: mergen verify --help)",
     )
 
+    # dashboard, like verify, forwards everything after the verb to its script.
+    sub.add_parser(
+        "dashboard",
+        add_help=False,
+        help="render a static HTML dashboard over verification reports (forwards "
+             "to dashboard.py, try: mergen dashboard --help)",
+    )
+
     return parser
 
 
@@ -322,6 +333,8 @@ def main(argv: list[str] | None = None) -> int:
     # through rather than parsed as mergen options.
     if raw and raw[0] == "verify":
         return _run(_VERIFY_CORE, *raw[1:])
+    if raw and raw[0] == "dashboard":
+        return _run(_DASHBOARD, *raw[1:])
 
     parser = build_parser()
     args = parser.parse_args(raw)

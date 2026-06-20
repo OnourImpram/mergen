@@ -302,6 +302,9 @@ v1.0.0, experimental.
 - Every report carries provenance and a tamper-evidence sidecar. `--out` writes a `<report>.sha256` next to the
   report, and `mergen verify --check-manifest <report>` re-checks the hash to catch an edited report. With
   `--require-fresh` it also rejects a report whose recorded source commit no longer matches the tree.
+- A static, offline dashboard. `mergen dashboard <dir>` (or `python scripts/dashboard.py <dir>`) renders one
+  self-contained HTML page over a directory of reports, showing each verdict, phantom count, and provenance,
+  with every value HTML-escaped. No network, no JavaScript.
 - No benchmark numbers are claimed. The methodology and a reproduction procedure are in `eval/`.
 - `/effort max` requires one manual paste per session. The binary does not expose that control to hooks.
 - Hooks are reinforcement nudges. Enforcement is the implement pipeline's adversarial verify stage, made a

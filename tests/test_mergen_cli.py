@@ -143,3 +143,12 @@ def test_verify_subcommand_reports_missing_tasks_state():
         "--root", str(_DEMO),
     ])
     assert rc == 2
+
+
+def test_dashboard_subcommand_forwards_to_the_generator(tmp_path):
+    # `mergen dashboard` forwards verbatim to dashboard.py. An empty dir is valid
+    # input: it renders a "no reports" page and exits 0.
+    out = tmp_path / "dash.html"
+    rc = mergen_cli.main(["dashboard", str(tmp_path), "--out", str(out)])
+    assert rc == 0
+    assert out.is_file()
