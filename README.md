@@ -107,6 +107,26 @@ The installer runs three steps in order:
 
 After install, restart Claude Code or run `/hooks` to load the new hooks.
 
+### One command, every platform
+
+`./install.sh` and `.\install.ps1` shell out to bash and PowerShell. The same
+three steps, plus a health check and a clean uninstall, are also available as a
+single cross-platform `mergen` command:
+
+```bash
+pipx install -e .        # or: pip install -e .
+mergen install           # render skills and register hooks (idempotent)
+mergen doctor            # read-only health check, honest about the caveats
+mergen upgrade           # re-render the skills after pulling a new version
+mergen uninstall         # remove every artifact it created
+```
+
+The editable install is the supported path: mergen renders the skills from this
+repo's `core/`, so the command needs the clone. A standalone wheel that bundles
+`core/` is on the roadmap. `mergen doctor` reports what is present, what is
+missing, and the honest caveats (the one manual `/effort max` paste, and that
+the SDD hooks are reinforcement nudges, not enforcement).
+
 ### Arm effort mode
 
 ```
