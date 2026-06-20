@@ -58,12 +58,13 @@ def test_load_reports_tolerates_bom(tmp_path):
 
 
 def test_render_includes_feature_verdict_and_phantom_count():
+    # passed=1, phantoms=3, done=4: distinct values so the phantom cell is pinned.
     out = dashboard.render_html([("a.json", _report(feature_id="alpha", verdict="fail",
-                                                    passed=1, failed=2))])
+                                                    passed=1, failed=3, done=4))])
     assert "alpha" in out
     assert "fail" in out
     assert "phantom completions" in out
-    assert ">2<" in out  # the phantom count is rendered
+    assert "<td>3</td>" in out  # the phantom count cell is rendered
 
 
 def test_render_html_escapes_malicious_values():

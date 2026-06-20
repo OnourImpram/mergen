@@ -429,8 +429,10 @@ def check_manifest(report_path: Path, root: Path, require_fresh: bool) -> int:
     print("manifest check")
     report_bytes = report_path.read_bytes()
     actual = hashlib.sha256(report_bytes).hexdigest()
-    sidecar_text = sidecar.read_text(encoding="utf-8").strip()
-    expected = sidecar_text.split()[0] if sidecar_text else ""
+    # First whitespace-delimited token is the digest (sha256sum format). Parse
+    # defensively so a blank or malformed sidecar yields "" rather than crashing.
+    sidecar_parts = sidecar.read_text(encoding="utf-8").split()
+    expected = sidecar_parts[0] if sidecar_parts else ""
     ok = True
     if actual == expected:
         print(f"  [OK ] report hash matches manifest ({actual[:12]})")
@@ -447,7 +449,8 @@ def check_manifest(report_path: Path, root: Path, require_fresh: bool) -> int:
         recorded = (report.get("provenance") or {}).get("source_commit")
         current = _git_head(root)
         if not recorded:
-            print("  [STALE] --require-fresh set but the report records no source_commit",
+            print("  [STALE] --require-fresh set but the report records no source_commit "
+                  "(generated outside a git work tree, or by an older verifier)",
                   file=sys.stderr)
             ok = False
         elif current is None:

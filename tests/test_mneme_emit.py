@@ -97,7 +97,9 @@ def test_cli_read_lists_vault_records(tmp_path, capsys):
     rc = emit.main(["--read", str(tmp_path)])
     out = capsys.readouterr().out
     assert rc == 0
-    assert "feature_id" in out
+    records = json.loads(out)
+    assert isinstance(records, list) and records
+    assert records[0]["feature_id"] == _sample_report()["feature_id"]
 
 
 def test_cli_reads_report_with_utf8_bom(tmp_path, capsys):
@@ -172,6 +174,30 @@ def test_writeback_redaction_preflight_blocks_a_secret(tmp_path):
     assert findings  # the finding labels the pattern, never echoes the secret
     assert _AWS_EXAMPLE_KEY not in " ".join(findings)
     assert not list(tmp_path.glob("decision-*.md"))
+
+
+def test_writeback_blocks_a_bare_token_without_key_value_shape(tmp_path):
+    # A high-entropy token with a known prefix and no key=value context. This is
+    # the class the assigned-secret pattern alone would miss.
+    emit = _load("scripts/mneme_emit.py")
+    token = "ghp_" + "0123456789abcdefghijABCDEFG"  # assembled so no scanner trips
+    path, status, findings = emit.write_decision_record(
+        _report(feature_id=f"leak-{token}"), tmp_path
+    )
+    assert status == "blocked"
+    assert path is None
+    assert token not in " ".join(findings)  # the finding must not echo the secret
+    assert not list(tmp_path.glob("decision-*.md"))
+
+
+def test_writeback_does_not_block_a_clean_record(tmp_path):
+    # The widened patterns must not false-block a normal decision record.
+    emit = _load("scripts/mneme_emit.py")
+    _path, status, findings = emit.write_decision_record(
+        _report(feature_id="normal-feature", proven=("T1", "T2"), unproven=("T3",)), tmp_path
+    )
+    assert status == "written"
+    assert findings == []
 
 
 def test_writeback_force_overrides_preflight(tmp_path):

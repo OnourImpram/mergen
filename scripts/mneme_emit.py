@@ -137,6 +137,16 @@ _SECRET_PATTERNS: list[tuple[str, re.Pattern[str]]] = [
     ("assigned-secret", re.compile(
         r"(?i)\b(password|passwd|secret|token|api[_-]?key|access[_-]?key|client[_-]?secret)\b"
         r"\s*[:=]\s*\S{6,}")),
+    # Well-known token prefixes that carry their own entropy and so appear bare,
+    # without a key=value shape: GitHub, Stripe, OpenAI, Anthropic, Google, Slack.
+    ("known-token-prefix", re.compile(
+        r"\b(ghp_|gho_|ghu_|ghs_|ghr_|github_pat_|sk_live_|rk_live_|pk_live_|"
+        r"sk-proj-|sk-ant-|sk-org-|AIza|xox[baprs]-)[A-Za-z0-9_-]{10,}")),
+    # A bare bearer token or a JWT (three base64url segments), which also carry no
+    # key=value shape.
+    ("jwt-or-bearer", re.compile(
+        r"(?i)\bbearer\s+[A-Za-z0-9._-]{12,}"
+        r"|\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}")),
     ("email-address", re.compile(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b")),
 ]
 
@@ -144,8 +154,15 @@ _SECRET_PATTERNS: list[tuple[str, re.Pattern[str]]] = [
 def redaction_preflight(text: str) -> list[str]:
     """Report secret or PII patterns in text, by label and offset only.
 
+    This is defense in depth, not a comprehensive secret scanner. It catches PEM
+    private-key blocks, AWS-format keys, several well-known token prefixes (GitHub,
+    Stripe, OpenAI, Anthropic, Google, Slack), JWT and bearer tokens, labeled
+    key=value secrets, and email addresses. A high-entropy token in an
+    unrecognized format can still slip through, so an empty list means clean by
+    THESE checks, not provably secret-free. mneme still redacts at ingest.
+
     The matched text itself is never returned, so a finding does not leak the
-    secret it found. An empty list means the text is clean by these checks.
+    secret it found.
     """
     findings: list[str] = []
     for label, pattern in _SECRET_PATTERNS:
@@ -181,7 +198,8 @@ def write_decision_record(
       duplicate  a substantively-equal record already exists. path points to it,
                  no new file is written.
       written    a new record was written at path.
-    Filenames embed a short content hash, so two distinct records never clobber.
+    Filenames embed a content hash, so two distinct records get distinct names
+    (a collision needs two different records to share a 48-bit prefix).
     """
     markdown = to_decision_markdown(report)
     findings = redaction_preflight(markdown)
@@ -195,7 +213,7 @@ def write_decision_record(
             return Path(existing["path"]), "duplicate", []
 
     feature_id = report.get("feature_id") or "unknown"
-    digest = hashlib.sha256(markdown.encode("utf-8")).hexdigest()[:8]
+    digest = hashlib.sha256(markdown.encode("utf-8")).hexdigest()[:12]
     directory.mkdir(parents=True, exist_ok=True)
     path = directory / f"decision-{_slug(str(feature_id))}-{digest}.md"
     path.write_bytes(markdown.encode("utf-8"))

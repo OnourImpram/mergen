@@ -467,3 +467,8 @@ def test_check_manifest_missing_sidecar_returns_2(tmp_path: Path) -> None:
     report = tmp_path / "report.json"
     report.write_text("{}", encoding="utf-8")
     assert verify_core.main(["--check-manifest", str(report)]) == 2
+
+
+def test_check_manifest_missing_report_returns_2(tmp_path: Path) -> None:
+    # The other exit-2 path: the report file itself does not exist.
+    assert verify_core.main(["--check-manifest", str(tmp_path / "nope.json")]) == 2
