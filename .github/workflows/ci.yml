@@ -95,8 +95,10 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Install pytest and coverage
-        run: pip install pytest pytest-cov
+      - name: Install the project and coverage tooling
+        # Editable install so coverage measures the deployed import state, not just
+        # files that happen to be importable from the repo root.
+        run: pip install -e . pytest pytest-cov
       - name: Run tests under coverage and enforce the floor
         run: python -m pytest tests/ --cov --cov-report=term-missing
 
