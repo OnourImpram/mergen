@@ -23,9 +23,13 @@ The four verbs:
   uninstall  remove every artifact install created. Idempotent.
   upgrade    re-render the skills from the current core/ and re-register the
              hooks. Use after pulling a new version of the repo.
+  verify     run the deterministic verify harness on any project. This verb is
+             agent agnostic. It forwards to scripts/verify_core.py, which is pure
+             standard library and needs no Claude Code, no network, and no model.
 
 install, uninstall, and upgrade act on the real ~/.claude. doctor takes optional
 directory flags so it can inspect any tree, which is also how it is tested.
+verify acts on whatever project the forwarded --tasks-state and --root name.
 """
 
 from __future__ import annotations
@@ -43,6 +47,7 @@ _REPO = Path(__file__).resolve().parent
 # In-repo helpers the CLI orchestrates.
 _BUILD_NATIVE = _REPO / "dist" / "native" / "build_native.py"
 _PATCH_HOOKS = _REPO / "dist" / "native" / "patch_settings_hooks.py"
+_VERIFY_CORE = _REPO / "scripts" / "verify_core.py"
 _EFFORT_PATCH = _REPO / "effort-mode" / "scripts" / "patch_settings.py"
 _EFFORT_CMD = _REPO / "effort-mode" / "commands" / "mergen.md"
 _EFFORT_HOOK = _REPO / "effort-mode" / "hooks" / "mergen_prompt_hook.py"
@@ -296,12 +301,30 @@ def build_parser() -> argparse.ArgumentParser:
     p_upgrade.add_argument("--python", default=sys.executable)
     p_upgrade.add_argument("--dry-run", action="store_true")
 
+    # verify forwards everything after the verb to scripts/verify_core.py. It is
+    # handled before argparse in main() so the forwarded flags are never parsed
+    # here. This subparser exists so the verb shows in help.
+    sub.add_parser(
+        "verify",
+        add_help=False,
+        help="run the agent-agnostic verify harness (forwards to verify_core.py, "
+             "try: mergen verify --help)",
+    )
+
     return parser
 
 
 def main(argv: list[str] | None = None) -> int:
+    raw = list(sys.argv[1:] if argv is None else argv)
+
+    # verify forwards everything after the verb verbatim to the agent-agnostic
+    # harness. Handle it before argparse so flags like --tasks-state are passed
+    # through rather than parsed as mergen options.
+    if raw and raw[0] == "verify":
+        return _run(_VERIFY_CORE, *raw[1:])
+
     parser = build_parser()
-    args = parser.parse_args(argv)
+    args = parser.parse_args(raw)
 
     if args.command == "install":
         return install(args.python, args.dry_run)

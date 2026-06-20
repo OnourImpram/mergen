@@ -119,3 +119,27 @@ def test_hook_registered_detects_basename():
     settings = {"hooks": {"PostToolUse": [{"hooks": [{"command": "py verify_gate.py"}]}]}}
     assert mergen_cli._hook_registered(settings, "verify_gate.py")
     assert not mergen_cli._hook_registered(settings, "constitution_inject.py")
+
+
+_DEMO = Path(__file__).resolve().parent.parent / "examples" / "verify-demo"
+
+
+def test_verify_subcommand_forwards_to_the_harness_and_returns_its_code():
+    # The packaged `mergen verify` forwards verbatim to verify_core. The demo
+    # carries a planted phantom, so the harness exits 1 and the CLI returns 1.
+    rc = mergen_cli.main([
+        "verify",
+        "--tasks-state", str(_DEMO / "tasks-state.json"),
+        "--root", str(_DEMO),
+    ])
+    assert rc == 1
+
+
+def test_verify_subcommand_reports_missing_tasks_state():
+    # A nonexistent tasks-state makes the harness exit 2, surfaced unchanged.
+    rc = mergen_cli.main([
+        "verify",
+        "--tasks-state", str(_DEMO / "does-not-exist.json"),
+        "--root", str(_DEMO),
+    ])
+    assert rc == 2
