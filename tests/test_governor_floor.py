@@ -471,3 +471,16 @@ class TestResultShape:
     def test_triggers_matched_empty_for_tiny(self):
         result = classify_floor(["docs/README.md"])
         assert result["triggers_matched"] == []
+
+
+# ---------------------------------------------------------------------------
+# The Governor command doc: the human-readable half of the same floor. Kept
+# with the floor logic so every Governor concern lives in one file (C4).
+# ---------------------------------------------------------------------------
+
+def test_govern_command_documents_the_floor():
+    text = (_REPO / "core" / "commands" / "govern.md").read_text(encoding="utf-8")
+    assert "high-trust" in text
+    assert "governor-decision.json" in text
+    # The deterministic no-downgrade floor is the safety property that matters.
+    assert "never lower" in text or "never silently" in text

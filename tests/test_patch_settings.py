@@ -126,3 +126,22 @@ def test_status_exits_1_when_not_installed(home_dir):
     """--status exits 1 when hook entry is absent."""
     rc = _run_patcher(home_dir, ["--status"])
     assert rc == 1
+
+
+def test_effort_patcher_is_bom_safe(home_dir):
+    """A UTF-8 BOM in settings.json is tolerated on read and preserved on write.
+
+    The effort-mode half of the inherited Wave-E defect fix; the native half is
+    in test_patch_settings_hooks.
+    """
+    import scripts.patch_settings as ps
+    importlib.reload(ps)
+    bom = b"\xef\xbb\xbf"
+    settings = _settings_path(home_dir)
+    settings.write_bytes(bom + b'{"hooks": {}}\n')
+    data, had_bom, err = ps._load_settings()
+    assert err == "" and had_bom is True
+    assert _run_patcher(home_dir, ["--python", "python"]) == 0
+    raw = settings.read_bytes()
+    assert raw.startswith(bom), "BOM was not preserved"
+    json.loads(raw.decode("utf-8-sig"))
