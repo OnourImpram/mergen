@@ -13,6 +13,10 @@ Usage:
   patch_settings.py --status                      # read-only: exits 0 if installed, 1 if not
 """
 
+# Required so the PEP 604 `X | None` annotations below stay strings on Python
+# 3.9, where evaluating `Path | None` at definition time raises TypeError.
+from __future__ import annotations
+
 import argparse
 import json
 import sys
