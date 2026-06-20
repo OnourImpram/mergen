@@ -106,3 +106,61 @@ def test_load_reports_tolerates_utf8_bom(tmp_path, capsys):
     assert rc == 0
     assert "reports read: 1" in out
     assert "skip" not in out
+
+
+_CLEAN_REPORT = {
+    "schema_version": "1.0",
+    "feature_id": "clean",
+    "verified_at": "2026-06-20T00:00:00Z",
+    "summary": {"verdict": "pass", "human_review_required": False},
+    "tasks": [
+        {"task_id": "T1", "claimed_status": "done", "verified_status": "pass",
+         "confidence": "extracted", "files_checked": ["a.py"]}
+    ],
+    "provenance": {"verifier_version": "1", "tasks_state_sha256": "x"},
+}
+
+
+def test_strict_fails_on_the_sample(capsys):
+    # The committed sample is a conditional, unsigned high-trust report with a
+    # phantom. --strict runs both the gate and the integrity lint, so it fails and
+    # surfaces the lint codes the plain gate never checks.
+    metric = _load("eval/evidence_metric.py")
+    sample = str(REPO / "eval" / "sample" / "verification-report.json")
+    rc = metric.main([sample, "--strict"])
+    out = capsys.readouterr().out
+    assert rc == 1
+    assert "CONDITIONAL_PASS" in out
+    assert "UNSIGNED_HIGH_TRUST" in out
+
+
+def test_strict_passes_on_a_clean_report(tmp_path, capsys):
+    metric = _load("eval/evidence_metric.py")
+    p = _write(tmp_path / "verification-report.json", _CLEAN_REPORT)
+    rc = metric.main([p, "--strict"])
+    out = capsys.readouterr().out
+    assert rc == 0
+    assert "result:              PASS" in out
+
+
+def test_strict_empty_report_fails_by_default(tmp_path):
+    # Strict refuses an empty report: a report that proves nothing is not a pass.
+    metric = _load("eval/evidence_metric.py")
+    p = _write(tmp_path / "verification-report.json", _EMPTY_REPORT)
+    assert metric.main([p, "--strict"]) == 1
+
+
+def test_strict_empty_report_passes_with_allow_empty(tmp_path):
+    metric = _load("eval/evidence_metric.py")
+    p = _write(tmp_path / "verification-report.json", _EMPTY_REPORT)
+    assert metric.main([p, "--strict", "--allow-empty"]) == 0
+
+
+def test_strict_conditional_needs_allow_conditional(tmp_path, capsys):
+    metric = _load("eval/evidence_metric.py")
+    report = {**_CLEAN_REPORT,
+              "summary": {"verdict": "conditional_pass", "human_review_required": False}}
+    p = _write(tmp_path / "verification-report.json", report)
+    assert metric.main([p, "--strict"]) == 1
+    capsys.readouterr()
+    assert metric.main([p, "--strict", "--allow-conditional"]) == 0

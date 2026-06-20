@@ -30,24 +30,32 @@ def summarize(state: Any) -> dict[str, Any]:
     tasks = [t for t in tasks if isinstance(t, dict)]
     done = sum(1 for t in tasks if t.get("status") == "done")
     pending = sum(1 for t in tasks if t.get("status") == "pending")
-    other = len(tasks) - done - pending
+    blocked = sum(1 for t in tasks if t.get("status") == "blocked")
+    conditional = sum(1 for t in tasks if t.get("status") == "conditional")
+    other = len(tasks) - done - pending - blocked - conditional
     return {
         "feature_id": state.get("feature_id", "unknown") if isinstance(state, dict) else "unknown",
         "total": len(tasks),
         "done": done,
         "pending": pending,
+        "blocked": blocked,
+        "conditional": conditional,
         "other": other,
         "tasks": tasks,
     }
 
 
+_MARKS = {"done": "X", "conditional": "~", "blocked": "!"}
+
+
 def render_text(s: dict[str, Any]) -> str:
     head = f"tasks:   {s['done']}/{s['total']} done, {s['pending']} pending"
-    if s["other"]:
-        head += f", {s['other']} other"
+    for label in ("blocked", "conditional", "other"):
+        if s[label]:
+            head += f", {s[label]} {label}"
     lines = [f"feature: {s['feature_id']}", head, ""]
     for t in s["tasks"]:
-        mark = "X" if t.get("status") == "done" else " "
+        mark = _MARKS.get(t.get("status"), " ")
         tid = t.get("id", "?")
         files = ", ".join(t.get("files") or []) or "-"
         verified = t.get("last_verified_at") or "-"
@@ -73,7 +81,8 @@ def main(argv: list[str] | None = None) -> int:
 
     s = summarize(state)
     if args.json:
-        counts = {k: s[k] for k in ("feature_id", "total", "done", "pending", "other")}
+        counts = {k: s[k] for k in
+                  ("feature_id", "total", "done", "pending", "blocked", "conditional", "other")}
         print(json.dumps(counts, indent=2))
     else:
         print(render_text(s))

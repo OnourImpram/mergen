@@ -30,8 +30,9 @@ governance real regardless of which agent, if any, sits above it.
 | `scripts/tasks_status.py` | Summarizes a `tasks-state.json` (done versus pending, per task). The Spec Kit analog is `specify status` | `python scripts/tasks_status.py <file>` or `mergen status <file>` |
 | `scripts/tasks_to_issues.py` | Renders GitHub issue stubs from a `tasks.md` (it renders, it does not create). The Spec Kit analog is taskstoissues | `python scripts/tasks_to_issues.py <file>` or `mergen issues <file>` |
 | `scripts/trends.py` | Cross-run verification trends and per-task churn over a directory of reports (self-contained HTML, or a `--json` metrics export). The snapshot dashboard's time dimension | `python scripts/trends.py <dir>` or `mergen trends <dir>` |
+| `scripts/verify_report_lint.py` | Refuses a verification report that is not a clean, proven pass (proofless pass, ambiguous pass, summary fail, conditional, unsigned high-trust). Stdlib enforcement of the report schema | `python scripts/verify_report_lint.py <file-or-dir>` or `mergen verify-lint` |
 | `eval/benchmark.py` | Deterministic phantom-detection benchmark, no LLM | `python eval/benchmark.py --gate` |
-| `eval/evidence_metric.py` | Evidence metric and CI gate over a committed report | `python eval/evidence_metric.py --gate` |
+| `eval/evidence_metric.py` | Evidence metric and CI gate over a committed report (`--strict` also lints each report for integrity) | `python eval/evidence_metric.py --gate` |
 
 A worked end-to-end run of this tier is in [`examples/verify-demo/`](../examples/verify-demo/README.md).
 

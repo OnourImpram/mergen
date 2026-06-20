@@ -12,6 +12,21 @@ tagged as a release.
 
 ### Added
 
+- Evidence hardening, so a verdict without proof cannot pass as one. The three
+  JSON schemas now enforce their own invariants declaratively. A verification
+  report whose task is verified `pass` must carry concrete evidence (a file, a
+  test, or recorded output) and cannot be labelled `ambiguous`, and a high-trust
+  report must flag that human review is required. A Governor decision with a
+  matched high-trust trigger must sit at the high-trust tier and must require
+  human approval. The tasks-state status set gains `blocked` and `conditional`.
+  The runtime counterpart is `scripts/verify_report_lint.py` (`mergen verify-lint`),
+  a pure-stdlib linter that refuses a report that is not a clean, proven pass
+  (proofless pass, ambiguous pass, summary fail, conditional, unsigned high-trust),
+  enforcing the same required surface and pass rules the schema declares with no
+  schema-validation dependency. `eval/evidence_metric.py --strict` runs the gate
+  and this lint together. The `summary` block records a machine-readable
+  `human_review` sign-off state, so an unsigned high-trust report fails the lint
+  by default.
 - A deterministic, agent-agnostic core, pure standard library, no network and no
   model. `scripts/verify_core.py` (the mechanical verify harness that emits
   `verification-report.json`), `scripts/governor_floor.py` (the non-downgradable

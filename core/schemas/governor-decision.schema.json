@@ -33,5 +33,29 @@
         }
       }
     }
-  }
+  },
+  "allOf": [
+    {
+      "if": {
+        "required": ["triggers_matched"],
+        "properties": { "triggers_matched": { "type": "array", "minItems": 1 } }
+      },
+      "then": {
+        "description": "A matched high-trust trigger forces the high-trust tier. The Governor floor is non-downgradable: a fired trigger can raise the tier but never sit under a lower one.",
+        "required": ["tier"],
+        "properties": { "tier": { "const": "high-trust" } }
+      }
+    },
+    {
+      "if": {
+        "required": ["tier"],
+        "properties": { "tier": { "const": "high-trust" } }
+      },
+      "then": {
+        "description": "High-trust always carries a human checkpoint. The tier and the approval requirement cannot disagree.",
+        "required": ["human_approval_required"],
+        "properties": { "human_approval_required": { "const": true } }
+      }
+    }
+  ]
 }

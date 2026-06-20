@@ -44,10 +44,22 @@ def test_summarize_counts_done_and_pending():
     assert s["feature_id"] == "feat-x"
 
 
+def test_summarize_names_blocked_and_conditional():
+    s = tasks_status.summarize(_state("done", "blocked", "conditional", "pending"))
+    assert s["done"] == 1
+    assert s["pending"] == 1
+    assert s["blocked"] == 1
+    assert s["conditional"] == 1
+    assert s["other"] == 0
+
+
 def test_summarize_handles_unknown_status_as_other():
-    s = tasks_status.summarize(_state("done", "blocked"))
+    # A status outside the named set still degrades to "other" rather than vanishing.
+    s = tasks_status.summarize(_state("done", "frozen"))
     assert s["done"] == 1
     assert s["pending"] == 0
+    assert s["blocked"] == 0
+    assert s["conditional"] == 0
     assert s["other"] == 1
 
 
@@ -61,8 +73,16 @@ def test_render_text_shows_marks_and_files():
 def test_render_text_appends_other_suffix_when_present():
     # An unrecognized status counts as "other" and the header must say so. Pins the
     # render_text branch that the done/pending-only states never exercise.
-    out = tasks_status.render_text(tasks_status.summarize(_state("done", "blocked")))
+    out = tasks_status.render_text(tasks_status.summarize(_state("done", "frozen")))
     assert "1 other" in out
+
+
+def test_render_text_shows_blocked_and_conditional_in_header_and_marks():
+    out = tasks_status.render_text(tasks_status.summarize(_state("done", "blocked", "conditional")))
+    assert "1 blocked" in out
+    assert "1 conditional" in out
+    assert "[!] T002" in out  # blocked mark
+    assert "[~] T003" in out  # conditional mark
 
 
 def test_main_text_on_demo_state(tmp_path, capsys):
@@ -79,7 +99,8 @@ def test_main_json_flag_emits_counts(tmp_path, capsys):
     rc = tasks_status.main([str(p), "--json"])
     assert rc == 0
     payload = json.loads(capsys.readouterr().out)
-    assert payload == {"feature_id": "feat-x", "total": 3, "done": 2, "pending": 1, "other": 0}
+    assert payload == {"feature_id": "feat-x", "total": 3, "done": 2, "pending": 1,
+                       "blocked": 0, "conditional": 0, "other": 0}
 
 
 def test_main_tolerates_bom(tmp_path, capsys):

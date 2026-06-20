@@ -23,9 +23,11 @@ Stdlib only. No network, no LLM.
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import json
 import sys
 from pathlib import Path
+from typing import Any
 
 
 def load_reports(path_str: str):
@@ -67,6 +69,38 @@ def minimal_change(overbuild_path: str | None):
     except Exception as exc:  # noqa: BLE001
         print(f"overbuild read failed: {exc}", file=sys.stderr)
     return None
+
+
+def _load_linter() -> Any:
+    """Load scripts/verify_report_lint.py by path (scripts/ is not a package).
+
+    --strict reuses the linter so the report-integrity rules (proofless pass,
+    ambiguous pass, summary fail, conditional, unsigned high-trust) have one
+    source of truth rather than a second, drifting copy here.
+    """
+    repo = Path(__file__).resolve().parent.parent
+    spec = importlib.util.spec_from_file_location(
+        "verify_report_lint", repo / "scripts" / "verify_report_lint.py")
+    if spec is None or spec.loader is None:  # pragma: no cover - import wiring
+        raise ImportError("cannot load verify_report_lint")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def strict_lint(reports, allow_conditional: bool, require_provenance: bool = False) -> int:
+    """Lint every report for integrity. Return 1 if any report fails, else 0."""
+    linter = _load_linter()
+    errors = 0
+    print("strict report lint (evidence integrity)")
+    for path, report in reports:
+        findings = linter.lint_report(report, str(path), allow_conditional=allow_conditional,
+                                      require_provenance=require_provenance)
+        for f in findings:
+            print(str(f))
+        errors += sum(1 for f in findings if f.level == "error")
+    print(f"  lint errors: {errors}")
+    return 1 if errors else 0
 
 
 def run_gate(claimed, verified, with_evidence, max_phantoms, min_work_done,
@@ -113,6 +147,16 @@ def main(argv=None) -> int:
     ap.add_argument("--overbuild", help="optional overbuild.json with added_lines and lean_flagged_lines")
     ap.add_argument("--gate", action="store_true",
                     help="exit non-zero when the report shows phantom or unverified work (for CI)")
+    ap.add_argument("--strict", action="store_true",
+                    help="run the gate AND lint every report for integrity (proofless "
+                         "pass, ambiguous pass, summary fail, conditional, unsigned "
+                         "high-trust). Refuses an empty report unless --allow-empty.")
+    ap.add_argument("--allow-empty", action="store_true",
+                    help="under --strict, do not fail a report with nothing claimed done")
+    ap.add_argument("--allow-conditional", action="store_true",
+                    help="under --strict, accept a conditional_pass verdict")
+    ap.add_argument("--require-provenance", action="store_true",
+                    help="under --strict, treat a missing provenance block as an error")
     ap.add_argument("--max-phantoms", type=int, default=0,
                     help="phantom completions tolerated under --gate (default 0)")
     ap.add_argument("--min-work-done", type=float, default=1.0,
@@ -149,6 +193,16 @@ def main(argv=None) -> int:
         print(f"  lean-flagged lines:  {flagged}")
         print(f"  added lines:         {added}")
         print(f"  over-build ratio:    {ratio:.2f}  (flagged / added)")
+
+    if args.strict:
+        # Strict combines the work-done gate with the integrity lint. An empty
+        # report fails by default (min_claimed at least 1) because a report that
+        # proves nothing is not a strict pass.
+        rc_lint = strict_lint(reports, args.allow_conditional, args.require_provenance)
+        min_claimed = args.min_claimed if args.allow_empty else max(args.min_claimed, 1)
+        rc_gate = run_gate(claimed, verified, with_evidence, args.max_phantoms,
+                           args.min_work_done, min_claimed)
+        return 1 if (rc_lint or rc_gate) else 0
 
     if args.gate:
         return run_gate(claimed, verified, with_evidence, args.max_phantoms,
