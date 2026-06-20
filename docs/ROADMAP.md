@@ -130,7 +130,7 @@ A static promo site for Mergen and the Agent Continuity Stack is published at ht
 ## 2. Known limits of v1.0.0
 
 **Spec-kit renderer is preset plus extension, not full feature parity.**
-The spec-kit half ships a preset that replaces 8 commands and an extension that adds 6 commands. Any Spec Kit behavior outside those 14 command surfaces, such as its interactive CLI scaffolding or its own project-bootstrap scripts, is not modified or replicated by this release.
+The spec-kit half ships a preset that replaces 8 commands and an extension that adds 6 commands. The agent-agnostic CLI now also covers the Spec Kit diagnostic surfaces that matter most: `mergen doctor` (install integrity, hook registration, and shipped-schema validity), `mergen status` (a `tasks-state.json` summary, the `specify status` analog), and `mergen issues` (issue stubs rendered from a `tasks.md`, the taskstoissues analog, which renders rather than creates). Other Spec Kit behavior outside the 14 command surfaces, such as its own project-bootstrap scripts, is still not replicated by this release.
 
 **`/effort max` requires a manual paste.**
 The `mergen_prompt_hook.py` hook injects a standing orchestration directive on each turn, but it cannot flip Claude Code's live effort value to `max`. The user must paste the `/effort max` line once after arming the mode. This is documented in `docs/HOW-IT-WORKS.md`.

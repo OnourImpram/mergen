@@ -28,10 +28,15 @@ The verbs:
              standard library and needs no Claude Code, no network, and no model.
   dashboard  render a static HTML dashboard over a directory of verification
              reports. Agent agnostic, pure standard library, no network.
+  status     summarize a tasks-state.json (done versus pending, per task). Agent
+             agnostic. The Spec Kit analog is `specify status`.
+  issues     render GitHub issue stubs from a tasks.md. It renders, it does not
+             create. Agent agnostic. The Spec Kit analog is taskstoissues.
 
 install, uninstall, and upgrade act on the real ~/.claude. doctor takes optional
 directory flags so it can inspect any tree, which is also how it is tested.
-verify and dashboard act on whatever project paths the forwarded flags name.
+verify, dashboard, status, and issues act on whatever project paths the forwarded
+flags name.
 """
 
 from __future__ import annotations
@@ -51,6 +56,9 @@ _BUILD_NATIVE = _REPO / "dist" / "native" / "build_native.py"
 _PATCH_HOOKS = _REPO / "dist" / "native" / "patch_settings_hooks.py"
 _VERIFY_CORE = _REPO / "scripts" / "verify_core.py"
 _DASHBOARD = _REPO / "scripts" / "dashboard.py"
+_STATUS = _REPO / "scripts" / "tasks_status.py"
+_ISSUES = _REPO / "scripts" / "tasks_to_issues.py"
+_SCHEMAS_DIR = _REPO / "core" / "schemas"
 _EFFORT_PATCH = _REPO / "effort-mode" / "scripts" / "patch_settings.py"
 _EFFORT_CMD = _REPO / "effort-mode" / "commands" / "mergen.md"
 _EFFORT_HOOK = _REPO / "effort-mode" / "hooks" / "mergen_prompt_hook.py"
@@ -129,6 +137,7 @@ def doctor(
     hooks_dir: Path,
     commands_dir: Path,
     settings_path: Path,
+    schemas_dir: Path = _SCHEMAS_DIR,
 ) -> int:
     """Read-only health probe. Return 0 if the core install is intact, else 1."""
     ok = True
@@ -163,6 +172,31 @@ def doctor(
     cmd_here = (commands_dir / "mergen.md").is_file()
     ok = ok and cmd_here
     print(f"  [{'OK ' if cmd_here else 'BAD'}] command mergen.md under {commands_dir}")
+
+    # Shipped schema integrity. The JSON schemas mergen renders and verifies
+    # against must be well-formed. doctor renders from this repo, so it checks the
+    # source schemas, not an installed copy.
+    schema_files = sorted(schemas_dir.glob("*.json"))
+    bad_schemas = []
+    for sf in schema_files:
+        try:
+            doc = json.loads(sf.read_text(encoding="utf-8-sig"))
+            if not (isinstance(doc, dict) and ("$schema" in doc or "type" in doc)):
+                bad_schemas.append(sf.name)
+        except Exception:  # noqa: BLE001 - any unreadable or invalid schema counts as bad
+            bad_schemas.append(sf.name)
+    # A malformed schema is a failure. An empty schemas dir is not: the check asks
+    # whether the schemas mergen ships are well-formed, which is vacuously true when
+    # there are none to ship, so it must not false-degrade a partial or renamed tree.
+    schemas_ok = not bad_schemas
+    ok = ok and schemas_ok
+    if schema_files:
+        print(f"  [{'OK ' if schemas_ok else 'BAD'}] schemas {len(schema_files) - len(bad_schemas)}/"
+              f"{len(schema_files)} valid under {schemas_dir}")
+    else:
+        print(f"  [OK ] schemas none found under {schemas_dir} (nothing to validate)")
+    if bad_schemas:
+        print(f"        invalid: {', '.join(bad_schemas)}")
 
     # Settings registrations.
     settings = _load_settings(settings_path)
@@ -296,6 +330,8 @@ def build_parser() -> argparse.ArgumentParser:
     p_doctor.add_argument("--hooks-dir", default=str(home / "hooks"))
     p_doctor.add_argument("--commands-dir", default=str(home / "commands"))
     p_doctor.add_argument("--settings", default=str(home / "settings.json"))
+    p_doctor.add_argument("--schemas-dir", default=str(_SCHEMAS_DIR),
+                          help="schemas to well-formedness check (default: this repo's core/schemas)")
 
     p_uninstall = sub.add_parser("uninstall", help="remove every installed artifact")
     p_uninstall.add_argument("--dry-run", action="store_true")
@@ -322,6 +358,20 @@ def build_parser() -> argparse.ArgumentParser:
              "to dashboard.py, try: mergen dashboard --help)",
     )
 
+    # status and issues forward to their scripts the same way.
+    sub.add_parser(
+        "status",
+        add_help=False,
+        help="summarize a tasks-state.json (forwards to tasks_status.py, try: "
+             "mergen status --help)",
+    )
+    sub.add_parser(
+        "issues",
+        add_help=False,
+        help="render GitHub issue stubs from a tasks.md (forwards to "
+             "tasks_to_issues.py, try: mergen issues --help)",
+    )
+
     return parser
 
 
@@ -335,6 +385,10 @@ def main(argv: list[str] | None = None) -> int:
         return _run(_VERIFY_CORE, *raw[1:])
     if raw and raw[0] == "dashboard":
         return _run(_DASHBOARD, *raw[1:])
+    if raw and raw[0] == "status":
+        return _run(_STATUS, *raw[1:])
+    if raw and raw[0] == "issues":
+        return _run(_ISSUES, *raw[1:])
 
     parser = build_parser()
     args = parser.parse_args(raw)
@@ -347,6 +401,7 @@ def main(argv: list[str] | None = None) -> int:
             Path(args.hooks_dir),
             Path(args.commands_dir),
             Path(args.settings),
+            Path(args.schemas_dir),
         )
     if args.command == "uninstall":
         return uninstall(args.dry_run)
