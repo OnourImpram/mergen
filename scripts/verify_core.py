@@ -19,6 +19,37 @@ from typing import Any
 
 
 # ---------------------------------------------------------------------------
+# Canonical confidence vocabulary
+#
+# The one definition of how a verdict is known. Every surface that labels a
+# claim references this single set: the verification-report schema enum,
+# verify.md, core/CONVENTIONS.md, and MERGEN_PRINCIPLES.md (the prose home).
+# Holding the labels in one place is the "unify the confidence vocabulary"
+# guarantee. The code mirror here cannot drift from the schema because a test
+# asserts CONFIDENCE_LABELS equals the schema enum.
+# ---------------------------------------------------------------------------
+
+CONFIDENCE_EXTRACTED = "extracted"
+CONFIDENCE_INFERRED = "inferred"
+CONFIDENCE_AMBIGUOUS = "ambiguous"
+
+CONFIDENCE: dict[str, str] = {
+    CONFIDENCE_EXTRACTED:
+        "Backed by direct evidence the harness observed: a file on disk, a test "
+        "exit code, a git record. The default for any mechanically checked verdict.",
+    CONFIDENCE_INFERRED:
+        "Reasoned from indirect signals rather than observed directly. Allowed for "
+        "an agent lens that argues from context, never for a mechanical pass.",
+    CONFIDENCE_AMBIGUOUS:
+        "Evidence is absent or conflicting, so no confident verdict is possible. "
+        "Resolves to fail, never to a guessed pass.",
+}
+
+#: The canonical label set, in calibration order (most to least grounded).
+CONFIDENCE_LABELS: tuple[str, ...] = tuple(CONFIDENCE)
+
+
+# ---------------------------------------------------------------------------
 # Lens implementations
 # ---------------------------------------------------------------------------
 
@@ -176,13 +207,13 @@ def verify_task(task: dict[str, Any], root: Path) -> dict[str, Any]:
     if not applicable:
         # All lenses were na, cannot confirm nor deny.
         verified_status = "fail"
-        confidence = "ambiguous"
+        confidence = CONFIDENCE_AMBIGUOUS
     elif any_failed:
         verified_status = "fail"
-        confidence = "extracted"
+        confidence = CONFIDENCE_EXTRACTED
     else:
         verified_status = "pass"
-        confidence = "extracted"
+        confidence = CONFIDENCE_EXTRACTED
 
     all_evidence = fe_evidence + tp_evidence + gc_evidence
     all_failures = fe_failures + tp_failures + gc_failures
@@ -238,7 +269,7 @@ def build_report(
                     "task_id": task["id"],
                     "claimed_status": "todo",
                     "verified_status": "fail",
-                    "confidence": "ambiguous",
+                    "confidence": CONFIDENCE_AMBIGUOUS,
                     "lens_file_exists": "na",
                     "lens_tests_pass": "na",
                     "lens_git_consistent": "na",
@@ -252,18 +283,18 @@ def build_report(
 
     all_items = verified_items + pending_items
 
-    ambiguous = sum(1 for i in verified_items if i["confidence"] == "ambiguous")
+    ambiguous = sum(1 for i in verified_items if i["confidence"] == CONFIDENCE_AMBIGUOUS)
 
     # Only count items where at least one lens applied (confidence extracted).
     mech_passed = sum(
         1
         for i in verified_items
-        if i["confidence"] == "extracted" and i["verified_status"] == "pass"
+        if i["confidence"] == CONFIDENCE_EXTRACTED and i["verified_status"] == "pass"
     )
     mech_failed = sum(
         1
         for i in verified_items
-        if i["confidence"] == "extracted" and i["verified_status"] == "fail"
+        if i["confidence"] == CONFIDENCE_EXTRACTED and i["verified_status"] == "fail"
     )
 
     # Ambiguous tasks do not fail the overall pass check.

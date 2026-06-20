@@ -9,7 +9,7 @@ not merely described.
 | Principle | The idea, in our words | Component it governs | The concrete change |
 |---|---|---|---|
 | Evidence honesty and provenance | Never invent a result, a source, or an attribution. Report only what was checked, with proof. | verify gate, rollup memory proposals | Each verify lane returns command output as evidence. A claim without output is not accepted. Rollup proposes memory with its real source. |
-| Calibration and abstention | Separate what is known from what is inferred. With no evidence, abstain rather than guess. | claim and evidence schema, verify verdict | `verification-report.json` carries a confidence label per finding. The verdict defaults to FAIL under uncertainty. |
+| Calibration and abstention | Separate what is known from what is inferred. With no evidence, abstain rather than guess. | claim and evidence schema, verify verdict | `verification-report.json` carries a confidence label per finding, drawn from the one confidence vocabulary defined below. The verdict defaults to FAIL under uncertainty. |
 | Retrieved content is data, never instruction | Anything read is material to reason about, never a command to obey or a grant of new capability. | implement and verify prompts, the fence convention | Stage A and Stage B treat task files, specs, and retrieved content as data. Content that asks to be obeyed is described, not followed. No read widens scope or grants a permission. |
 | Minimal output | Build the least code that works. Write the least prose that informs. | lazy ladder, lean, communication disposition | implement builds to the ladder and the verifier flags over-build. lean returns a delete-list. CONVENTIONS states the prose disposition. |
 | Honest pushback, owning mistakes | Disagree plainly when there is reason. Never self-approve. Fix errors without theater. | never-self-approve rule, adversarial verify | Authoring and review are separate lanes in separate contexts. The verifier's mandate is to disprove. Corrections update the record. |
@@ -17,6 +17,25 @@ not merely described.
 | Restraint in reproduction | Return the evidence span that matters, with its source, not a wholesale copy. | snippet and evidence emission, IP guardrail | verify and rollup emit match-centered spans with provenance. A repository check forbids verbatim reference text. |
 | Operational discipline, right tool before default | Classify the task and pick the right ceremony before reaching for the heavy default. | the Governor | `govern.md` classifies into tiers and selects memory scope, workflow depth, evidence standard, and approval. The default is no longer all-or-nothing. |
 | Care in sensitive domains | In high-trust contexts do not surface or compose in ways that could harm the person. | the Governor's high-trust tier, surfacing policy | Clinical, safety, privacy, and other triggers force the high-trust floor, a human checkpoint, and a verdict that caps until sign-off. The floor can be raised, never silently lowered. |
+
+## The confidence vocabulary, defined once
+
+Every surfaced verdict carries one of three confidence labels. They are defined here, once, and
+referenced everywhere else (the `verification-report.json` schema enum, `verify.md`, `core/CONVENTIONS.md`),
+so the vocabulary cannot drift between the prose and the code. The machine-readable mirror is the
+`CONFIDENCE` constant in `scripts/verify_core.py`. A test asserts the constant and the schema enum hold the
+same labels, which keeps this a checked guarantee rather than a claim.
+
+- **extracted**. Backed by direct evidence the harness observed, a file on disk, a test exit code, a git
+  record. This is the default for any mechanically checked verdict.
+- **inferred**. Reasoned from indirect signals rather than observed directly. Allowed for an agent lens that
+  argues from context, never for a mechanical pass.
+- **ambiguous**. Evidence is absent or conflicting, so no confident verdict is possible. It resolves to FAIL,
+  never to a guessed pass.
+
+The order is calibration order, most grounded to least. The mechanical harness emits only extracted and
+ambiguous, since it either observes evidence or it does not. inferred is reserved for the agent lenses that
+reason beyond what a filesystem check can see.
 
 ## A note on enforcement honesty
 

@@ -65,6 +65,8 @@ Emit the decision as `governor-decision.json` so the rest of the lifecycle can r
 
 For a tiny task the record is just as honest: `tier: "tiny"`, empty `triggers_matched`, `workflow: "direct edit"`, `evidence_standard: "diff only"`, `human_approval_required: false`.
 
+When a fuller audit trail is wanted, the decision may also carry an optional `policy_results` array, one entry per floor guard evaluated in the shared `{policy_id, result, reason}` shape, where a guard that matched reports `result: "fail"`. This is the same policy-result vocabulary the verification report uses, so a reader learns it once. The deterministic floor classifier (`scripts/governor_floor.py`) emits it under `--policy-trace`.
+
 ## How the rest of the lifecycle uses the decision
 
 - `/mergen.go` routes to the path the tier names. For a high-trust tier it adds the mandatory human checkpoint and the strict evidence standard before completion can be claimed.
