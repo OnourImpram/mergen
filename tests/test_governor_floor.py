@@ -29,6 +29,7 @@ def _load_module():
 _m = _load_module()
 classify_floor = _m.classify_floor
 combine = _m.combine
+main = _m.main
 
 
 # ---------------------------------------------------------------------------
@@ -484,3 +485,39 @@ def test_govern_command_documents_the_floor():
     assert "governor-decision.json" in text
     # The deterministic no-downgrade floor is the safety property that matters.
     assert "never lower" in text or "never silently" in text
+
+
+# ---------------------------------------------------------------------------
+# CLI gate: the CI-facing enforcement of the floor on a real PR diff (B3).
+# ---------------------------------------------------------------------------
+
+def test_cli_gate_blocks_high_trust_without_ack(capsys):
+    rc = main(["--paths", "src/auth/login.py", "--gate"])
+    assert rc == 1
+
+
+def test_cli_gate_passes_high_trust_with_ack(capsys):
+    rc = main(["--paths", "src/auth/login.py", "--gate", "--ack", "high-trust"])
+    assert rc == 0
+
+
+def test_cli_gate_ack_is_case_insensitive(capsys):
+    rc = main(["--paths", "src/auth/login.py", "--gate", "--ack", "High-Trust"])
+    assert rc == 0
+
+
+def test_cli_gate_passes_tiny_diff(capsys):
+    rc = main(["--paths", "docs/README.md", "--gate"])
+    assert rc == 0
+
+
+def test_cli_gate_fires_on_diff_text_keyword(capsys, tmp_path):
+    diff = tmp_path / "pr.diff"
+    diff.write_bytes(b"+ def process_payment(amount):\n+     charge(amount)\n")
+    rc = main(["--paths", "docs/README.md", "--diff-file", str(diff), "--gate"])
+    assert rc == 1
+
+
+def test_cli_without_gate_never_fails(capsys):
+    rc = main(["--paths", "src/auth/login.py"])
+    assert rc == 0
