@@ -33,6 +33,16 @@ tagged as a release.
   dashboard <dir>`): one self-contained HTML page over a directory of reports,
   showing each verdict, phantom-completion count, and provenance, with every
   report value HTML-escaped. No network, no JavaScript, pure standard library.
+- The cross-run dimension over that same corpus (`scripts/trends.py`, `mergen
+  trends <dir>`). Where the dashboard is a snapshot, this is the time view:
+  phantom-completion and work-done-rate history across runs with an inline SVG
+  sparkline, and a per-task churn leaderboard ranking the tasks that most often
+  flip verdict or return as phantoms, the spec patterns that reliably fight the
+  verifier. Metrics are computed from each report's schema-required `tasks`
+  array, so they hold for any conforming report. A `--json` flag emits the same
+  metrics as a machine-readable export, the honest observability seam: an
+  external collector can ingest it while mergen core keeps no telemetry
+  dependency and makes no network call. Self-contained HTML, no JavaScript.
 - Spec Kit diagnostic parity in the agent-agnostic CLI. `mergen status`
   (`scripts/tasks_status.py`) summarizes a `tasks-state.json` (done versus
   pending, per task), the `specify status` analog. `mergen issues`
@@ -145,5 +155,6 @@ a renamed one, so its history begins here rather than carrying the seed project'
 
 ### Deferred to a later release
 
-See `docs/ROADMAP.md`: a GitHub Action and PR comment bot, clinical and security domain packs, a dashboard,
-churn analytics, the full benchmark suite, and a full mneme writeback adapter.
+See `docs/ROADMAP.md`: a GitHub Action and PR comment bot, clinical and security domain packs, the full
+benchmark suite, and a full mneme writeback adapter. The dashboard, cross-run trends, and churn analytics
+listed here originally have since shipped in the Unreleased line above.

@@ -32,11 +32,14 @@ The verbs:
              agnostic. The Spec Kit analog is `specify status`.
   issues     render GitHub issue stubs from a tasks.md. It renders, it does not
              create. Agent agnostic. The Spec Kit analog is taskstoissues.
+  trends     cross-run verification trends and per-task churn over a directory of
+             reports. Where dashboard is a snapshot, this is the time dimension.
+             Agent agnostic, pure standard library, no network.
 
 install, uninstall, and upgrade act on the real ~/.claude. doctor takes optional
 directory flags so it can inspect any tree, which is also how it is tested.
-verify, dashboard, status, and issues act on whatever project paths the forwarded
-flags name.
+verify, dashboard, status, issues, and trends act on whatever project paths the
+forwarded flags name.
 """
 
 from __future__ import annotations
@@ -58,6 +61,7 @@ _VERIFY_CORE = _REPO / "scripts" / "verify_core.py"
 _DASHBOARD = _REPO / "scripts" / "dashboard.py"
 _STATUS = _REPO / "scripts" / "tasks_status.py"
 _ISSUES = _REPO / "scripts" / "tasks_to_issues.py"
+_TRENDS = _REPO / "scripts" / "trends.py"
 _SCHEMAS_DIR = _REPO / "core" / "schemas"
 _EFFORT_PATCH = _REPO / "effort-mode" / "scripts" / "patch_settings.py"
 _EFFORT_CMD = _REPO / "effort-mode" / "commands" / "mergen.md"
@@ -371,6 +375,12 @@ def build_parser() -> argparse.ArgumentParser:
         help="render GitHub issue stubs from a tasks.md (forwards to "
              "tasks_to_issues.py, try: mergen issues --help)",
     )
+    sub.add_parser(
+        "trends",
+        add_help=False,
+        help="cross-run trends and per-task churn over a reports directory "
+             "(forwards to trends.py, try: mergen trends --help)",
+    )
 
     return parser
 
@@ -389,6 +399,8 @@ def main(argv: list[str] | None = None) -> int:
         return _run(_STATUS, *raw[1:])
     if raw and raw[0] == "issues":
         return _run(_ISSUES, *raw[1:])
+    if raw and raw[0] == "trends":
+        return _run(_TRENDS, *raw[1:])
 
     parser = build_parser()
     args = parser.parse_args(raw)

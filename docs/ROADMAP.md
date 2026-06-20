@@ -160,11 +160,11 @@ A CI action that runs `scripts/check_sync.py` and posts a summary comment on pul
 **Clinical and security domain packs.**
 Preset overlays that add domain-specific constitution clauses, checklist items, and evidence standards for clinical and security contexts.
 
-**Dashboard trends and history.**
-A basic static dashboard shipped (`scripts/dashboard.py`, `mergen dashboard <dir>`): a self-contained offline HTML view over a directory of verification reports, showing each report's verdict, phantom completions, and provenance. The remaining work is the cross-run dimension, confidence and phantom-completion history and over-build trends over time, rather than a snapshot per report.
+**Dashboard trends and history (cross-run view shipped).**
+A basic static dashboard shipped first (`scripts/dashboard.py`, `mergen dashboard <dir>`): a self-contained offline HTML snapshot, one row per report. The cross-run dimension now ships alongside it (`scripts/trends.py`, `mergen trends <dir>`): phantom-completion and work-done-rate history across the run corpus with an inline SVG sparkline, computed from each report's schema-required `tasks` array. A `--json` flag emits the same metrics as a machine-readable export, the honest observability seam, with no telemetry dependency and no network call in mergen core. The one remaining cross-run signal is the over-build trend, which needs lean data the verification report does not carry, so it is not shown yet.
 
-**Churn analytics.**
-Track which tasks are most frequently re-queued or reverted across eval runs to identify spec patterns that reliably produce verifier failures.
+**Churn analytics (shipped).**
+`mergen trends` ranks the tasks that most often flip verified status or return as phantoms across the run corpus, the per-task churn leaderboard that surfaces spec patterns reliably producing verifier failures. The remaining work is aggregation across separate eval-run corpora and clustering of churn by spec pattern rather than by individual task.
 
 **Full benchmark suite.**
 Extend `eval/evidence_metric.py` into the complete four-metric benchmark with published reproducible results.
