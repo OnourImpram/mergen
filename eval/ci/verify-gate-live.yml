@@ -1,0 +1,63 @@
+# Mergen verify-gate-live. A drop-in CI workflow that re-verifies your live tree.
+#
+# This is the hand-edit-proof sibling of verify-gate.yml. Instead of reading a
+# committed verification-report.json, it regenerates the report in CI by running
+# verify_core against the files and tests actually present at the merge commit,
+# then gates on that fresh report. A committed report, if any, is never read, so
+# editing it by hand changes nothing: CI recomputes from the live tree.
+#
+# Setup is three steps.
+#   1. Vendor both stdlib-only scripts into your repo, for example at
+#      tools/verify_core.py and tools/evidence_metric.py. Nothing to install.
+#   2. Point the regenerate step at your project's tasks-state JSON (the file
+#      /mergen.tasks and /mergen.verify maintain under .specify/).
+#   3. Make this check required on your default branch (a one-time repo setting).
+#
+# What it enforces. A phantom is a task claimed done that the verifier does not
+# confirm pass against the real filesystem and test suite. Because the report is
+# regenerated here, the residual trust is narrower than verify-gate.yml: it rests
+# on the verify_core lenses running in CI, not on a report a human committed.
+
+name: verify-gate-live
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  verify-gate-live:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      # Regenerate the report from this commit's live tree. Replace the
+      # tasks-state path with your project's. verify_core exits 0 when every done
+      # task passes, 1 when the report is written but a task failed (the gate step
+      # reports it), and 2 only when no report could be produced (the tasks-state
+      # could not be read or parsed, or the harness crashed). Only exit 2 is fatal
+      # here, because 0 and 1 both wrote a fresh report.
+      - name: Re-verify against the live tree (regenerate the report)
+        run: |
+          set +e
+          python tools/verify_core.py \
+            --tasks-state .specify/specs/CHANGEME/tasks-state.json \
+            --root . \
+            --out fresh-verification-report.json
+          rc=$?
+          set -e
+          if [ "$rc" -eq 2 ]; then
+            echo "verify_core harness error (could not read tasks-state)"; exit 2
+          fi
+
+      # Gate on the FRESH report, never a committed one. --min-claimed 1 refuses
+      # an empty report so an under-claiming tasks-state cannot pass in silence.
+      - name: Fail the build on phantom or unverified work
+        run: |
+          python tools/evidence_metric.py \
+            fresh-verification-report.json \
+            --gate --max-phantoms 0 --min-work-done 1.0 --min-claimed 1

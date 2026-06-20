@@ -102,6 +102,50 @@ jobs:
       - name: Run tests under coverage and enforce the floor
         run: python -m pytest tests/ --cov --cov-report=term-missing
 
+  verify-live-demo:
+    # Dogfood the verify-gate-live pattern (eval/ci/verify-gate-live.yml): the
+    # shippable gate regenerates the report from the LIVE tree rather than reading
+    # a committed one, so a hand-edited report cannot pass. The worked example
+    # examples/verify-demo carries a planted phantom (T002 names src/teardown.py,
+    # which does not exist), so a fresh re-verify against the tree must refuse it.
+    # This proves the regenerate-then-gate pattern end to end in CI, complementing
+    # eval/benchmark.py (which proves the verify_core lenses in isolation).
+    name: "verify-gate-live dogfood (phantom refused)"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install pytest (the tests-pass lens runs the demo's test)
+        run: pip install pytest
+      - name: Regenerate the demo report from the live tree, assert the gate refuses the phantom
+        run: |
+          set +e
+          python scripts/verify_core.py \
+            --tasks-state examples/verify-demo/tasks-state.json \
+            --root examples/verify-demo \
+            --out fresh-demo-report.json
+          vc=$?
+          set -e
+          # Exit 2 means no report was produced (a harness error, not a verdict).
+          # Without this guard the gate would read an empty directory, exit 1, and
+          # the inversion below would wrongly print OK, masking a real crash.
+          if [ "$vc" -eq 2 ]; then
+            echo "FAIL: verify_core could not produce a report (exit 2), the gate proof is void"
+            exit 1
+          fi
+          set +e
+          python eval/evidence_metric.py fresh-demo-report.json --gate --min-claimed 1
+          gate=$?
+          set -e
+          echo "verify_core exit: $vc, gate exit: $gate"
+          if [ "$gate" -eq 0 ]; then
+            echo "FAIL: the live re-verify gate passed on a tree with a planted phantom (src/teardown.py is missing)"
+            exit 1
+          fi
+          echo "OK: the live re-verify regenerated the report from the tree and the gate refused the phantom"
+
   shell-smoke:
     name: "shell parse (bash + pwsh)"
     runs-on: ubuntu-latest

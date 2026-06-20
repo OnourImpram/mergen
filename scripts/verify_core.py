@@ -529,11 +529,17 @@ def main(argv: list[str] | None = None) -> int:
         print(f"error: tasks-state file not found: {tasks_state_path}", file=sys.stderr)
         return 2
 
-    # utf-8-sig tolerates a UTF-8 BOM, which Windows PowerShell writes into JSON
-    # files. The verifier runs on Windows (and as `mergen verify`), so a BOM in
-    # tasks-state.json must not crash the read.
-    with open(tasks_state_path, encoding="utf-8-sig") as fh:
-        tasks_state = json.load(fh)
+    # A tasks-state that cannot be read or parsed is a harness input error, not a
+    # verdict. Return exit 2 (the same code as a missing file) so a CI gate can
+    # tell "no report could be produced" apart from "the report shows failures"
+    # (exit 1). utf-8-sig tolerates the UTF-8 BOM Windows PowerShell writes, so a
+    # BOM in tasks-state.json does not crash the read.
+    try:
+        with open(tasks_state_path, encoding="utf-8-sig") as fh:
+            tasks_state = json.load(fh)
+    except (OSError, json.JSONDecodeError) as exc:
+        print(f"error: could not read tasks-state {tasks_state_path}: {exc}", file=sys.stderr)
+        return 2
 
     # Capture provenance BEFORE the lenses run. The tests-pass lens executes
     # pytest inside root and leaves __pycache__ behind, so computing the
@@ -541,7 +547,14 @@ def main(argv: list[str] | None = None) -> int:
     # uncommitted changes. Provenance is the tree state at verification start.
     provenance = compute_provenance(root, tasks_state_path)
 
-    report, overall_pass = build_report(tasks_state, root)
+    # Any harness crash while building the report is a no-report condition, so it
+    # also exits 2. A phantom is never a crash: it is a normal fail verdict with
+    # the report written (exit 1), so this never hides incomplete work.
+    try:
+        report, overall_pass = build_report(tasks_state, root)
+    except Exception as exc:  # noqa: BLE001 - a harness crash is a no-report error
+        print(f"error: verify harness failed to build the report: {exc}", file=sys.stderr)
+        return 2
 
     # Provenance pins the report to the commit, the tree state, and the exact
     # task-state file that produced it. It is an I/O concern bound to real paths,
