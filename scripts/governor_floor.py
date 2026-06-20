@@ -17,6 +17,7 @@ import json
 import re
 import sys
 from pathlib import Path
+from typing import Any
 
 # Ordered tier list, lowest to highest. Index position encodes rank.
 _TIERS: list[str] = ["tiny", "standard", "spec", "high-trust"]
@@ -196,7 +197,7 @@ def _check_diff(diff_text: str) -> list[str]:
 def classify_floor(
     changed_paths: list[str],
     diff_text: str = "",
-) -> dict[str, object]:
+) -> dict[str, Any]:
     """Classify the floor tier from changed paths and optional diff text.
 
     Returns a dict with keys:
@@ -320,10 +321,10 @@ def main(argv: list[str] | None = None) -> int:
                 file=sys.stderr,
             )
             return 0
-        triggers = ", ".join(decision["triggers_matched"]) or "none"
+        trigger_list = ", ".join(decision["triggers_matched"]) or "none"
         print(
             "governor floor: this diff reaches the high-trust tier "
-            f"(triggers: {triggers}). A human must review it and record the "
+            f"(triggers: {trigger_list}). A human must review it and record the "
             "acknowledgement line 'Governor-Ack: high-trust' in the pull-request "
             "body before it can merge. The floor is non-downgradable.",
             file=sys.stderr,

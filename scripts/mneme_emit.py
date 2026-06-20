@@ -22,9 +22,10 @@ import argparse
 import json
 import sys
 from pathlib import Path
+from typing import Any
 
 
-def to_decision_markdown(report: dict) -> str:
+def to_decision_markdown(report: dict[str, Any]) -> str:
     feature_id = report.get("feature_id", "unknown")
     summary = report.get("summary", {})
     verdict = summary.get("verdict", "unknown")
@@ -60,16 +61,16 @@ def to_decision_markdown(report: dict) -> str:
 # yields [], honoring mneme's markdown-ground-truth and no-network invariants.
 # --------------------------------------------------------------------------- #
 
-def _csv_or_none(value: str) -> list:
+def _csv_or_none(value: str) -> list[str]:
     if not value or value.strip().lower() == "none":
         return []
     return [item.strip() for item in value.split(",") if item.strip()]
 
 
-def parse_decision_record(markdown: str) -> dict:
+def parse_decision_record(markdown: str) -> dict[str, Any]:
     """Parse one decision record (the shape to_decision_markdown emits)."""
-    record = {"feature_id": "", "verdict": "", "confidence": "",
-              "verified_at": "", "proven": [], "unproven": []}
+    record: dict[str, Any] = {"feature_id": "", "verdict": "", "confidence": "",
+                              "verified_at": "", "proven": [], "unproven": []}
     for raw in markdown.splitlines():
         s = raw.strip()
         if s.startswith("# Decision:"):
@@ -89,7 +90,7 @@ def parse_decision_record(markdown: str) -> dict:
     return record
 
 
-def read_decision_records(vault_dir) -> list:
+def read_decision_records(vault_dir: str | Path) -> list[dict[str, Any]]:
     """Read and parse every decision record under a mneme vault directory.
 
     Returns [] when the directory is absent, so mergen has zero hard dependency
@@ -98,7 +99,7 @@ def read_decision_records(vault_dir) -> list:
     d = Path(vault_dir)
     if not d.is_dir():
         return []
-    records = []
+    records: list[dict[str, Any]] = []
     for f in sorted(d.glob("*.md")):
         try:
             rec = parse_decision_record(f.read_text(encoding="utf-8"))
@@ -110,12 +111,12 @@ def read_decision_records(vault_dir) -> list:
     return records
 
 
-def prior_decisions_for(vault_dir, feature_id: str) -> list:
+def prior_decisions_for(vault_dir: str | Path, feature_id: str) -> list[dict[str, Any]]:
     """Prior decision records for one feature, to inform a new decision."""
     return [r for r in read_decision_records(vault_dir) if r["feature_id"] == feature_id]
 
 
-def main(argv=None) -> int:
+def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(
         description="mergen <-> mneme decision-record seam: emit a report, or read a vault"
     )

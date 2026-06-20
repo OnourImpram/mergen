@@ -28,7 +28,7 @@ HERE="$(cd "$(dirname "$0")" && pwd)"
 # --------------------------------------------------------------------------- #
 PY="$(command -v python3 2>/dev/null || command -v python 2>/dev/null || true)"
 if [ -z "${PY}" ]; then
-  echo "ERROR: python3 (or python) was not found on PATH. Install Python 3.8+ and retry." >&2
+  echo "ERROR: python3 (or python) was not found on PATH. Install Python 3.9+ and retry." >&2
   exit 1
 fi
 

@@ -36,6 +36,7 @@ import shutil
 import subprocess
 import sys
 from pathlib import Path
+from typing import Any
 
 _REPO = Path(__file__).resolve().parent
 
@@ -87,16 +88,17 @@ def _run(script: Path, *args: str, dry_run: bool = False) -> int:
 # Settings inspection (read-only, BOM tolerant)
 # --------------------------------------------------------------------------- #
 
-def _load_settings(settings_path: Path) -> dict:
+def _load_settings(settings_path: Path) -> dict[str, Any]:
     if not settings_path.is_file():
         return {}
     try:
-        return json.loads(settings_path.read_text(encoding="utf-8-sig"))
+        data = json.loads(settings_path.read_text(encoding="utf-8-sig"))
     except Exception:
         return {}
+    return data if isinstance(data, dict) else {}
 
 
-def _hook_registered(settings: dict, basename: str) -> bool:
+def _hook_registered(settings: dict[str, Any], basename: str) -> bool:
     hooks = settings.get("hooks")
     if not isinstance(hooks, dict):
         return False
