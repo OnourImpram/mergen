@@ -1,10 +1,13 @@
 # Evaluation Methodology
 
-**Status: no numbers have been measured yet.**
-This document defines four metrics, explains how each targets a specific spec-kit failure mode,
-and gives exact reproduction steps. Any figure marked SYNTHETIC or ILLUSTRATIVE is a placeholder
-showing the shape of the result table only. It is not a measured value. Replace every SYNTHETIC
-cell with real values from the reproduction run before making any public claim.
+**Status: the live head-to-head in this document is not yet measured.**
+A separate deterministic benchmark (`eval/benchmark.py`, described in the README) now reports real,
+reproducible numbers for metric 1 (phantom-completion) and a deterministic slice of metric 3
+(adversarial catch) without a live model. This document is the LIVE spec-kit-vs-mergen comparison,
+which additionally covers metric 2 (parallel speedup) and metric 4 (over-build) and has not been
+run. Every SYNTHETIC or ILLUSTRATIVE figure in the tables below is a placeholder showing the shape
+of the result table only. It is not a measured value. Replace every SYNTHETIC cell with real values
+from the reproduction run before making any public claim.
 
 ---
 
