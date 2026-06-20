@@ -27,19 +27,19 @@ Classification follows the Governor. Run `/mergen.govern $ARGUMENTS` first and r
 
 Classify `$ARGUMENTS` into exactly one of the three tiers below. Apply the rule strictly. When uncertain between two tiers, pick the higher one.
 
-### Tier A: tinySpec (trivial)
+### Tier A: tinySpec (trivial), Governor tier `tiny`
 
 Criteria: the change touches a single file, adds or fixes one small thing (a constant, a typo, a one-line guard, a config value, a single failing test), requires no design, no new contracts, and no cross-file coordination. The full implementation fits in one isolated context without losing anything.
 
 If the request meets all criteria, go to the **tinySpec path** below.
 
-### Tier B: standard (medium feature)
+### Tier B: standard (medium feature), Governor tier `standard`
 
 Criteria: the change spans two to five files, or touches a clear module boundary, or requires a short design thought, or adds a user-visible capability. The normal SDD chain (specify, plan, tasks, implement, verify) is appropriate. Parallelism is useful but not critical.
 
 If the request meets these criteria, go to the **standard path** below.
 
-### Tier C: mergen (complex)
+### Tier C: mergen (complex), Governor tier `spec`
 
 Criteria: any of the following apply: multiple subsystems or packages are involved, a new public contract or data model is introduced, the change is safety-critical or security-relevant, the request is ambiguous enough that a judge panel is needed to resolve it, or the expected task list is ten or more tasks. Full parallel orchestration, adversarial verification, and a dedicated constitution review are warranted.
 
