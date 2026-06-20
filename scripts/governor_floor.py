@@ -263,6 +263,13 @@ def _build_cli_parser() -> argparse.ArgumentParser:
         help="Acknowledgement tier supplied by a human reviewer (for example "
              "'high-trust'). Under --gate it authorises a matching floor.",
     )
+    parser.add_argument(
+        "--config",
+        metavar="FILE",
+        default=None,
+        help="Path to a project .specify/mergen.toml. Its domain and "
+             "protected-path overlay can raise the floor, never lower it.",
+    )
     return parser
 
 
@@ -276,6 +283,15 @@ def main(argv: list[str] | None = None) -> int:
         diff_text = Path(args.diff_file).read_text(encoding="utf-8")
 
     decision = classify_floor(args.paths, diff_text)
+
+    if args.config:
+        # The project overlay lives beside this script. Load it lazily so the
+        # core classifier has no dependency on the config reader.
+        sys.path.insert(0, str(Path(__file__).resolve().parent))
+        import project_config
+        cfg = project_config.load_config(Path(args.config))
+        decision = project_config.apply_overlay(decision, cfg, args.paths)
+
     print(json.dumps(decision, indent=2))
 
     if args.gate and decision["tier"] == "high-trust":
