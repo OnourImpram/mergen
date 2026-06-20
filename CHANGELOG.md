@@ -26,6 +26,13 @@ tagged as a release.
   emitted record shape) and shareable domain packs (`domains/clinical`).
 - A worked end-to-end example (`examples/verify-demo/`) and a compatibility
   matrix (`docs/COMPAT.md`) mapping which features need which runtime.
+- A tamper-evident evidence manifest. `verify_core.py` records provenance
+  (verifier version, source commit, working-tree-clean, and a sha256 of the exact
+  tasks-state it verified) in every report, writes a `<report>.sha256` sidecar on
+  `--out`, and a `--check-manifest` mode recomputes the hash to catch an edited
+  report (and with `--require-fresh`, a report whose source commit no longer
+  matches HEAD). Tamper-evident, not tamper-proof: meaningful when CI recomputes
+  the sidecar from the live tree rather than trusting it.
 
 ### Changed
 

@@ -297,6 +297,9 @@ v1.0.0, experimental.
   Python 3.9 or newer runs, with no Claude Code, no network, and no model. Run it directly or as `mergen verify`.
   A worked end-to-end run is in [`examples/verify-demo/`](examples/verify-demo/README.md), and which features need
   which runtime is mapped in [docs/COMPAT.md](docs/COMPAT.md).
+- Every report carries provenance and a tamper-evidence sidecar. `--out` writes a `<report>.sha256` next to the
+  report, and `mergen verify --check-manifest <report>` re-checks the hash to catch an edited report. With
+  `--require-fresh` it also rejects a report whose recorded source commit no longer matches the tree.
 - No benchmark numbers are claimed. The methodology and a reproduction procedure are in `eval/`.
 - `/effort max` requires one manual paste per session. The binary does not expose that control to hooks.
 - Hooks are reinforcement nudges. Enforcement is the implement pipeline's adversarial verify stage, made a
