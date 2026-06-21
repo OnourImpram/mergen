@@ -96,15 +96,20 @@ def lint_report(report: Any, source: str, *, allow_conditional: bool = False,
                                 "verdict is conditional_pass, a caveat is unresolved "
                                 "(pass --allow-conditional to accept it)"))
 
-    # Unsigned high-trust. A high-trust report that requires human review is not a
-    # pass until human_review records an approval. Tier and sign-off cannot disagree.
-    if summary.get("risk_level") == "high-trust" and bool(summary.get("human_review_required")):
+    # Unsigned high-trust. A high-trust report is not a pass until it both flags that human
+    # review is required and records an approval. The two cannot disagree: a high-trust report
+    # with human_review_required false is itself the contradiction the schema's if/then forbids,
+    # and is flagged here so the linter is at least as strict as the schema (it previously
+    # short-circuited on that case and let it through, the exact downgrade the floor must refuse).
+    if summary.get("risk_level") == "high-trust":
         review = summary.get("human_review")
         status = review.get("status") if isinstance(review, dict) else None
-        if status != "approved":
-            findings.append(Finding("error", "UNSIGNED_HIGH_TRUST", source,
-                                    "high-trust report needs a recorded human approval, "
-                                    f"human_review.status is {status!r}"))
+        if not bool(summary.get("human_review_required")) or status != "approved":
+            findings.append(Finding(
+                "error", "UNSIGNED_HIGH_TRUST", source,
+                "high-trust report is not signed off: it must set human_review_required and record "
+                f"human_review.status approved (human_review_required="
+                f"{summary.get('human_review_required')!r}, status={status!r})"))
 
     tasks = report.get("tasks")
     if isinstance(tasks, list):

@@ -33,11 +33,31 @@ import importlib.util
 import json
 import re
 import sys
+import unicodedata
 from pathlib import Path
 from typing import Any
 
 
 _RECORD_TYPES = ("decision", "trajectory", "failure", "policy")
+
+# A verification report is data, not instruction. Every report field written into a persistent
+# vault record passes this fence, so a hostile feature_id, verdict, commit, or task_id cannot
+# smuggle a newline, a forged record field, or an injection payload into the markdown a future LLM
+# reads. This is the producer-side data fence, applied here because this path writes a file (the
+# strongest persistence), the same discipline constitution_inject and the verify-agent hook use.
+_MAX_FIELD = 200
+
+
+def _safe(raw: Any, cap: int = _MAX_FIELD) -> str:
+    """Neutralize a report field: normalize, strip control and format characters, collapse
+    whitespace, cap length. A field can carry text but never structure or bulk."""
+    s = raw if isinstance(raw, str) else str(raw)
+    s = unicodedata.normalize("NFKC", s)
+    s = "".join(ch for ch in s if not unicodedata.category(ch).startswith("C"))
+    s = re.sub(r"\s+", " ", s).strip()
+    if len(s) > cap:
+        s = s[:cap].rstrip() + "..."
+    return s
 
 _MODS: dict[str, Any] = {}
 
@@ -64,26 +84,28 @@ def to_decision_markdown(
     report: dict[str, Any], *, record_type: str = "decision",
     source_sha256: str | None = None,
 ) -> str:
-    feature_id = report.get("feature_id", "unknown")
+    # Every report-derived field is sanitized: it is data read from a file, not trusted text,
+    # and this record is written to a persistent vault a future session reads.
+    feature_id = _safe(report.get("feature_id", "unknown"))
     summary = report.get("summary", {})
-    verdict = summary.get("verdict", "unknown")
-    verified_at = report.get("verified_at", "")
+    verdict = _safe(summary.get("verdict", "unknown"))
+    verified_at = _safe(report.get("verified_at", ""))
     # Verification lineage from the report's own provenance, so a remembered
     # decision can be walked back to the exact commit and tasks-state it verified.
     # Read from the report, never shelled from git, so the seam stays subprocess
     # free and deterministic.
     provenance = report.get("provenance")
     provenance = provenance if isinstance(provenance, dict) else {}
-    source_commit = provenance.get("source_commit") or "none"
-    tasks_state_sha = provenance.get("tasks_state_sha256") or "none"
-    verifier_version = provenance.get("verifier_version") or "none"
+    source_commit = _safe(provenance.get("source_commit") or "none")
+    tasks_state_sha = _safe(provenance.get("tasks_state_sha256") or "none")
+    verifier_version = _safe(provenance.get("verifier_version") or "none")
     tasks = report.get("tasks", [])
     proven = [
-        t.get("task_id", "?")
+        _safe(t.get("task_id", "?"))
         for t in tasks
         if t.get("verified_status") == "pass" and (t.get("files_checked") or t.get("tests_run"))
     ]
-    unproven = [t.get("task_id", "?") for t in tasks if t.get("verified_status") != "pass"]
+    unproven = [_safe(t.get("task_id", "?")) for t in tasks if t.get("verified_status") != "pass"]
 
     # The anchor into the trust graph. The graph ids a verification-report node by the
     # sha256 of the report, the same hash recorded as report-sha256, so this is the exact

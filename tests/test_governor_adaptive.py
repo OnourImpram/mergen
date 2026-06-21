@@ -87,6 +87,16 @@ def test_govern_floor_forces_high_trust_regardless_of_scope():
     assert "auth-path" in decision["triggers_matched"]
 
 
+def test_govern_clamps_caller_thresholds_to_the_safe_band():
+    # Thresholds passed straight to govern are clamped, so scope escalation cannot be suppressed
+    # below the audited default. A wide change still reaches spec even under huge thresholds.
+    permissive = {k: v * 1000 for k, v in ga.DEFAULT_THRESHOLDS.items()}
+    paths = [f"docs/p{i}.md" for i in range(ga.DEFAULT_THRESHOLDS["spec_files"])]
+    decision = ga.govern(paths, thresholds=permissive)
+    assert decision["scope_tier"] == "spec"
+    assert decision["floor_tier"] == "tiny"
+
+
 def test_even_the_most_permissive_thresholds_cannot_lower_the_floor():
     # A caller passes thresholds far more permissive than calibration could ever produce.
     permissive = {k: v * 1000 for k, v in ga.DEFAULT_THRESHOLDS.items()}

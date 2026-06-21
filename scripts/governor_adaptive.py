@@ -77,12 +77,19 @@ _MIN_SAMPLES = 5
 
 
 def _resolve_thresholds(thresholds: dict[str, int] | None) -> dict[str, int]:
-    """Overlay caller thresholds on the defaults, ignoring unknown or non-integer keys."""
+    """Overlay caller thresholds on the defaults, clamped to the safe band.
+
+    Every accepted value passes through _clamp, so a threshold can never exceed the shipped
+    default (more permissive) or fall below its minimum. This holds for EVERY path that resolves
+    thresholds, govern and classify_scope included, not only calibrate, so a caller, a CLI flag,
+    or an externally supplied thresholds file can raise scrutiny but can never make the adaptive
+    governor more permissive than the audited default. Unknown or non-integer keys are ignored.
+    """
     resolved = dict(DEFAULT_THRESHOLDS)
     if thresholds:
         for key, value in thresholds.items():
             if key in resolved and isinstance(value, int) and not isinstance(value, bool):
-                resolved[key] = value
+                resolved[key] = _clamp(key, value)
     return resolved
 
 
@@ -135,20 +142,26 @@ def govern(
 ) -> dict[str, Any]:
     """Return the governed decision: the highest of the model, scope, and content-floor tiers.
 
-    The content floor (governor_floor.classify_floor) forces high-trust on a guarded surface
-    and can never be lowered. The scope tier is a deterministic lower bound from change size.
-    The model tier, when supplied, is the model's own read. govern() takes the maximum of the
-    three via the floor's own combine(), so each input can only RAISE the tier. Even the most
-    permissive thresholds a caller could pass cannot lower a tripped floor, because the floor
-    enters the maximum independently of the scope thresholds.
+    The content floor here is the BUILT-IN path and diff classifier (governor_floor.classify_floor)
+    only. It forces high-trust on a guarded surface and can never be lowered. The scope tier is a
+    deterministic lower bound from change size. The model tier, when supplied, is the model's own
+    read. govern() takes the maximum of the three via the floor's own combine(), so each input can
+    only RAISE the tier. Even the most permissive thresholds a caller could pass cannot lower a
+    tripped floor, because the floor enters the maximum independently of the scope thresholds.
 
-    Two caller responsibilities are worth stating. Thresholds passed here are NOT clamped to
-    the safe band: that is calibrate()'s job, and a caller who supplies raw thresholds owns
-    their values. The scope tier they drive is only ever a lower bound, so loose thresholds can
-    under-escalate a wide non-sensitive change but can never lower the content floor. And an
-    explicit line_count overrides the count computed from the diff: passing 0 asserts a change
-    with no added or removed lines and so disables line-based scope escalation. A negative
-    line_count is rejected, and an unknown model_tier is rejected, rather than failing opaquely.
+    govern() does NOT apply the per-project domain overlay (project_config.apply_overlay, the
+    clinical floor-all and protected-path layer). That overlay is a separate layer the governor
+    CLI composes on top with --config, and it too can only raise the tier. A programmatic caller
+    that needs the domain overlay composes apply_overlay itself, exactly as governor_floor.main
+    does; govern() is the built-in content floor plus the scope tier, not the project overlay.
+
+    Thresholds passed here are clamped to the safe band by _resolve_thresholds, so even a caller
+    that supplies raw thresholds (or a CLI thresholds file) can raise scrutiny but can never make
+    the scope tier more permissive than the audited default. The scope tier is always a lower
+    bound and can never lower the content floor. An explicit line_count overrides the count
+    computed from the diff: passing 0 asserts a change with no added or removed lines and so
+    disables line-based scope escalation. A negative line_count is rejected, and an unknown
+    model_tier is rejected, rather than failing opaquely.
     """
     floor_mod = _load("governor_floor")
     if model_tier not in floor_mod._TIERS:

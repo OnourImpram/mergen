@@ -154,11 +154,22 @@ def _check_paths(changed_paths: list[str]) -> list[str]:
         norm = _normalise_path(raw)
         segs = _segments(norm)
 
-        # Segment-exact matching.
+        # Match the segments AND the stem of any segment that carries a file extension, so a
+        # flat file like src/auth.py fires the auth keyword the same way the directory src/auth/
+        # does. A classifier that matched only whole segments would silently miss every flat-file
+        # layout (src/auth.py, src/payments.py, src/billing.py), the most common one, which is the
+        # exact surface the floor exists to protect. Stripping the extension only ever ADDS a
+        # match, so the floor stays a lower bound that can over-fire toward safety, never under.
+        tokens = set(segs)
+        for seg in segs:
+            if "." in seg:
+                tokens.add(seg.split(".", 1)[0])
+
+        # Segment-exact matching against the segment-and-stem token set.
         for tid, keywords in _SEGMENT_EXACT.items():
             if tid in seen:
                 continue
-            if any(seg in keywords for seg in segs):
+            if tokens & keywords:
                 fired.append(tid)
                 seen.add(tid)
 

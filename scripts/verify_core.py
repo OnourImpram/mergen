@@ -12,6 +12,7 @@ from __future__ import annotations
 import argparse
 import datetime
 import hashlib
+import importlib.util
 import subprocess
 import sys
 import json
@@ -316,6 +317,28 @@ def verify_task(task: dict[str, Any], root: Path) -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 
 
+_GOVERNOR_FLOOR_MOD: Any = None
+
+
+def _governor_floor() -> Any:
+    """Load the sibling governor_floor module by path, cached (scripts/ is not a package).
+
+    Wiring the floor in here is what makes the high-trust tier of a report real. Without it the
+    report's risk_level would never reflect the Governor floor, and the unsigned-high-trust lint
+    that conditions on risk_level == high-trust could never fire on a live verify_core report.
+    """
+    global _GOVERNOR_FLOOR_MOD
+    if _GOVERNOR_FLOOR_MOD is None:
+        spec = importlib.util.spec_from_file_location(
+            "governor_floor", Path(__file__).resolve().parent / "governor_floor.py")
+        if spec is None or spec.loader is None:  # pragma: no cover - import wiring
+            raise ImportError("cannot load governor_floor")
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        _GOVERNOR_FLOOR_MOD = mod
+    return _GOVERNOR_FLOOR_MOD
+
+
 def build_report(
     tasks_state: dict[str, Any],
     root: Path,
@@ -325,6 +348,11 @@ def build_report(
     Returns (report, overall_pass) where overall_pass is True iff every
     applicable mechanical lens passed for every done task. Ambiguous tasks
     (all lenses na) are not counted as failures.
+
+    The report's risk_level is the Governor floor classified over the change surface (the files
+    the done tasks declare), not a fixed value, so a change that touches a guarded surface is
+    high-trust and forces a human sign-off. The path classifier matches a flat file by its stem,
+    so src/auth.py is caught, not only src/auth/login.py.
     """
     feature_id = tasks_state.get("feature_id", "unknown")
     tasks = tasks_state.get("tasks", [])
@@ -397,6 +425,18 @@ def build_report(
     else:
         verdict = "pass"
 
+    # Classify the Governor floor over the change surface, the files the done tasks declare. The
+    # floor is the lower bound on the report's risk tier: a change touching a guarded surface is
+    # high-trust, which forces human_review_required and is what the unsigned-high-trust lint then
+    # enforces. risk_triggers records WHY, so a reviewer sees which surface tripped it.
+    changed_paths = [
+        f for t in done_tasks for f in (t.get("files") or []) if isinstance(f, str)
+    ]
+    floor = _governor_floor().classify_floor(changed_paths)
+    risk_level = "high-trust" if floor.get("tier") == "high-trust" else "standard"
+    risk_triggers = list(floor.get("triggers_matched", []))
+    human_review_required = (not overall_pass) or (ambiguous > 0) or (risk_level == "high-trust")
+
     report: dict[str, Any] = {
         "schema_version": "1.0",
         "feature_id": feature_id,
@@ -408,8 +448,9 @@ def build_report(
         },
         "summary": {
             "verdict": verdict,
-            "risk_level": "standard",
-            "human_review_required": not overall_pass or ambiguous > 0,
+            "risk_level": risk_level,
+            "risk_triggers": risk_triggers,
+            "human_review_required": human_review_required,
             "total_done_tasks": len(done_tasks),
             "mechanically_passed": mech_passed,
             "mechanically_failed": mech_failed,

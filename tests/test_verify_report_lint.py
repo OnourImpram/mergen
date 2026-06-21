@@ -134,12 +134,14 @@ def test_high_trust_with_recorded_approval_is_clean():
     assert _errors(findings) == []
 
 
-def test_high_trust_without_review_required_is_not_forced_to_sign():
-    # risk high-trust but human_review_required false: the report did not ask for
-    # a sign-off, so the linter does not invent one.
+def test_high_trust_with_review_required_false_is_the_contradiction_the_linter_catches():
+    # risk high-trust but human_review_required false is exactly the downgrade the schema's
+    # if/then forbids: a high-trust report must require human review. The linter is now at least
+    # as strict as the schema and flags it, rather than short-circuiting and letting it through
+    # (which previously let an unsigned high-trust report pass clean, the floor's worst case).
     findings = lint.lint_report(
         _report([_pass_task()], risk="high-trust", human_required=False), "x")
-    assert "UNSIGNED_HIGH_TRUST" not in _codes(findings)
+    assert "UNSIGNED_HIGH_TRUST" in _codes(findings)
 
 
 def test_missing_required_key_is_schema_invalid():
