@@ -11,9 +11,9 @@ Spec Kit artifacts:
                          `replaces:` the stock speckit.<name>.
 
   extensions/mergen/  Adds the commands Spec Kit does not have (verify,
-                         rollup, go) as namespaced `speckit.mergen.<cmd>`,
-                         and wires the verify gate as a non-bypassable
-                         `after_implement` hook.
+                         rollup, go, lean, debt, govern) as namespaced
+                         `speckit.mergen.<cmd>`, and wires the verify gate
+                         as a mandatory after_implement hook (optional: false).
 
 Why this is mostly copy + manifest generation: the single-source command files
 are authored in Spec Kit's own SOURCE convention (bare `scripts/bash/...` in
@@ -122,9 +122,9 @@ def build_extension_yaml(descs: dict[str, str]) -> str:
         '  name: "Mergen (mergen verification and minimalism)"',
         '  version: "1.0.0"',
         '  description: "Adds adversarial verification, canonical project-state '
-        'rollup, a complexity router, an over-engineering review, and a '
-        'deferred-shortcut debt ledger, and a risk-tier Governor to Spec Kit, and wires a non-bypassable '
-        'verify gate after implement."',
+        'rollup, a complexity router, an over-engineering review, a '
+        'deferred-shortcut debt ledger, and a risk-tier Governor to Spec Kit. '
+        'Wires the verify gate as a mandatory after_implement hook (optional: false)."',
         f'  author: "{AUTHOR}"',
         f'  repository: "{REPO_URL}"',
         f'  license: "{LICENSE}"',
@@ -196,10 +196,10 @@ def cmd_build(out_dir: Path, dry_run: bool) -> int:
     for src, dst in actions:
         dst.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(src, dst)
-    (preset_dir / "preset.yml").write_text(build_preset_yaml(descs),
-                                           encoding="utf-8", newline="\n")
-    (ext_dir / "extension.yml").write_text(build_extension_yaml(descs),
-                                           encoding="utf-8", newline="\n")
+    # write_bytes keeps LF on all platforms and works on Python 3.9, where
+    # write_text does not accept the newline argument (added in 3.10).
+    (preset_dir / "preset.yml").write_bytes(build_preset_yaml(descs).encode("utf-8"))
+    (ext_dir / "extension.yml").write_bytes(build_extension_yaml(descs).encode("utf-8"))
 
     print(f"preset 'mergen': {len(PRESET_CMDS)} command override(s) -> {preset_dir}")
     print(f"extension '{EXT_ID}': {len(EXT_CMDS)} command(s) + after_implement hook -> {ext_dir}")

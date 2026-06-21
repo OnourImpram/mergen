@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/TheGoatPsy/mergen/core/schemas/tasks-dag.schema.json",
+  "title": "tasks-dag",
+  "description": "Wave-ordered dependency DAG emitted by /mergen-tasks. A top-level array of waves; each wave is an array of task objects whose dependencies are all satisfied by earlier waves and which can run in parallel. The semantic invariants (unique ids, references resolve, no cycles, dependencies appear in earlier waves) are enforced by scripts/tasks_dag_validator.py, which JSON Schema alone cannot express.",
+  "type": "array",
+  "items": {
+    "type": "array",
+    "items": {"$ref": "#/$defs/task"}
+  },
+  "$defs": {
+    "task": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "files", "parallel", "depends_on"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Stable task identifier, unique across the whole DAG."
+        },
+        "files": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "Files this task creates or modifies. Disjoint file sets within a wave allow parallelism."
+        },
+        "parallel": {
+          "type": "boolean",
+          "description": "True when the task carried the [P] flag and may run alongside others in its wave."
+        },
+        "depends_on": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "Task ids that must complete in an earlier wave before this task runs."
+        },
+        "test_task": {
+          "type": ["string", "null"],
+          "description": "Optional id of the test task that covers this task, for TDD ordering."
+        }
+      }
+    }
+  }
+}

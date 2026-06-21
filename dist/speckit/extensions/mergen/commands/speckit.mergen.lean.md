@@ -13,11 +13,11 @@ If `$ARGUMENTS` contains `audit`, scan the whole repository tree, not just the d
 
 ## mergen substrate (do this first)
 
-This command runs under the mergen substrate: maximum reasoning effort plus Workflow orchestration. It is the minimalism counterpart to `/mergen.verify`. `/mergen.verify` proves the code is correct. This command proves the code is minimal. Use the Workflow tool to fan out the review. Reviewing a large diff or repo in this single context is the shallow failure mode this command exists to prevent.
+This command runs under the mergen substrate: maximum reasoning effort plus Workflow orchestration. It is the minimalism counterpart to `/mergen-verify`. `/mergen-verify` proves the code is correct. This command proves the code is minimal. Use the Workflow tool to fan out the review. Reviewing a large diff or repo in this single context is the shallow failure mode this command exists to prevent.
 
 ## Scope (read before reviewing)
 
-Over-engineering and complexity ONLY. Correctness bugs, security holes, and performance belong to `/mergen.verify` and a normal review pass. Do not flag them here. A single smoke test or assert-based self-check is the lazy-ladder minimum, not bloat. Never flag validation, security, accessibility, error handling, or tests for deletion. The discipline is `core/lazy-ladder.md`.
+Over-engineering and complexity ONLY. Correctness bugs, security holes, and performance belong to `/mergen-verify` and a normal review pass. Do not flag them here. A single smoke test or assert-based self-check is the lazy-ladder minimum, not bloat. Never flag validation, security, accessibility, error handling, or tests for deletion. The discipline is `core/lazy-ladder.md`.
 
 ## Review (Workflow fan-out)
 
@@ -54,6 +54,6 @@ If there is nothing to cut, output `Lean already. Ship.` and stop. This command 
 
 - [ ] The Workflow tool fanned out the review. A single-context monologue review is not acceptable for a non-trivial surface.
 - [ ] Every finding is one line with a tag and a concrete replacement.
-- [ ] Correctness, security, and performance were left out of scope (routed to `/mergen.verify`).
+- [ ] Correctness, security, and performance were left out of scope (routed to `/mergen-verify`).
 - [ ] The output ends with `net: -<N> lines possible` or `Lean already. Ship.`
 - [ ] No fix was applied. The command only lists.

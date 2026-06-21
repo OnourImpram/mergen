@@ -25,9 +25,9 @@ from __future__ import annotations
 import contextlib
 import importlib.util
 import io
-import sys
 import tempfile
 from pathlib import Path
+from types import ModuleType
 
 REPO = Path(__file__).resolve().parents[1]
 SPECKIT_SRC = REPO / "dist" / "speckit" / "build_speckit.py"
@@ -45,8 +45,10 @@ LADDER_RUNGS = [
 ]
 
 
-def _load(path: Path):
+def _load(path: Path) -> ModuleType:
     spec = importlib.util.spec_from_file_location(path.stem, path)
+    if spec is None or spec.loader is None:
+        raise ImportError(f"cannot load module from {path}")
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
     return mod
@@ -99,11 +101,11 @@ def check_agents_consistency() -> list[str]:
             problems.append(f"AGENTS.md render is missing ladder rung: '{rung}'")
     # The discipline body must not instruct the agent to run Claude-Code-only
     # commands. The honest scope note (rendered separately) is allowed to name
-    # the excluded `/mergen.*` suite, so check the discipline body, not the
-    # whole file.
+    # the excluded `/mergen-*` suite, so check the discipline body, not the
+    # whole file. Both the hyphen invocation and a legacy dot count as a leak.
     discipline = build_agents.portable_discipline(ladder_text)
-    if "/mergen." in discipline:
-        problems.append("portable discipline leaks a Claude-Code-specific /mergen. reference")
+    if "/mergen-" in discipline or "/mergen." in discipline:
+        problems.append("portable discipline leaks a Claude-Code-specific /mergen- reference")
     if "How the lifecycle uses the ladder" in discipline:
         problems.append("portable discipline leaks the Claude-Code-specific lifecycle section")
     return problems

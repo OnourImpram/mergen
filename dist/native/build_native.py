@@ -3,15 +3,20 @@
 
 Single source -> two shells (see core/CONVENTIONS.md). This is the NATIVE
 renderer. It turns each `core/commands/<name>.md` into a Claude Code skill at
-`~/.claude/skills/mergen-<name>/SKILL.md`, invoked as `/mergen.<name>`.
+`~/.claude/skills/mergen-<name>/SKILL.md`, invoked as `/mergen-<name>`. Claude
+Code derives the typed command from the skill directory name, so the hyphen
+directory is the invocation. The frontmatter name mirrors it for the listing.
 
 Two responsibilities, mirroring how spec-kit splits global commands from a
 per-project `.specify/` bootstrap:
 
-  build  (default)  Render the command prompts into global skills under
-                    ~/.claude/skills/. Also copies core/hooks/*.py into
-                    ~/.claude/hooks/ when present (settings registration is
-                    handled separately by the installer).
+  build  (default)  Render the command prompts into skills under
+                    ~/.claude/skills/ (or --skills-dir). On a default global
+                    build it also copies core/hooks/*.py into ~/.claude/hooks/.
+                    A custom --skills-dir does NOT touch the global hooks unless
+                    --hooks-dir is given (and --no-hooks always skips), so a
+                    scratch or packaging render is side-effect free. Settings
+                    registration is handled separately by the installer.
 
   init [project]    Bootstrap a project's `.specify/` directory: copy the
                     helper scripts and templates and create the memory dir, so
@@ -41,7 +46,13 @@ TEMPLATES_DIR = REPO / "core" / "templates"
 SCRIPTS_DIR = REPO / "core" / "scripts"
 HOOKS_DIR = REPO / "core" / "hooks"
 
-SKILL_PREFIX = "mergen"  # /mergen.<name>
+SKILL_PREFIX = "mergen"  # dir mergen-<name>, invoked /mergen-<name>
+
+
+def _claude_home() -> Path:
+    """The ~/.claude directory. A seam the tests patch, so they never mutate the
+    global Path.home and stay safe under parallel test runners."""
+    return Path.home() / ".claude"
 
 
 # --------------------------------------------------------------------------- #
@@ -139,7 +150,7 @@ def _yaml_quote(value: str) -> str:
 def render_skill(cmd: Command) -> str:
     """Render a Command into a Claude Code SKILL.md (frontmatter + body)."""
     lines = ["---"]
-    lines.append(f"name: {SKILL_PREFIX}.{cmd.name}")
+    lines.append(f"name: {SKILL_PREFIX}-{cmd.name}")
     lines.append(f"description: {_yaml_quote(cmd.description)}")
     if cmd.argument_hint:
         lines.append(f"argument-hint: {_yaml_quote(cmd.argument_hint)}")
@@ -155,7 +166,7 @@ def render_skill(cmd: Command) -> str:
     return "\n".join(lines) + "\n" + cmd.body.rstrip("\n") + "\n"
 
 
-def cmd_build(skills_dir: Path, dry_run: bool) -> int:
+def cmd_build(skills_dir: Path, hooks_dir: Path | None, dry_run: bool) -> int:
     if not COMMANDS_DIR.is_dir():
         print(f"ERROR: no commands dir at {COMMANDS_DIR}", file=sys.stderr)
         return 1
@@ -174,21 +185,29 @@ def cmd_build(skills_dir: Path, dry_run: bool) -> int:
                   f"({len(content)} bytes, scripts={list(cmd.scripts) or 'none'})")
         else:
             target.parent.mkdir(parents=True, exist_ok=True)
-            target.write_text(content, encoding="utf-8", newline="\n")
-            print(f"rendered /{SKILL_PREFIX}.{cmd.name} -> {target}")
+            # write_bytes keeps LF cross-platform and is 3.9-safe (write_text
+            # gained the newline argument only in 3.10).
+            target.write_bytes(content.encode("utf-8"))
+            print(f"rendered /{SKILL_PREFIX}-{cmd.name} -> {target}")
         rendered += 1
 
-    # Copy hooks if any exist (settings registration is the installer's job).
-    if HOOKS_DIR.is_dir():
+    # Copy hooks only when a hooks target is set. main() resolves a custom
+    # --skills-dir with no hooks decision to None, so a render to a scratch or
+    # packaging dir never touches the global ~/.claude/hooks. Settings
+    # registration is the installer's job.
+    if hooks_dir is None:
+        if HOOKS_DIR.is_dir() and sorted(HOOKS_DIR.glob("*.py")):
+            print("skipping hook install (no hooks target). Pass --hooks-dir to "
+                  "install hooks, or omit --skills-dir for the default global install.")
+    elif HOOKS_DIR.is_dir():
         hook_files = sorted(HOOKS_DIR.glob("*.py"))
         if hook_files and not dry_run:
-            hooks_target = Path.home() / ".claude" / "hooks"
-            hooks_target.mkdir(parents=True, exist_ok=True)
+            hooks_dir.mkdir(parents=True, exist_ok=True)
             for h in hook_files:
-                shutil.copy2(h, hooks_target / h.name)
-                print(f"installed hook {h.name} -> {hooks_target / h.name}")
+                shutil.copy2(h, hooks_dir / h.name)
+                print(f"installed hook {h.name} -> {hooks_dir / h.name}")
         elif hook_files:
-            print(f"[dry-run] would install {len(hook_files)} hook(s) to ~/.claude/hooks")
+            print(f"[dry-run] would install {len(hook_files)} hook(s) to {hooks_dir}")
 
     print(f"\n{rendered} skill(s) {'planned' if dry_run else 'rendered'}.")
     return 0
@@ -217,6 +236,19 @@ def cmd_init(project: Path, dry_run: bool) -> int:
                     os.chmod(dst / item.name, 0o755)
         print(f"copied {src.name} -> {dst}")
 
+    # The bash and powershell shims delegate to feature_ops.py one level up.
+    # Install it into .specify/scripts/ so the relative path ../feature_ops.py
+    # resolves correctly from both .specify/scripts/bash/ and
+    # .specify/scripts/powershell/.
+    fops_src = SCRIPTS_DIR / "feature_ops.py"
+    if fops_src.is_file():
+        fops_dst = specify / "scripts" / "feature_ops.py"
+        if dry_run:
+            print(f"[dry-run] would copy feature_ops.py -> {fops_dst}")
+        else:
+            shutil.copy2(fops_src, fops_dst)
+            print(f"copied feature_ops.py -> {fops_dst}")
+
     memory = specify / "memory"
     if dry_run:
         print(f"[dry-run] would create {memory}")
@@ -232,8 +264,14 @@ def main(argv: list[str] | None = None) -> int:
     sub = parser.add_subparsers(dest="cmd")
 
     p_build = sub.add_parser("build", help="render command prompts into ~/.claude/skills")
-    p_build.add_argument("--skills-dir", default=str(Path.home() / ".claude" / "skills"),
+    p_build.add_argument("--skills-dir", default=None,
                          help="target skills directory (default: ~/.claude/skills)")
+    p_build.add_argument("--hooks-dir", default=None,
+                         help="target hooks directory. Default: ~/.claude/hooks on a "
+                              "fully-default build. A custom --skills-dir suppresses the "
+                              "global hook install unless --hooks-dir is given explicitly.")
+    p_build.add_argument("--no-hooks", action="store_true",
+                         help="never copy hooks, regardless of the other flags")
     p_build.add_argument("--dry-run", action="store_true")
 
     p_init = sub.add_parser("init", help="bootstrap .specify in a project")
@@ -244,10 +282,32 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     if args.cmd == "init":
         return cmd_init(Path(args.project).resolve(), args.dry_run)
+
     # Default to build (no subcommand or "build").
-    skills_dir = getattr(args, "skills_dir", str(Path.home() / ".claude" / "skills"))
+    home = _claude_home()
+    skills_arg = getattr(args, "skills_dir", None)
+    hooks_arg = getattr(args, "hooks_dir", None)
+    no_hooks = getattr(args, "no_hooks", False)
     dry_run = getattr(args, "dry_run", False)
-    return cmd_build(Path(skills_dir), dry_run)
+
+    skills_dir = Path(skills_arg) if skills_arg is not None else home / "skills"
+
+    # Hook-target policy. The rule keeps a scratch render side-effect free:
+    #   --no-hooks           never install hooks
+    #   --hooks-dir X        install to X
+    #   custom --skills-dir  isolate: do not write the global hooks
+    #   all defaults         install to the global ~/.claude/hooks (installer path)
+    hooks_dir: Path | None
+    if no_hooks:
+        hooks_dir = None
+    elif hooks_arg is not None:
+        hooks_dir = Path(hooks_arg)
+    elif skills_arg is not None:
+        hooks_dir = None
+    else:
+        hooks_dir = home / "hooks"
+
+    return cmd_build(skills_dir, hooks_dir, dry_run)
 
 
 if __name__ == "__main__":

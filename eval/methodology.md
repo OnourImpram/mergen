@@ -1,10 +1,13 @@
 # Evaluation Methodology
 
-**Status: no numbers have been measured yet.**
-This document defines three metrics, explains how each targets a specific spec-kit failure mode,
-and gives exact reproduction steps. Any figure marked SYNTHETIC or ILLUSTRATIVE is a placeholder
-showing the shape of the result table only. It is not a measured value. Replace every SYNTHETIC
-cell with real values from the reproduction run before making any public claim.
+**Status: the live head-to-head in this document is not yet measured.**
+A separate deterministic benchmark (`eval/benchmark.py`, described in the README) now reports real,
+reproducible numbers for metric 1 (phantom-completion) and a deterministic slice of metric 3
+(adversarial catch) without a live model. This document is the LIVE spec-kit-vs-mergen comparison,
+which additionally covers metric 2 (parallel speedup) and metric 4 (over-build) and has not been
+run. Every SYNTHETIC or ILLUSTRATIVE figure in the tables below is a placeholder showing the shape
+of the result table only. It is not a measured value. Replace every SYNTHETIC cell with real values
+from the reproduction run before making any public claim.
 
 ---
 
@@ -116,7 +119,7 @@ Replace every SYNTHETIC cell with real values from the reproduction run.
 
 ### Definition
 
-Given a `tasks-dag.json` emitted by `/mergen.tasks` (see `core/commands/tasks.md`), the
+Given a `tasks-dag.json` emitted by `/mergen-tasks` (see `core/commands/tasks.md`), the
 tasks form waves: each wave contains tasks whose `depends_on` list is fully satisfied by prior
 waves. Within a wave, tasks are independent and can run in parallel.
 
@@ -138,7 +141,7 @@ task durations vary and because API dispatch has latency.
 
 ### How to measure
 
-1. After running `/mergen.tasks`, the file `FEATURE_DIR/tasks-dag.json` exists. Inspect the
+1. After running `/mergen-tasks`, the file `FEATURE_DIR/tasks-dag.json` exists. Inspect the
    wave structure:
    ```bash
    jq 'length' FEATURE_DIR/tasks-dag.json          # number of waves
@@ -198,7 +201,7 @@ count is structurally 0.
 
 ### How to measure
 
-1. After the mergen implement run completes, invoke `/mergen.verify` (native) or
+1. After the mergen implement run completes, invoke `/mergen-verify` (native) or
    `speckit.mergen.verify` (spec-kit renderer path).
 2. The verify command writes its report to `FEATURE_DIR/verification-report.md`. Parse the
    report to count reverted tasks and flagged issues per lens:
@@ -232,13 +235,13 @@ SYNTHETIC cells with real values from the reproduction run.
 
 A max-effort agent with no minimalism gate over-builds: it writes abstractions, dependencies, and
 boilerplate the task never required. This is the failure mode the lazy ladder (`core/lazy-ladder.md`)
-and the `/mergen.lean` review target. The over-build rate is:
+and the `/mergen-lean` review target. The over-build rate is:
 
 ```
-over_build_rate = (lines /mergen.lean flags as removable) / (total lines added in the diff)
+over_build_rate = (lines /mergen-lean flags as removable) / (total lines added in the diff)
 ```
 
-A line is flagged when `/mergen.lean audit` tags it `delete`, `stdlib`, `native`, `yagni`, or
+A line is flagged when `/mergen-lean audit` tags it `delete`, `stdlib`, `native`, `yagni`, or
 `shrink`. Lines tagged for validation, security, accessibility, error handling, or tests are never
 counted, because the ladder never cuts those.
 
@@ -264,14 +267,14 @@ reduction is not claimed. It is measured.
    minimalism layer, not the model.
 2. After each arm completes, capture the added lines with `git diff --numstat` against the
    pre-implementation commit.
-3. Run `/mergen.lean audit` on each arm's diff and parse the tagged delete-list. Count flagged
+3. Run `/mergen-lean audit` on each arm's diff and parse the tagged delete-list. Count flagged
    lines by tag, excluding any line whose tag would touch validation, security, accessibility, or
    tests (the review already excludes these by scope).
 4. `over_build_rate = flagged_lines / added_lines` for each arm.
 
 ### Honest caveat
 
-`/mergen.lean` is itself an LLM-judged review, so this metric measures the review's judgment of
+`/mergen-lean` is itself an LLM-judged review, so this metric measures the review's judgment of
 surplus, not a ground-truth line count. Run the review with a fixed model and record it. Report the
 two arms' rates side by side rather than as an absolute, since the judgment is the same instrument
 applied to both.
@@ -312,7 +315,7 @@ Run each arm in isolation:
 ## Reproduction Steps
 
 These steps produce a controlled head-to-head comparison on an identical feature spec. Follow
-them exactly to generate valid data for all three metrics.
+them exactly to generate valid data for all four metrics.
 
 ### Prerequisites
 
@@ -416,8 +419,8 @@ live effort value automatically.
 Inside Claude Code, invoke the commands in order:
 
 ```
-/mergen.specify   (pass eval/fixtures/feature-spec.md as the spec source)
-/mergen.tasks     (emits FEATURE_DIR/tasks-dag.json)
+/mergen-specify   (pass eval/fixtures/feature-spec.md as the spec source)
+/mergen-tasks     (emits FEATURE_DIR/tasks-dag.json)
 ```
 
 Record the start timestamp:
@@ -429,7 +432,7 @@ date +%s > eval/results/mergen-start.txt
 Inside Claude Code:
 
 ```
-/mergen.implement
+/mergen-implement
 ```
 
 Record the end timestamp:
@@ -441,7 +444,7 @@ date +%s > eval/results/mergen-end.txt
 Inside Claude Code:
 
 ```
-/mergen.verify
+/mergen-verify
 ```
 
 After the run completes, collect artifacts:
@@ -483,7 +486,7 @@ and commit the updated methodology before publishing any claim.
 - Parallel speedup depends on model API latency, which varies by time of day and account tier.
   Run at least four trials and report the median. A single-trial speedup figure is not
   representative.
-- Over-build rate (metric 4) is scored by `/mergen.lean`, which is an LLM-judged review, not a
+- Over-build rate (metric 4) is scored by `/mergen-lean`, which is an LLM-judged review, not a
   deterministic counter. It measures the review's judgment of surplus applied identically to both
   arms. Report the two arms side by side, not as an absolute, and record the model used for the
   review.

@@ -13,6 +13,10 @@ Usage:
   patch_settings.py --status                      # read-only: exits 0 if installed, 1 if not
 """
 
+# Required so the PEP 604 `X | None` annotations below stay strings on Python
+# 3.9, where evaluating `Path | None` at definition time raises TypeError.
+from __future__ import annotations
+
 import argparse
 import json
 import sys
@@ -44,9 +48,9 @@ def _read_text_bom(path: Path):
     return raw.decode("utf-8"), False
 
 
-def _load_settings() -> tuple:
+def _load_settings(settings_path: Path | None = None) -> tuple:
     """Return (parsed_data, had_bom, error_message). error_message is empty on success."""
-    settings = Path.home() / ".claude" / "settings.json"
+    settings = settings_path if settings_path is not None else Path.home() / ".claude" / "settings.json"
     if not settings.is_file():
         return {}, False, ""
     try:
@@ -59,18 +63,21 @@ def _load_settings() -> tuple:
     return data, had_bom, ""
 
 
-def main() -> int:
+def main(argv=None) -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--python", default="python3", help="python executable to run the hook")
     ap.add_argument("--remove", action="store_true", help="remove the hook instead of adding it")
     ap.add_argument("--status", action="store_true", help="read-only check: exits 0 if installed, 1 if not")
-    args = ap.parse_args()
+    ap.add_argument("--settings", default=str(Path.home() / ".claude" / "settings.json"),
+                    help="settings.json path (default: ~/.claude/settings.json)")
+    ap.add_argument("--dry-run", action="store_true", help="print the result, do not write")
+    args = ap.parse_args(argv)
 
-    settings_path = Path.home() / ".claude" / "settings.json"
+    settings_path = Path(args.settings)
 
     # --status: read-only inspection
     if args.status:
-        data, _had_bom, err = _load_settings()
+        data, _had_bom, err = _load_settings(settings_path)
         if err:
             print(f"absent (could not read settings: {err})")
             return 1
@@ -82,7 +89,7 @@ def main() -> int:
             print("absent: mergen UserPromptSubmit hook is not registered")
             return 1
 
-    data, had_bom, err = _load_settings()
+    data, had_bom, err = _load_settings(settings_path)
     if err:
         print(f"ERROR: {err}. Aborting so your settings are not corrupted.", file=sys.stderr)
         return 1
@@ -111,6 +118,9 @@ def main() -> int:
     rendered = json.dumps(data, indent=2, ensure_ascii=False) + "\n"
     if had_bom:
         rendered = chr(0xFEFF) + rendered
+    if args.dry_run:
+        print(rendered, end="")
+        return 0
     settings_path.parent.mkdir(parents=True, exist_ok=True)
     settings_path.write_text(rendered, encoding="utf-8")
     print(f"{'removed' if args.remove else 'installed'} mergen UserPromptSubmit hook in {settings_path}")

@@ -1,0 +1,27 @@
+version: 2
+updates:
+  # Keep the SHA-pinned GitHub Actions current. Dependabot opens a PR that bumps
+  # the pinned SHA and the version comment together, so the pin stays both
+  # immutable and fresh.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "ci"
+    labels:
+      - "dependencies"
+      - "github-actions"
+
+  # The dev tooling declared in pyproject [dependency-groups]. The runtime ships
+  # no third-party dependency (Tier 0 is pure standard library), so this watches
+  # the dev group only.
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "deps"
+    labels:
+      - "dependencies"
+      - "python"

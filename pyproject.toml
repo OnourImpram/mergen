@@ -1,2 +1,64 @@
+[project]
+name = "mergen"
+version = "1.0.0"
+description = "The execution backbone for AI coding agents: a wise Governor and a precise verify gate."
+requires-python = ">=3.9"
+
+# Installing this project exposes the `mergen` command. The supported path is an
+# editable/clone install (`pip install -e .` or `pipx install -e .`), because
+# mergen renders the SDD skills from this repo's core/ tree and the command must
+# be able to find it. A standalone wheel that bundles core/ as package data is
+# on the roadmap.
+[project.scripts]
+mergen = "mergen_cli:main"
+
+# Dev tooling, declared once here (PEP 735) so the versions CI installs are
+# pinned and visible rather than floating on a bare `pip install pytest`. The
+# runtime ships zero third-party dependencies (Tier 0 is pure standard library),
+# so these are dev-only. jsonschema validates the schema if/then invariants in
+# the test suite. The shipped linter enforces the same rules without it.
+[dependency-groups]
+dev = [
+    "pytest>=8,<9",
+    "ruff>=0.6,<1",
+    "mypy>=1.11,<2",
+    "coverage>=7,<8",
+    "pytest-cov>=5,<7",
+    "jsonschema>=4,<5",
+]
+
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+py-modules = ["mergen_cli"]
+
+[tool.mypy]
+# Strict type checking, scoped to mergen's Python library surface. The bash and
+# PowerShell shims and the test suite are out of scope; widening the gate to
+# feature_ops, the hooks, and the other renderers is a follow-up.
+strict = true
+files = [
+    "scripts",
+    "mergen_cli.py",
+    "dist/native/build_native.py",
+    "dist/native/patch_settings_hooks.py",
+]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+[tool.coverage.run]
+# Coverage of the Python source surface, everything that ships and runs. The
+# renderers and feature_ops are included even where lightly tested, so the number
+# is honest rather than narrowed to the well-covered modules.
+source = ["scripts", "mergen_cli", "dist", "eval", "core", "effort-mode"]
+omit = ["tests/*", "*/__pycache__/*"]
+
+[tool.coverage.report]
+show_missing = true
+# Initial floor, set a few points below the measured ~78 percent so a normal
+# change does not false-fail and so variance across the CI matrix is absorbed.
+# Meant to ratchet upward as coverage of the renderers and feature_ops improves.
+fail_under = 75

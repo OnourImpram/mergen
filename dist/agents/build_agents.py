@@ -9,7 +9,7 @@ expects, so the "think exhaustively, build minimally" discipline travels even
 where the orchestration cannot.
 
 Honest scope: this ports the minimalism discipline ONLY. It does not port, and
-does not claim to port, the `/mergen.*` command suite, the verify gate, or
+does not claim to port, the `/mergen-*` command suite, the verify gate, or
 the wave-parallel implement pipeline. Each rendered file states this.
 
 Targets (each agent's documented passive-rule location):
@@ -49,7 +49,7 @@ PROVENANCE = (
 
 SCOPE_NOTE = (
     "> This file ports mergen's minimalism discipline only. mergen's "
-    "Workflow-orchestrated spec-driven-development engine (the `/mergen.*` "
+    "Workflow-orchestrated spec-driven-development engine (the `/mergen-*` "
     "commands, the adversarial verify gate, the wave-parallel implement pipeline) "
     "is Claude Code specific and is not included here."
 )
@@ -59,7 +59,7 @@ def portable_discipline(ladder_text: str) -> str:
     """Return the agent-portable body of the lazy ladder.
 
     Drops the Claude-specific "How the lifecycle uses the ladder" section and
-    rewrites the one sentence that references the `/mergen.debt` command, so
+    rewrites the one sentence that references the `/mergen-debt` command, so
     a non-Claude agent gets clean, applicable guidance.
     """
     body = ladder_text
@@ -68,10 +68,11 @@ def portable_discipline(ladder_text: str) -> str:
     idx = body.find(marker)
     if idx != -1:
         body = body[:idx]
-    # Rewrite any sentence that references a `/mergen.<cmd>` command into a
-    # portable instruction (robust to wording changes in the source).
+    # Rewrite any sentence that references a `/mergen-<cmd>` command into a
+    # portable instruction. The character class tolerates either the hyphen
+    # invocation or a legacy dot, so a stale source still renders clean.
     body = re.sub(
-        r"`/mergen\.\w+`[^\n]*",
+        r"`/mergen[.-]\w+`[^\n]*",
         "Track these comments so deferred work stays visible.",
         body,
     )
@@ -102,21 +103,39 @@ def render_targets(ladder_text: str) -> dict[str, str]:
     }
 
 
-def cmd_build(target: Path, dry_run: bool) -> int:
+def cmd_build(target: Path, dry_run: bool, force: bool) -> int:
     if not LADDER.is_file():
         print(f"ERROR: missing source {LADDER}", file=sys.stderr)
         return 1
     targets = render_targets(LADDER.read_text(encoding="utf-8"))
+    skipped: list[str] = []
     for rel, content in targets.items():
         dst = target / rel
         if dry_run:
-            print(f"[dry-run] would write {dst} ({len(content)} bytes)")
+            if dst.exists() and PROVENANCE not in dst.read_text(encoding="utf-8"):
+                print(f"[dry-run] would skip {dst} (user file, no provenance marker; use --force to overwrite)")
+            else:
+                print(f"[dry-run] would write {dst} ({len(content)} bytes)")
             continue
+        if dst.exists() and PROVENANCE not in dst.read_text(encoding="utf-8"):
+            if not force:
+                skipped.append(rel)
+                continue
         dst.parent.mkdir(parents=True, exist_ok=True)
-        dst.write_text(content, encoding="utf-8", newline="\n")
+        # write_bytes keeps LF cross-platform and is 3.9-safe (write_text gained
+        # the newline argument only in 3.10).
+        dst.write_bytes(content.encode("utf-8"))
         print(f"rendered {rel} -> {dst}")
+    if skipped:
+        print(f"\nWARNING: {len(skipped)} file(s) were NOT overwritten because they exist "
+              "and do not contain the mergen PROVENANCE marker (they appear to be user files):")
+        for rel in skipped:
+            print(f"  {target / rel}")
+        print("To overwrite them, re-run with --force.")
+    rendered = len(targets) - len(skipped)
     print(f"\n{len(targets)} cross-agent rule file(s) "
-          f"{'planned' if dry_run else 'rendered'} under {target}.")
+          f"{'planned' if dry_run else f'rendered: {rendered}, skipped: {len(skipped)}'} "
+          f"under {target}.")
     return 0
 
 
@@ -126,8 +145,10 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("target", nargs="?", default=".",
                     help="target project directory (default: cwd)")
     ap.add_argument("--dry-run", action="store_true")
+    ap.add_argument("--force", action="store_true",
+                    help="overwrite existing files even when they lack the provenance marker")
     args = ap.parse_args(argv)
-    return cmd_build(Path(args.target).resolve(), args.dry_run)
+    return cmd_build(Path(args.target).resolve(), args.dry_run, args.force)
 
 
 if __name__ == "__main__":

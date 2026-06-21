@@ -4,7 +4,7 @@ extension:
   id: "mergen"
   name: "Mergen (mergen verification and minimalism)"
   version: "1.0.0"
-  description: "Adds adversarial verification, canonical project-state rollup, a complexity router, an over-engineering review, and a deferred-shortcut debt ledger, and a risk-tier Governor to Spec Kit, and wires a non-bypassable verify gate after implement."
+  description: "Adds adversarial verification, canonical project-state rollup, a complexity router, an over-engineering review, a deferred-shortcut debt ledger, and a risk-tier Governor to Spec Kit. Wires the verify gate as a mandatory after_implement hook (optional: false)."
   author: "TheGoatPsy"
   repository: "https://github.com/TheGoatPsy/mergen"
   license: "Apache-2.0"

@@ -1,0 +1,80 @@
+# Mergen verify-attest. verify-gate-live plus a signed provenance attestation.
+#
+# This builds on verify-gate-live.yml. After regenerating the verification report
+# from the live tree and gating on it, it attests the fresh report with GitHub's
+# hosted build-provenance action. The attestation binds the report's SHA-256 to a
+# SLSA provenance predicate, signed with a short-lived Sigstore certificate minted
+# from this workflow run's OIDC token. A later `gh attestation verify` re-derives
+# the digest and fails on any edit, because in-toto matches subjects purely by
+# digest regardless of content type.
+#
+# Why this is not self-signed provenance. The signing key is minted by GitHub for
+# this run and is unreachable by the build steps, so this is not the forgeable
+# "the build script signs its own provenance" pattern. The report is produced by
+# the deterministic verify_core harness, not by a model, and signed by the hosted
+# action.
+#
+# What stays manual (a one-time repository setting, not something this file can
+# do): protect your default branch and require this check, and enforce
+# `gh attestation verify` before merge. Authoring the workflow is automatic.
+# Enforcing it is a permissions decision only a repo admin can make.
+
+name: verify-attest
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# id-token: write mints the OIDC token Sigstore signs with. attestations: write
+# records the attestation on this repository. contents: read is the default floor.
+permissions:
+  contents: read
+  id-token: write
+  attestations: write
+
+jobs:
+  verify-attest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
+
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.x"
+
+      - name: Re-verify against the live tree (regenerate the report)
+        run: |
+          set +e
+          python tools/verify_core.py \
+            --tasks-state .specify/specs/CHANGEME/tasks-state.json \
+            --root . \
+            --out fresh-verification-report.json
+          rc=$?
+          set -e
+          if [ "$rc" -eq 2 ]; then
+            echo "verify_core harness error (could not read tasks-state)"; exit 2
+          fi
+
+      - name: Fail the build on phantom or unverified work
+        run: |
+          python tools/evidence_metric.py \
+            fresh-verification-report.json \
+            --gate --max-phantoms 0 --min-work-done 1.0 --min-claimed 1
+
+      # Sign the CI-regenerated report. The subject is the fresh report, never a
+      # committed one. This step only runs after the gate above has passed.
+      #
+      # The signer is pinned to a full commit SHA, not a floating tag, so the signer
+      # itself cannot be swapped under you by a tag force-push. The trailing comment
+      # records the human-readable version. Re-verify the SHA against the action's
+      # releases page before bumping it.
+      - name: Attest the regenerated verification report
+        uses: actions/attest-build-provenance@ef244123eb79f2f7a7e75d99086184180e6d0018 # v1.4.4
+        with:
+          subject-path: fresh-verification-report.json
+
+      # To verify an attestation, here or on a developer machine:
+      #   gh attestation verify fresh-verification-report.json --repo <owner>/<repo>
+      # It re-derives the SHA-256 and fails on any edit. Make this verification a
+      # required status check on the default branch to make forgery a build break.

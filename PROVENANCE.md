@@ -21,18 +21,20 @@ Every occurrence of the prior internal names was transformed into Mergen, preser
 - hyperspec, Hyperspec, HYPERSPEC became mergen, Mergen, MERGEN
 - the repository slug `claude-code-hypercode` became `mergen`
 
-Command surface. `/hypercode` became `/mergen`. The `/hyperspec.<cmd>` family became `/mergen.<cmd>`. The
+Command surface. `/hypercode` became `/mergen`. The `/hyperspec.<cmd>` family became `/mergen-<cmd>`. The
 native skill prefix `hyperspec-<name>` became `mergen-<name>`. The spec-kit preset and extension became
 `mergen` with `speckit.mergen.<cmd>` ids. The deferred-shortcut comment convention `hyperspec:` became
-`mergen:`. The state marker `~/.omc/state/hypercode.json` became `~/.omc/state/mergen.json`.
+`mergen:`. The state marker `~/.omc/state/hypercode.json` became `~/.claude/mergen.json`.
 
 Files renamed. `effort-mode/commands/hypercode.md` to `mergen.md`, and
 `effort-mode/hooks/hypercode_prompt_hook.py` to `mergen_prompt_hook.py`. The generated spec-kit output was
 deleted and regenerated from the transformed source, so `dist/speckit/preset/mergen` and
 `dist/speckit/extensions/mergen` are fresh renders, not edited copies.
 
-Verified after transform. Zero `hyper*` tokens remain in the tree. `check_sync` reports the committed output
-in sync with `core/`. The native renderer plans 14 skills. The test suite passes.
+Verified after transform. All `hyper*` tokens were removed from the operational source and the rendered
+tree. The only surviving mentions are in this file and `CHANGELOG.md`, which record the rename lineage on
+purpose. `check_sync` reports the committed output in sync with `core/`. The native renderer plans 14
+skills. The test suite passes.
 
 ## Naming
 

@@ -65,11 +65,13 @@ Emit the decision as `governor-decision.json` so the rest of the lifecycle can r
 
 For a tiny task the record is just as honest: `tier: "tiny"`, empty `triggers_matched`, `workflow: "direct edit"`, `evidence_standard: "diff only"`, `human_approval_required: false`.
 
+When a fuller audit trail is wanted, the decision may also carry an optional `policy_results` array, one entry per floor guard evaluated in the shared `{policy_id, result, reason}` shape, where a guard that matched reports `result: "fail"` (the policy-engine sense: the deny rule fired, not that something broke). This is the same policy-result vocabulary the verification report uses, so a reader learns it once. The deterministic floor classifier (`scripts/governor_floor.py`) emits it under `--policy-trace`.
+
 ## How the rest of the lifecycle uses the decision
 
-- `/mergen.go` routes to the path the tier names. For a high-trust tier it adds the mandatory human checkpoint and the strict evidence standard before completion can be claimed.
-- `/mergen.plan` lets the tier set how deep the plan goes. A tiny task needs no plan. A high-trust task gets the full multi-approach and architecture-critic pass.
-- `/mergen.implement` lets the tier set the verifier's evidence standard and whether a human checkpoint gates the final `[X]`.
+- `/mergen-go` routes to the path the tier names. For a high-trust tier it adds the mandatory human checkpoint and the strict evidence standard before completion can be claimed.
+- `/mergen-plan` lets the tier set how deep the plan goes. A tiny task needs no plan. A high-trust task gets the full multi-approach and architecture-critic pass.
+- `/mergen-implement` lets the tier set the verifier's evidence standard and whether a human checkpoint gates the final `[X]`.
 
 The Governor is what makes maximum effort affordable. Without it, every task pays full ceremony and the cost drives people to skip the discipline entirely. With it, the discipline scales to the risk.
 
@@ -78,4 +80,4 @@ The Governor is what makes maximum effort affordable. Without it, every task pay
 - [ ] The task was classified into exactly one tier, and every high-trust trigger that matched is recorded.
 - [ ] The decision was emitted as `governor-decision.json` with all five fields plus `triggers_matched`.
 - [ ] The high-trust floor was honored: no matched trigger was silently lowered, and ties resolved upward.
-- [ ] The decision was handed to the work-running command (`/mergen.go`, `/mergen.plan`, or `/mergen.implement`) that consumes it.
+- [ ] The decision was handed to the work-running command (`/mergen-go`, `/mergen-plan`, or `/mergen-implement`) that consumes it.

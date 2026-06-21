@@ -23,7 +23,7 @@ This command runs under the mergen substrate: maximum reasoning effort plus Work
 
 Before launching the Workflow, collect the full input set in this context:
 
-1. Enumerate all feature spec directories: look for `specs/*/spec.md` and `specs/*/plan.md` under the repository root. Also check `memory/` for any previously written `project-state.md`.
+1. Enumerate all feature spec directories: look for `specs/*/spec.md` and `specs/*/plan.md` under the repository root. Also check `.specify/memory/` for any previously written `project-state.md`.
 2. List the files found and, for each spec directory, note whether `plan.md`, `data-model.md`, `contracts/`, `research.md`, and `tasks.md` exist. This inventory is passed to every Workflow lane.
 3. Load `.specify/memory/constitution.md` if it exists. Its governance constraints take precedence over any spec claim.
 

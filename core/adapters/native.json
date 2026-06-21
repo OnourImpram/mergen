@@ -1,0 +1,15 @@
+{
+  "host": "native",
+  "title": "Claude Code (native skills)",
+  "note": "The full engine. The mergen command suite as /mergen-* skills, lifecycle hooks, and the Workflow-orchestrated SDD pipeline, the one host where the orchestration runs.",
+  "capabilities": {
+    "slash_commands": true,
+    "command_suite": true,
+    "lifecycle_hooks": true,
+    "settings_registration": true,
+    "project_bootstrap": true,
+    "workflow_orchestration": true,
+    "verify_gate": true,
+    "passive_rules": false
+  }
+}
