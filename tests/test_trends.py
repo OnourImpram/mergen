@@ -45,6 +45,12 @@ def _write(directory, name, report):
     (directory / name).write_text(json.dumps(report), encoding="utf-8")
 
 
+def _corpus_dir(parent, name):
+    d = parent / name
+    d.mkdir()
+    return d
+
+
 # --------------------------------------------------------------------------- #
 # load_runs
 # --------------------------------------------------------------------------- #
@@ -182,10 +188,211 @@ def test_build_export_shape(tmp_path):
     _write(tmp_path, "r.json", _report("f", "2026-01-01T00:00:00Z", [_task("T1", "done", "fail")]))
     runs = trends.load_runs(tmp_path)
     export = trends.build_export(tmp_path, runs)
-    assert export["schema"] == "mergen-trends/1.0"
+    assert export["schema"] == "mergen-trends/1.1"
     assert export["report_count"] == 1
     assert len(export["runs"]) == 1
     assert export["churn"][0]["task_id"] == "T1"
+    assert export["feature_churn"][0]["feature_id"] == "f"
+
+
+# --------------------------------------------------------------------------- #
+# feature_churn (spec-pattern clustering)
+# --------------------------------------------------------------------------- #
+
+def test_feature_churn_rolls_up_per_feature():
+    runs = [
+        ("r1.json", _report("auth", "2026-01-01T00:00:00Z", [_task("A1", "done", "pass")])),
+        ("r2.json", _report("auth", "2026-01-02T00:00:00Z", [_task("A1", "done", "fail")])),  # flip+phantom
+        ("r3.json", _report("pay", "2026-01-03T00:00:00Z", [_task("P1", "done", "fail")])),    # phantom
+    ]
+    fc = trends.feature_churn(runs)
+    by_f = {r["feature_id"]: r for r in fc}
+    assert by_f["auth"]["flips"] == 1
+    assert by_f["auth"]["phantom_runs"] == 1
+    assert by_f["auth"]["churn_score"] == 2
+    assert by_f["auth"]["tasks"] == 1
+    assert by_f["auth"]["runs"] == 2
+    assert by_f["pay"]["churn_score"] == 1
+    # The harder-churning spec ranks first.
+    assert fc[0]["feature_id"] == "auth"
+
+
+def test_feature_churn_does_not_pool_task_id_across_features():
+    # The same task_id lives in two features. Pooled task churn would merge them
+    # (pass->fail->pass->pass = 2 flips + 1 phantom = 3), but the feature is the
+    # task's namespace, so per-feature each id is its own task.
+    runs = [
+        ("r1.json", _report("A", "2026-01-01T00:00:00Z", [_task("T1", "done", "pass")])),
+        ("r2.json", _report("A", "2026-01-02T00:00:00Z", [_task("T1", "done", "fail")])),
+        ("r3.json", _report("B", "2026-01-03T00:00:00Z", [_task("T1", "done", "pass")])),
+        ("r4.json", _report("B", "2026-01-04T00:00:00Z", [_task("T1", "done", "pass")])),
+    ]
+    by_f = {r["feature_id"]: r for r in trends.feature_churn(runs)}
+    assert by_f["A"]["churn_score"] == 2   # A's T1: one flip + one phantom
+    assert by_f["B"]["churn_score"] == 0   # B's T1: stable, never churns
+    # Proof the namespacing matters: pooled across features it would be 3.
+    pooled = trends.task_churn(runs)
+    assert pooled[0]["task_id"] == "T1" and pooled[0]["churn_score"] == 3
+
+
+# --------------------------------------------------------------------------- #
+# multi-corpus
+# --------------------------------------------------------------------------- #
+
+def test_corpus_summary_aggregates_features_and_rate():
+    runs = [
+        ("r1.json", _report("auth", "2026-01-01T00:00:00Z",
+                            [_task("A1", "done", "pass"), _task("A2", "done", "fail")])),
+        ("r2.json", _report("pay", "2026-01-02T00:00:00Z", [_task("P1", "done", "pass")])),
+    ]
+    s = trends._corpus_summary("lbl", runs)
+    assert s["label"] == "lbl"
+    assert s["report_count"] == 2
+    assert s["features"] == 2
+    assert s["latest_verdict"] == "pass"            # r2 is latest, no phantom
+    # r1 work-done = 1/2, r2 = 1/1, mean = 0.75.
+    assert abs(s["mean_work_done_rate"] - 0.75) < 1e-9
+
+
+def test_build_multi_export_has_comparison_and_corpora(tmp_path):
+    a = _corpus_dir(tmp_path, "a")
+    b = _corpus_dir(tmp_path, "b")
+    _write(a, "r.json", _report("A", "2026-01-01T00:00:00Z", [_task("T1", "done", "fail")]))
+    _write(b, "r.json", _report("B", "2026-01-01T00:00:00Z", [_task("T1", "done", "pass")]))
+    export = trends.build_multi_export(trends.load_corpora([a, b]))
+    assert export["schema"] == "mergen-trends/1.1"
+    assert export["report_count"] == 2
+    assert len(export["corpora"]) == 2
+    assert {c["label"] for c in export["comparison"]} == {str(a), str(b)}
+    assert all("feature_churn" in c for c in export["corpora"])
+
+
+def test_render_multi_has_comparison_and_per_corpus(tmp_path):
+    corpora = [
+        (str(tmp_path / "a"),
+         [("r.json", _report("A", "2026-01-01T00:00:00Z", [_task("T1", "done", "fail")]))]),
+        (str(tmp_path / "b"),
+         [("r.json", _report("B", "2026-01-02T00:00:00Z", [_task("T2", "done", "pass")]))]),
+    ]
+    out = trends.render_multi(corpora)
+    assert out.startswith("<!doctype html")
+    assert "Corpora compared" in out
+    assert "Corpus:" in out
+    assert "Trends across runs" in out   # each corpus rendered in full
+    assert "<script" not in out
+
+
+def test_render_html_shows_spec_table_when_multiple_features():
+    runs = [
+        ("r1.json", _report("auth", "2026-01-01T00:00:00Z", [_task("A1", "done", "fail")])),
+        ("r2.json", _report("pay", "2026-01-02T00:00:00Z", [_task("P1", "done", "fail")])),
+    ]
+    out = trends.render_html(runs)
+    assert "Spec churn leaderboard" in out
+    assert "auth" in out and "pay" in out
+
+
+def test_render_html_hides_spec_table_for_single_feature():
+    runs = [
+        ("r1.json", _report("f", "2026-01-01T00:00:00Z", [_task("T1", "done", "fail")])),
+        ("r2.json", _report("f", "2026-01-02T00:00:00Z", [_task("T1", "done", "pass")])),
+    ]
+    out = trends.render_html(runs)
+    assert "Spec churn leaderboard" not in out
+
+
+def test_main_multi_dir_json_compares_corpora(tmp_path, capsys):
+    a = _corpus_dir(tmp_path, "a")
+    b = _corpus_dir(tmp_path, "b")
+    _write(a, "r.json", _report("A", "2026-01-01T00:00:00Z", [_task("T1", "done", "fail")]))
+    _write(b, "r.json", _report("B", "2026-01-01T00:00:00Z", [_task("T1", "done", "pass")]))
+    rc = trends.main([str(a), str(b), "--json"])
+    assert rc == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["schema"] == "mergen-trends/1.1"
+    assert payload["report_count"] == 2
+    assert len(payload["corpora"]) == 2
+    assert {c["label"] for c in payload["comparison"]} == {str(a), str(b)}
+
+
+def test_main_multi_dir_one_bad_returns_2(tmp_path):
+    a = _corpus_dir(tmp_path, "a")
+    _write(a, "r.json", _report("A", "2026-01-01T00:00:00Z", [_task("T1")]))
+    assert trends.main([str(a), str(tmp_path / "nope")]) == 2
+
+
+def test_main_multi_dir_html_to_stdout(tmp_path, capsys):
+    a = _corpus_dir(tmp_path, "a")
+    b = _corpus_dir(tmp_path, "b")
+    _write(a, "r.json", _report("A", "2026-01-01T00:00:00Z", [_task("T1", "done", "fail")]))
+    _write(b, "r.json", _report("B", "2026-01-01T00:00:00Z", [_task("T2", "done", "pass")]))
+    rc = trends.main([str(a), str(b)])
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "Corpora compared" in out
+    assert "Corpus:" in out
+
+
+# --------------------------------------------------------------------------- #
+# robustness and contract (review follow-ups)
+# --------------------------------------------------------------------------- #
+
+def test_feature_churn_missing_feature_id_uses_sentinel_not_unknown():
+    # load_runs tolerates a report missing feature_id. Its tasks must not pool with
+    # a report that legitimately names its feature "unknown", or one would
+    # contaminate the other's churn score.
+    no_fid = {
+        "schema_version": "1.0", "verified_at": "2026-01-01T00:00:00Z",
+        "summary": {"verdict": "fail", "human_review_required": True},
+        "tasks": [_task("T1", "done", "fail")],   # a phantom
+    }
+    runs = [
+        ("r1.json", no_fid),
+        ("r2.json", _report("unknown", "2026-01-02T00:00:00Z", [_task("T2", "done", "pass")])),
+    ]
+    by_f = {r["feature_id"]: r for r in trends.feature_churn(runs)}
+    assert trends._NO_FEATURE in by_f             # missing feature_id gets its own bucket
+    assert "unknown" in by_f                       # the literal "unknown" feature is separate
+    assert by_f[trends._NO_FEATURE]["phantom_runs"] == 1
+    assert by_f["unknown"]["churn_score"] == 0     # the legit feature is uncontaminated
+
+
+def test_render_multi_with_one_empty_corpus(tmp_path):
+    a = _corpus_dir(tmp_path, "a")
+    b = _corpus_dir(tmp_path, "b")  # empty, no reports
+    _write(a, "r.json", _report("A", "2026-01-01T00:00:00Z", [_task("T1")]))
+    out = trends.render_multi(trends.load_corpora([a, b]))
+    assert out.startswith("<!doctype html")
+    assert "Corpora compared" in out
+    assert "No verification reports" in out        # the empty corpus renders its empty section
+
+
+def test_render_html_spec_table_announces_truncation():
+    # Three single-phantom features, each churn 1. With top=2 the spec table must
+    # announce the cut and name "specs", not "tasks".
+    runs = [
+        ("r1.json", _report("auth", "2026-01-01T00:00:00Z", [_task("A", "done", "fail")])),
+        ("r2.json", _report("pay", "2026-01-02T00:00:00Z", [_task("B", "done", "fail")])),
+        ("r3.json", _report("core", "2026-01-03T00:00:00Z", [_task("C", "done", "fail")])),
+    ]
+    out = trends.render_html(runs, top=2)
+    assert "Showing the 2 most churny of 3 specs" in out
+
+
+def test_comparison_churny_tasks_matches_corpus_export(tmp_path):
+    # The comparison row's churny_tasks must equal the count of non-zero churn
+    # entries in that corpus's own churn list, so the two computations cannot drift.
+    a = _corpus_dir(tmp_path, "a")
+    b = _corpus_dir(tmp_path, "b")
+    _write(a, "r1.json", _report("A", "2026-01-01T00:00:00Z", [_task("T1", "done", "pass")]))
+    _write(a, "r2.json", _report("A", "2026-01-02T00:00:00Z", [_task("T1", "done", "fail")]))
+    _write(b, "r.json", _report("B", "2026-01-01T00:00:00Z", [_task("T2", "done", "pass")]))
+    export = trends.build_multi_export(trends.load_corpora([a, b]))
+    by_source = {c["source_dir"]: c for c in export["corpora"]}
+    for summary in export["comparison"]:
+        corpus = by_source[summary["label"]]
+        expected = sum(1 for c in corpus["churn"] if c["churn_score"] > 0)
+        assert summary["churny_tasks"] == expected
 
 
 def test_main_returns_2_on_non_directory(tmp_path):

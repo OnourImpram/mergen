@@ -74,6 +74,15 @@ tagged as a release.
   metrics as a machine-readable export, the honest observability seam: an
   external collector can ingest it while mergen core keeps no telemetry
   dependency and makes no network call. Self-contained HTML, no JavaScript.
+- Spec-pattern clustering and cross-corpus aggregation in `mergen trends`. The
+  same churn now rolls up per feature (a spec churn leaderboard), so a whole spec
+  that keeps fighting the verifier surfaces above its individual tasks. Because a
+  feature is the natural namespace for a task, the rollup never pools a task id
+  across two features. Passing more than one reports directory compares corpora
+  side by side, each read independently so a task id is never pooled across two
+  unrelated projects. The `--json` export carries the per-feature rollup and, in
+  multi-corpus mode, a corpus comparison alongside each corpus in full (schema
+  `mergen-trends/1.1`).
 - Spec Kit diagnostic parity in the agent-agnostic CLI. `mergen status`
   (`scripts/tasks_status.py`) summarizes a `tasks-state.json` (done versus
   pending, per task), the `specify status` analog. `mergen issues`

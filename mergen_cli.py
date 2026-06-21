@@ -37,8 +37,10 @@ The verbs:
   issues     render GitHub issue stubs from a tasks.md. It renders, it does not
              create. Agent agnostic. The Spec Kit analog is taskstoissues.
   trends     cross-run verification trends and per-task churn over a directory of
-             reports. Where dashboard is a snapshot, this is the time dimension.
-             Agent agnostic, pure standard library, no network.
+             reports, with a per-feature spec churn rollup, and a side-by-side
+             comparison when several directories are passed. Where dashboard is a
+             snapshot, this is the time dimension. Agent agnostic, pure standard
+             library, no network.
 
 install, uninstall, and upgrade act on the real ~/.claude. doctor takes optional
 directory flags so it can inspect any tree, which is also how it is tested.
@@ -391,8 +393,8 @@ def build_parser() -> argparse.ArgumentParser:
     sub.add_parser(
         "trends",
         add_help=False,
-        help="cross-run trends and per-task churn over a reports directory "
-             "(forwards to trends.py, try: mergen trends --help)",
+        help="cross-run trends, per-task and per-spec churn over one or more "
+             "reports directories (forwards to trends.py, try: mergen trends --help)",
     )
 
     return parser
