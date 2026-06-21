@@ -37,7 +37,7 @@ four metrics below target those failure modes directly.
 
 ## Evidence metric
 
-`evidence_metric.py` in this directory is a minimal honest metric derived from the machine-readable verify output. It reports two values: work-done rate (fraction of tasks with verifier-confirmed evidence) and phantom-completion count (tasks marked `[X]` with no backing artifact). The metric abstains on minimal-change runs that lack lean data rather than reporting a misleading zero. It reads `verification-report.json` and `tasks-state.json` emitted by `/mergen.verify` (schemas in `core/schemas/`). It reads BOM-prefixed JSON (the form Windows PowerShell writes) without choking. The full benchmark suite is on the roadmap.
+`evidence_metric.py` in this directory is a minimal honest metric derived from the machine-readable verify output. It reports two values: work-done rate (fraction of tasks with verifier-confirmed evidence) and phantom-completion count (tasks marked `[X]` with no backing artifact). The metric abstains on minimal-change runs that lack lean data rather than reporting a misleading zero. It reads `verification-report.json` and `tasks-state.json` emitted by `/mergen-verify` (schemas in `core/schemas/`). It reads BOM-prefixed JSON (the form Windows PowerShell writes) without choking. The full benchmark suite is on the roadmap.
 
 Gate use, honest defaults. `python eval/evidence_metric.py <report> --gate` fails the build when a claimed-done task is not verifier-confirmed. With nothing claimed done it abstains and passes, because a gate cannot enforce work that was never claimed. That abstention also means an empty report would pass, so a CI step meant to prove work was done should require at least one claimed task. The recommended CI invocation is:
 
@@ -84,7 +84,7 @@ repository does not track. All five are cases the bare checkbox accepts and the 
 | 1 | Phantom-completion rate | Fraction of `[X]` tasks whose named file or test does not exist at measurement time |
 | 2 | Parallel speedup | Ratio of serial wall-clock to wave-parallel wall-clock for independent task waves |
 | 3 | Adversarial catch | Count of real defects (spec gaps, missing files, failing tests) surfaced by the verify lanes before the human accepts the run |
-| 4 | Over-build rate | Fraction of added lines that `/mergen.lean` flags as removable (the minimalism layer, with correctness-critical lines never counted) |
+| 4 | Over-build rate | Fraction of added lines that `/mergen-lean` flags as removable (the minimalism layer, with correctness-critical lines never counted) |
 
 ## Measurement isolation
 

@@ -20,7 +20,7 @@ every claimed-done task must carry concrete evidence. Relax either bound with
 
 1. Vendor the metric into your repository, for example at `tools/evidence_metric.py`.
    It is Python standard library only, so there is nothing to install.
-2. Run `/mergen.verify` in your project and commit the `verification-report.json`
+2. Run `/mergen-verify` in your project and commit the `verification-report.json`
    it emits.
 3. Copy `verify-gate.yml` into your project's `.github/workflows/` directory and
    point the run step at your committed report.

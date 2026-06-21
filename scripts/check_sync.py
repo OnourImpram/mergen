@@ -101,11 +101,11 @@ def check_agents_consistency() -> list[str]:
             problems.append(f"AGENTS.md render is missing ladder rung: '{rung}'")
     # The discipline body must not instruct the agent to run Claude-Code-only
     # commands. The honest scope note (rendered separately) is allowed to name
-    # the excluded `/mergen.*` suite, so check the discipline body, not the
-    # whole file.
+    # the excluded `/mergen-*` suite, so check the discipline body, not the
+    # whole file. Both the hyphen invocation and a legacy dot count as a leak.
     discipline = build_agents.portable_discipline(ladder_text)
-    if "/mergen." in discipline:
-        problems.append("portable discipline leaks a Claude-Code-specific /mergen. reference")
+    if "/mergen-" in discipline or "/mergen." in discipline:
+        problems.append("portable discipline leaks a Claude-Code-specific /mergen- reference")
     if "How the lifecycle uses the ladder" in discipline:
         problems.append("portable discipline leaks the Claude-Code-specific lifecycle section")
     return problems

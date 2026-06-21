@@ -3,7 +3,9 @@
 
 Single source -> two shells (see core/CONVENTIONS.md). This is the NATIVE
 renderer. It turns each `core/commands/<name>.md` into a Claude Code skill at
-`~/.claude/skills/mergen-<name>/SKILL.md`, invoked as `/mergen.<name>`.
+`~/.claude/skills/mergen-<name>/SKILL.md`, invoked as `/mergen-<name>`. Claude
+Code derives the typed command from the skill directory name, so the hyphen
+directory is the invocation. The frontmatter name mirrors it for the listing.
 
 Two responsibilities, mirroring how spec-kit splits global commands from a
 per-project `.specify/` bootstrap:
@@ -44,7 +46,7 @@ TEMPLATES_DIR = REPO / "core" / "templates"
 SCRIPTS_DIR = REPO / "core" / "scripts"
 HOOKS_DIR = REPO / "core" / "hooks"
 
-SKILL_PREFIX = "mergen"  # /mergen.<name>
+SKILL_PREFIX = "mergen"  # dir mergen-<name>, invoked /mergen-<name>
 
 
 def _claude_home() -> Path:
@@ -148,7 +150,7 @@ def _yaml_quote(value: str) -> str:
 def render_skill(cmd: Command) -> str:
     """Render a Command into a Claude Code SKILL.md (frontmatter + body)."""
     lines = ["---"]
-    lines.append(f"name: {SKILL_PREFIX}.{cmd.name}")
+    lines.append(f"name: {SKILL_PREFIX}-{cmd.name}")
     lines.append(f"description: {_yaml_quote(cmd.description)}")
     if cmd.argument_hint:
         lines.append(f"argument-hint: {_yaml_quote(cmd.argument_hint)}")
@@ -186,7 +188,7 @@ def cmd_build(skills_dir: Path, hooks_dir: Path | None, dry_run: bool) -> int:
             # write_bytes keeps LF cross-platform and is 3.9-safe (write_text
             # gained the newline argument only in 3.10).
             target.write_bytes(content.encode("utf-8"))
-            print(f"rendered /{SKILL_PREFIX}.{cmd.name} -> {target}")
+            print(f"rendered /{SKILL_PREFIX}-{cmd.name} -> {target}")
         rendered += 1
 
     # Copy hooks only when a hooks target is set. main() resolves a custom

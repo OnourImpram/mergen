@@ -46,14 +46,14 @@ not become "never":
 # mergen: global lock. switch to per-account locks if throughput matters.
 ```
 
-`/mergen.debt` harvests these comments into a ledger so deferred work stays
+`/mergen-debt` harvests these comments into a ledger so deferred work stays
 visible across the spec-driven lifecycle.
 
 ## How the lifecycle uses the ladder
 
-- `/mergen.plan` prefers stdlib, native, and installed dependencies over new
+- `/mergen-plan` prefers stdlib, native, and installed dependencies over new
   abstractions, and its architecture-critic rejects complexity the spec does not require.
-- `/mergen.implement` builds each task to the ladder, and its adversarial
+- `/mergen-implement` builds each task to the ladder, and its adversarial
   verifier checks that the result is minimal as well as correct.
-- `/mergen.lean` reviews a diff or the repo for over-engineering and returns
+- `/mergen-lean` reviews a diff or the repo for over-engineering and returns
   a delete-list. It judges complexity only, never correctness.

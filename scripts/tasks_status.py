@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """mergen status: a compact, agent-agnostic summary of tasks-state.json.
 
-Reads the machine-readable completion record that /mergen.verify and
-/mergen.rollup maintain and reports how many tasks are done versus pending, with
+Reads the machine-readable completion record that /mergen-verify and
+/mergen-rollup maintain and reports how many tasks are done versus pending, with
 a per-task line. The Spec Kit analog is `specify status`. Pure standard library,
 no network, no model.
 

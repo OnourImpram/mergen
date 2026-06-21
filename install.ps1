@@ -10,7 +10,7 @@
 
   Native install performs three steps in order:
     1. effort-mode\install.ps1         /mergen command + UserPromptSubmit effort hook
-    2. build_native.py build           renders 14 /mergen.* skills to ~/.claude/skills/
+    2. build_native.py build           renders 14 /mergen-* skills to ~/.claude/skills/
     3. patch_settings_hooks.py         registers verify_gate + constitution_inject hooks
 
   After install: restart Claude Code (or run /hooks) so all new hooks load.
@@ -72,7 +72,7 @@ Usage:
 
 Native install steps (in order):
   1. effort-mode\install.ps1         /mergen command + UserPromptSubmit effort hook
-  2. build_native.py build           renders 14 /mergen.* skills to ~/.claude/skills/
+  2. build_native.py build           renders 14 /mergen-* skills to ~/.claude/skills/
   3. patch_settings_hooks.py         registers verify_gate + constitution_inject hooks
 
 Note: /effort max requires one manual paste after running /mergen in a session.
@@ -138,7 +138,7 @@ if ($PSBoundParameters.ContainsKey('Init') -or $InitCurrent) {
   & $Py "$BuildNative" init "$InitDir"
   if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
   Write-Host ""
-  Write-Host "Project initialized. Open a Claude Code session in $InitDir and run /mergen.specify to start."
+  Write-Host "Project initialized. Open a Claude Code session in $InitDir and run /mergen-specify to start."
   exit 0
 }
 
@@ -156,7 +156,7 @@ if (-not (Test-Path $EffortInstaller)) {
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 Write-Host ""
-Write-Host "==> Step 2/3: Building native SDD skills (14 /mergen.* commands) ..."
+Write-Host "==> Step 2/3: Building native SDD skills (14 /mergen-* commands) ..."
 $BuildNative = Join-Path $Here "dist\native\build_native.py"
 if (-not (Test-Path $BuildNative)) {
   Write-Host "ERROR: expected file not found: $BuildNative" -ForegroundColor Red
@@ -184,7 +184,7 @@ Next steps:
   2. To arm max-effort mode in a session, run: /mergen
      Then paste the line it prints:  /effort max
      (One manual paste is required -- a hook cannot flip the live effort value.)
-  3. Use the SDD commands anywhere: /mergen.specify, /mergen.plan, etc.
+  3. Use the SDD commands anywhere: /mergen-specify, /mergen-plan, etc.
   4. To bootstrap SDD in a project, run from this repo:
        .\install.ps1 -Init C:\path\to\your\project
 

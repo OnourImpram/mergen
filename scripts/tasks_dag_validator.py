@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Deterministic validator for a tasks-dag.json (roadmap 1.3).
 
-/mergen.tasks emits a wave-ordered dependency DAG and describes an adversarial
+/mergen-tasks emits a wave-ordered dependency DAG and describes an adversarial
 verifier lane that checks it. This module is the code form of that lane, so the
 check is a tool that proves rather than a prompt that asks. It enforces the
 invariants the schema cannot express:

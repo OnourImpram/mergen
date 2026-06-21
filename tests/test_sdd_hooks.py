@@ -1,5 +1,5 @@
 """Tests for the always-on SDD runtime hooks under core/hooks/: verify_gate (the
-nudge to run /mergen.verify when a task is checked off inside .specify) and
+nudge to run /mergen-verify when a task is checked off inside .specify) and
 constitution_inject (surfacing the project constitution's headings on session
 start). Both share the _run_hook driver, so they live in one focused file.
 
@@ -48,7 +48,7 @@ def test_verify_gate_fires_on_new_x_in_specify_tasks(monkeypatch, capsys):
     rc, out = _run_hook("core/hooks/verify_gate.py", payload, monkeypatch, capsys)
     assert rc == 0
     assert "verify-gate reminder" in out
-    assert "/mergen.verify" in out
+    assert "/mergen-verify" in out
 
 
 def test_verify_gate_silent_on_tasks_outside_specify(monkeypatch, capsys):

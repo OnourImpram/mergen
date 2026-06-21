@@ -49,7 +49,7 @@ slash commands. The single-source contract is in `core/CONVENTIONS.md`.
 
 | Component | Needs | Notes |
 |---|---|---|
-| `/mergen.*` native skills | Claude Code | `dist/native/build_native.py` renders to `~/.claude/skills/mergen-<name>/SKILL.md` |
+| `/mergen-*` native skills | Claude Code | `dist/native/build_native.py` renders to `~/.claude/skills/mergen-<name>/SKILL.md` |
 | `speckit.*` and `speckit.mergen.*` | Spec Kit | `dist/speckit/build_speckit.py` renders a preset (8 overrides) and an extension (6 additions) |
 | `verify_gate.py`, `constitution_inject.py` | Claude Code hooks | Reinforcement nudges via `settings.json`. No-ops where the hook system is absent |
 
