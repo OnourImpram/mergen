@@ -290,3 +290,114 @@ def test_cli_record_type_and_auto_source_hash(tmp_path, capsys):
     assert "- record-type: trajectory" in out
     # The report hash is computed automatically from the exact file bytes.
     assert f"- report-sha256: {hashlib.sha256(raw).hexdigest()}" in out
+
+
+# --------------------------------------------------------------------------- #
+# Verified Mneme Writeback (v2.5 component 3): the record carries the trust-graph
+# node id of the report that earns it, so a remembered decision walks to its proof.
+# --------------------------------------------------------------------------- #
+
+def _report_with_provenance(commit="abc1234"):
+    return {
+        "feature_id": "feat-x", "verified_at": "2026-06-20T00:00:00Z",
+        "summary": {"verdict": "pass", "human_review_required": False},
+        "tasks": [{"task_id": "T1", "verified_status": "pass", "files_checked": ["a.py"]}],
+        "provenance": {"source_commit": commit, "tasks_state_sha256": "deadbeef",
+                       "verifier_version": "1.0"},
+    }
+
+
+def test_emit_carries_the_trust_graph_anchor():
+    emit = _load("scripts/mneme_emit.py")
+    # Use the same trust_graph instance the seam itself uses, so the test cannot drift from
+    # the module mneme_emit loads internally.
+    tg = emit._load("trust_graph")
+    rep = {"feature_id": "f", "verified_at": "t", "summary": {"verdict": "pass"}, "tasks": []}
+    md = emit.to_decision_markdown(rep, source_sha256="cafef00d")
+    assert f"- trust-graph-node: {tg.node_id('verification-report', 'cafef00d')}" in md
+
+
+def test_emit_anchor_is_none_without_a_report_sha():
+    emit = _load("scripts/mneme_emit.py")
+    rep = {"feature_id": "f", "verified_at": "t", "summary": {"verdict": "pass"}, "tasks": []}
+    assert "- trust-graph-node: none" in emit.to_decision_markdown(rep)
+
+
+def test_parse_round_trips_the_trust_graph_node():
+    emit = _load("scripts/mneme_emit.py")
+    tg = emit._load("trust_graph")
+    rep = {"feature_id": "f", "verified_at": "t", "summary": {"verdict": "pass"}, "tasks": []}
+    rec = emit.parse_decision_record(emit.to_decision_markdown(rep, source_sha256="hh"))
+    assert rec["trust_graph_node"] == tg.node_id("verification-report", "hh")
+
+
+def test_dedup_distinguishes_records_by_source_commit(tmp_path):
+    # The same feature and verdict verified at a different commit is a different decision,
+    # not a duplicate, so the later commit's record is kept rather than silently dropped.
+    emit = _load("scripts/mneme_emit.py")
+    emit.write_decision_record(_report_with_provenance("commit-one"), tmp_path)
+    emit.write_decision_record(_report_with_provenance("commit-two"), tmp_path)
+    assert len(list(tmp_path.glob("decision-*.md"))) == 2
+    # Re-verifying the same commit is still a duplicate.
+    emit.write_decision_record(_report_with_provenance("commit-one"), tmp_path)
+    assert len(list(tmp_path.glob("decision-*.md"))) == 2
+
+
+def test_remembered_decision_walks_to_its_proof(tmp_path):
+    # The DoD: from a remembered decision, walk to the proof that earns it. Mirror the real
+    # two-tool flow. The report is written to a file, and BOTH the graph ingest and the mneme
+    # emit derive the report sha from the SAME file bytes, exactly as the two CLIs do, so the
+    # anchor the record carries is the node id the graph actually stored, not a self-fed value.
+    import hashlib
+    emit = _load("scripts/mneme_emit.py")
+    tg = emit._load("trust_graph")
+    report_file = tmp_path / "verification-report.json"
+    report_file.write_bytes(json.dumps(_report_with_provenance("abc1234"), indent=2).encode("utf-8"))
+    raw = report_file.read_bytes()
+    sha = hashlib.sha256(raw).hexdigest()              # the hash both CLIs compute from file bytes
+    loaded = json.loads(raw.decode("utf-8-sig"))
+
+    graph = tmp_path / "graph.jsonl"
+    report_node = tg.ingest_report(graph, loaded, "2026-06-20T00:00:00Z", report_sha256=sha)
+    rec = emit.parse_decision_record(emit.to_decision_markdown(loaded, source_sha256=sha))
+    assert rec["trust_graph_node"] == report_node      # the anchor is the exact report node id
+
+    chain = emit.proof_chain_for_record(rec, graph)
+    kinds = {n["kind"] for n in chain["nodes"]}
+    assert {"verification-report", "tasks-state", "commit"} <= kinds
+
+
+def test_cli_anchor_matches_the_ingested_node(tmp_path, capsys):
+    # The honest cross-check: the two CLIs, reading the SAME report file, must agree on the sha
+    # so the anchor the mneme CLI prints resolves to the node the trust_graph CLI ingested. This
+    # is the production serialization boundary the in-memory test cannot exercise on its own.
+    emit = _load("scripts/mneme_emit.py")
+    tg = _load("scripts/trust_graph.py")
+    report_file = tmp_path / "verification-report.json"
+    report_file.write_bytes(json.dumps(_report_with_provenance("c0ffee"), indent=2).encode("utf-8"))
+    graph = tmp_path / "graph.jsonl"
+
+    assert tg.main(["ingest", "--graph", str(graph), str(report_file)]) == 0
+    node_id = capsys.readouterr().out.split("report node ")[1].split(" into")[0].strip()
+
+    assert emit.main([str(report_file)]) == 0
+    assert f"- trust-graph-node: {node_id}" in capsys.readouterr().out
+
+
+def test_proof_chain_is_empty_without_an_anchor_or_graph(tmp_path):
+    emit = _load("scripts/mneme_emit.py")
+    assert emit.proof_chain_for_record({"trust_graph_node": "none"}, tmp_path / "x.jsonl")["nodes"] == []
+    assert emit.proof_chain_for_record({"trust_graph_node": ""}, tmp_path / "x.jsonl")["nodes"] == []
+    # A real-looking anchor but an absent graph yields an empty chain, never a raise.
+    out = emit.proof_chain_for_record({"trust_graph_node": "abcdef0123456789"}, tmp_path / "absent.jsonl")
+    assert out["nodes"] == []
+
+
+def test_proof_chain_handles_a_corrupt_graph_without_raising(tmp_path):
+    # A corrupt or partially-written graph file must yield an empty chain, not crash the caller.
+    # This is the exact case that the load_graph -> read_events path raises ValueError on.
+    emit = _load("scripts/mneme_emit.py")
+    corrupt = tmp_path / "corrupt.jsonl"
+    corrupt.write_text("not-json\n", encoding="utf-8")
+    out = emit.proof_chain_for_record({"trust_graph_node": "abcdef0123456789"}, corrupt)
+    assert out["nodes"] == [] and out["edges"] == []
