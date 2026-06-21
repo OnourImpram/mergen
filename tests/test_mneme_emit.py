@@ -230,3 +230,63 @@ def test_cli_write_blocks_secret_and_writes_nothing(tmp_path, capsys):
     assert "redaction preflight blocked" in err
     assert _AWS_EXAMPLE_KEY not in err  # the block message must not leak the secret
     assert not out.exists() or not list(out.glob("decision-*.md"))
+
+
+# --------------------------------------------------------------------------- #
+# Record metadata (Phase 4): record-type, an auto report hash, and the
+# verification lineage carried from the report's provenance.
+# --------------------------------------------------------------------------- #
+
+def test_emit_includes_record_type_and_lineage():
+    emit = _load("scripts/mneme_emit.py")
+    rep = {
+        "feature_id": "f", "verified_at": "2026-06-20T00:00:00Z",
+        "summary": {"verdict": "pass", "human_review_required": False},
+        "tasks": [{"task_id": "T1", "verified_status": "pass", "files_checked": ["a.py"]}],
+        "provenance": {"source_commit": "abc1234", "tasks_state_sha256": "deadbeef",
+                       "verifier_version": "1.2.3"},
+    }
+    md = emit.to_decision_markdown(rep, record_type="failure", source_sha256="cafef00d")
+    assert "- record-type: failure" in md
+    assert "- report-sha256: cafef00d" in md
+    assert "- source-commit: abc1234" in md
+    assert "- tasks-state-sha256: deadbeef" in md
+    assert "- verifier-version: 1.2.3" in md
+
+
+def test_emit_lineage_defaults_to_none_without_provenance():
+    emit = _load("scripts/mneme_emit.py")
+    rep = {"feature_id": "f", "verified_at": "t", "summary": {"verdict": "pass"}, "tasks": []}
+    md = emit.to_decision_markdown(rep)
+    assert "- record-type: decision" in md
+    assert "- report-sha256: none" in md
+    assert "- source-commit: none" in md
+
+
+def test_parse_round_trips_record_type_and_lineage():
+    emit = _load("scripts/mneme_emit.py")
+    rep = {
+        "feature_id": "f", "verified_at": "t", "summary": {"verdict": "pass"}, "tasks": [],
+        "provenance": {"source_commit": "abc", "tasks_state_sha256": "def", "verifier_version": "9"},
+    }
+    rec = emit.parse_decision_record(
+        emit.to_decision_markdown(rep, record_type="policy", source_sha256="hh"))
+    assert rec["record_type"] == "policy"
+    assert rec["report_sha256"] == "hh"
+    assert rec["source_commit"] == "abc"
+    assert rec["tasks_state_sha256"] == "def"
+    assert rec["verifier_version"] == "9"
+
+
+def test_cli_record_type_and_auto_source_hash(tmp_path, capsys):
+    import hashlib
+    emit = _load("scripts/mneme_emit.py")
+    report = tmp_path / "verification-report.json"
+    raw = json.dumps(_report()).encode("utf-8")
+    report.write_bytes(raw)
+    rc = emit.main([str(report), "--record-type", "trajectory"])
+    out = capsys.readouterr().out
+    assert rc == 0
+    assert "- record-type: trajectory" in out
+    # The report hash is computed automatically from the exact file bytes.
+    assert f"- report-sha256: {hashlib.sha256(raw).hexdigest()}" in out

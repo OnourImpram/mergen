@@ -31,11 +31,26 @@ from pathlib import Path
 from typing import Any
 
 
-def to_decision_markdown(report: dict[str, Any]) -> str:
+_RECORD_TYPES = ("decision", "trajectory", "failure", "policy")
+
+
+def to_decision_markdown(
+    report: dict[str, Any], *, record_type: str = "decision",
+    source_sha256: str | None = None,
+) -> str:
     feature_id = report.get("feature_id", "unknown")
     summary = report.get("summary", {})
     verdict = summary.get("verdict", "unknown")
     verified_at = report.get("verified_at", "")
+    # Verification lineage from the report's own provenance, so a remembered
+    # decision can be walked back to the exact commit and tasks-state it verified.
+    # Read from the report, never shelled from git, so the seam stays subprocess
+    # free and deterministic.
+    provenance = report.get("provenance")
+    provenance = provenance if isinstance(provenance, dict) else {}
+    source_commit = provenance.get("source_commit") or "none"
+    tasks_state_sha = provenance.get("tasks_state_sha256") or "none"
+    verifier_version = provenance.get("verifier_version") or "none"
     tasks = report.get("tasks", [])
     proven = [
         t.get("task_id", "?")
@@ -47,11 +62,16 @@ def to_decision_markdown(report: dict[str, Any]) -> str:
     lines = [
         f"# Decision: {feature_id}",
         "",
+        f"- record-type: {record_type}",
         f"- source: mergen verification-report ({verified_at})",
+        f"- report-sha256: {source_sha256 or 'none'}",
         f"- verdict: {verdict}",
         "- confidence: extracted",
         f"- proven tasks: {', '.join(proven) if proven else 'none'}",
         f"- unproven tasks: {', '.join(unproven) if unproven else 'none'}",
+        f"- source-commit: {source_commit}",
+        f"- tasks-state-sha256: {tasks_state_sha}",
+        f"- verifier-version: {verifier_version}",
         "",
         "Provenance is the verification report. Each proven task carries filesystem and test evidence. "
         "Unproven tasks are recorded as such and are not claimed as done.",
@@ -76,15 +96,21 @@ def _csv_or_none(value: str) -> list[str]:
 def parse_decision_record(markdown: str) -> dict[str, Any]:
     """Parse one decision record (the shape to_decision_markdown emits)."""
     record: dict[str, Any] = {"feature_id": "", "verdict": "", "confidence": "",
-                              "verified_at": "", "proven": [], "unproven": []}
+                              "verified_at": "", "record_type": "", "report_sha256": "",
+                              "source_commit": "", "tasks_state_sha256": "",
+                              "verifier_version": "", "proven": [], "unproven": []}
     for raw in markdown.splitlines():
         s = raw.strip()
         if s.startswith("# Decision:"):
             record["feature_id"] = s[len("# Decision:"):].strip()
+        elif s.startswith("- record-type:"):
+            record["record_type"] = s[len("- record-type:"):].strip()
         elif s.startswith("- source:"):
             val = s[len("- source:"):].strip()
             if val.endswith(")") and "(" in val:
                 record["verified_at"] = val[val.rfind("(") + 1:-1].strip()
+        elif s.startswith("- report-sha256:"):
+            record["report_sha256"] = s[len("- report-sha256:"):].strip()
         elif s.startswith("- verdict:"):
             record["verdict"] = s[len("- verdict:"):].strip()
         elif s.startswith("- confidence:"):
@@ -93,6 +119,12 @@ def parse_decision_record(markdown: str) -> dict[str, Any]:
             record["proven"] = _csv_or_none(s[len("- proven tasks:"):])
         elif s.startswith("- unproven tasks:"):
             record["unproven"] = _csv_or_none(s[len("- unproven tasks:"):])
+        elif s.startswith("- source-commit:"):
+            record["source_commit"] = s[len("- source-commit:"):].strip()
+        elif s.startswith("- tasks-state-sha256:"):
+            record["tasks_state_sha256"] = s[len("- tasks-state-sha256:"):].strip()
+        elif s.startswith("- verifier-version:"):
+            record["verifier_version"] = s[len("- verifier-version:"):].strip()
     return record
 
 
@@ -187,7 +219,8 @@ def _dedup_key(record: dict[str, Any]) -> tuple[Any, ...]:
 
 
 def write_decision_record(
-    report: dict[str, Any], out_dir: str | Path, force: bool = False
+    report: dict[str, Any], out_dir: str | Path, force: bool = False, *,
+    record_type: str = "decision", source_sha256: str | None = None,
 ) -> tuple[Path | None, str, list[str]]:
     """Write the decision record for report into out_dir.
 
@@ -201,7 +234,7 @@ def write_decision_record(
     Filenames embed a content hash, so two distinct records get distinct names
     (a collision needs two different records to share a 48-bit prefix).
     """
-    markdown = to_decision_markdown(report)
+    markdown = to_decision_markdown(report, record_type=record_type, source_sha256=source_sha256)
     findings = redaction_preflight(markdown)
     if findings and not force:
         return None, "blocked", findings
@@ -237,6 +270,9 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--force", action="store_true",
                     help="with --write, write even if the redaction preflight flags a "
                          "secret-like pattern. Not recommended.")
+    ap.add_argument("--record-type", choices=_RECORD_TYPES, default="decision",
+                    help="the kind of record emitted (default decision). trajectory, "
+                         "failure, and policy let a consumer route the record by kind.")
     args = ap.parse_args(argv)
 
     if args.read:
@@ -248,9 +284,12 @@ def main(argv: list[str] | None = None) -> int:
     if not args.report:
         ap.error("provide a verification-report.json to emit, or --read DIR")
     try:
-        # utf-8-sig so a BOM-prefixed report (the form Windows PowerShell writes,
-        # and which evidence_metric.py already tolerates) reads here too.
-        report = json.loads(Path(args.report).read_text(encoding="utf-8-sig"))
+        # Read the raw bytes once: decode with utf-8-sig so a BOM-prefixed report
+        # (the form Windows PowerShell writes, and which evidence_metric.py already
+        # tolerates) parses, and hash the exact bytes so the record names which
+        # report file it came from.
+        raw_bytes = Path(args.report).read_bytes()
+        report = json.loads(raw_bytes.decode("utf-8-sig"))
     except Exception as exc:  # noqa: BLE001
         print(f"cannot read report: {exc}", file=sys.stderr)
         return 1
@@ -258,9 +297,12 @@ def main(argv: list[str] | None = None) -> int:
         print(f"cannot process report: expected a JSON object, got {type(report).__name__}",
               file=sys.stderr)
         return 1
+    src_hash = hashlib.sha256(raw_bytes).hexdigest()
 
     if args.write:
-        path, status, findings = write_decision_record(report, args.write, force=args.force)
+        path, status, findings = write_decision_record(
+            report, args.write, force=args.force,
+            record_type=args.record_type, source_sha256=src_hash)
         if status == "blocked":
             # Fail closed: do not write the file and do not echo the markdown,
             # so the flagged secret never reaches a file or stdout.
@@ -273,7 +315,8 @@ def main(argv: list[str] | None = None) -> int:
         print(f"{status}: {path}", file=sys.stderr)
         return 0
 
-    sys.stdout.write(to_decision_markdown(report))
+    sys.stdout.write(to_decision_markdown(
+        report, record_type=args.record_type, source_sha256=src_hash))
     return 0
 
 

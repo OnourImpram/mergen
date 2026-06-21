@@ -43,7 +43,13 @@ tagged as a release.
   persists a decision record into a directory you name, with a producer-side
   redaction preflight that fails closed on a secret pattern and duplicate
   detection that skips a substantively-equal record. The store integration
-  (direct vault write versus MCP) stays open.
+  (direct vault write versus MCP) stays open. Each emitted record now carries a
+  record type (decision, trajectory, failure, or policy), an automatic sha256 of
+  the exact report file it came from, and the verification lineage (the source
+  commit, tasks-state hash, and verifier version) read from the report's own
+  provenance, so a remembered decision can be walked back to the proof that earned
+  it without shelling git. Substantive duplicate detection still ignores the
+  metadata, so a re-verify is not double-recorded.
 - A static, offline verification dashboard (`scripts/dashboard.py`, `mergen
   dashboard <dir>`): one self-contained HTML page over a directory of reports,
   showing each verdict, phantom-completion count, and provenance, with every
