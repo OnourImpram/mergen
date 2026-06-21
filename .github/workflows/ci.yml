@@ -16,15 +16,19 @@ jobs:
         python-version: ["3.9", "3.11", "3.12"]
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
 
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: Install pytest
-        run: pip install pytest
+      - name: Install pytest and the dev-only schema validator
+        # jsonschema is dev-only: it validates the schemas' if/then invariants in
+        # CI. The shipped linter (verify_report_lint.py) enforces the same rules in
+        # pure stdlib, so the runtime never needs it. Without it here the schema
+        # tests skip instead of guarding.
+        run: pip install pytest jsonschema
 
       - name: Run tests
         run: python -m pytest tests/ -v
@@ -48,12 +52,12 @@ jobs:
     name: "Windows (Python 3.12)"
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.12"
-      - name: Install pytest
-        run: pip install pytest
+      - name: Install pytest and the dev-only schema validator
+        run: pip install pytest jsonschema
       - name: Run tests
         run: python -m pytest tests/ -v
 
@@ -61,8 +65,8 @@ jobs:
     name: "ruff"
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.12"
       - name: Install ruff
@@ -74,8 +78,8 @@ jobs:
     name: "mypy --strict"
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.12"
       - name: Install mypy
@@ -91,14 +95,14 @@ jobs:
     name: "coverage (fail-under floor)"
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.12"
       - name: Install the project and coverage tooling
         # Editable install so coverage measures the deployed import state, not just
         # files that happen to be importable from the repo root.
-        run: pip install -e . pytest pytest-cov
+        run: pip install -e . pytest pytest-cov jsonschema
       - name: Run tests under coverage and enforce the floor
         run: python -m pytest tests/ --cov --cov-report=term-missing
 
@@ -113,8 +117,8 @@ jobs:
     name: "verify-gate-live dogfood (phantom refused)"
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.12"
       - name: Install pytest (the tests-pass lens runs the demo's test)
@@ -150,7 +154,7 @@ jobs:
     name: "shell parse (bash + pwsh)"
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
       - name: Bash syntax check
         run: |
           shopt -s nullglob
@@ -178,10 +182,10 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
         with:
           fetch-depth: 0
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.12"
       # Re-verify the REAL pull-request diff against the deterministic Governor

@@ -1,0 +1,26 @@
+# Code ownership for review routing. The owner is requested for review on a pull
+# request that touches the matching paths. The safety-critical surfaces are
+# listed explicitly so a change to the verification engine, the Governor floor,
+# the schemas, or the hooks always reaches the owner, even if a broad rule would
+# already cover it.
+
+# Default owner for everything.
+*                                   @TheGoatPsy
+
+# The deterministic core that proves work was done. Changes here change the
+# guarantee, so they are owned explicitly.
+/scripts/verify_core.py             @TheGoatPsy
+/scripts/verify_report_lint.py      @TheGoatPsy
+/scripts/governor_floor.py          @TheGoatPsy
+/core/schemas/                      @TheGoatPsy
+/core/hooks/                        @TheGoatPsy
+
+# Single-source render contract and its drift gates.
+/core/commands/                     @TheGoatPsy
+/dist/                              @TheGoatPsy
+/scripts/check_sync.py              @TheGoatPsy
+/scripts/check_no_reference_text.py @TheGoatPsy
+
+# Supply chain and CI.
+/.github/                           @TheGoatPsy
+/pyproject.toml                     @TheGoatPsy

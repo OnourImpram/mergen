@@ -12,6 +12,21 @@ requires-python = ">=3.9"
 [project.scripts]
 mergen = "mergen_cli:main"
 
+# Dev tooling, declared once here (PEP 735) so the versions CI installs are
+# pinned and visible rather than floating on a bare `pip install pytest`. The
+# runtime ships zero third-party dependencies (Tier 0 is pure standard library),
+# so these are dev-only. jsonschema validates the schema if/then invariants in
+# the test suite. The shipped linter enforces the same rules without it.
+[dependency-groups]
+dev = [
+    "pytest>=8,<9",
+    "ruff>=0.6,<1",
+    "mypy>=1.11,<2",
+    "coverage>=7,<8",
+    "pytest-cov>=5,<7",
+    "jsonschema>=4,<5",
+]
+
 [build-system]
 requires = ["setuptools>=61"]
 build-backend = "setuptools.build_meta"
