@@ -2,14 +2,23 @@
 """mergen trends: cross-run verification trends and per-task churn.
 
 Where `mergen dashboard` is a snapshot, one row per report, this is the cross-run
-dimension. It reads the same directory of verification-report.json files, orders
-them by verification time, and answers two questions a single report cannot.
+dimension. It reads the same directory of verification-report.json files (or
+several, to compare corpora), orders them by verification time, and answers
+questions a single report cannot.
 
   trends  how phantom completions, work-done rate, and ambiguity move across the
           run history. The cross-run view the snapshot dashboard cannot give.
   churn   which tasks are re-queued or reverted most often across runs, the spec
           patterns that reliably produce verifier failures. A task's churn is its
           count of verified-status flips plus the runs it was a phantom.
+  spec    the same churn rolled up per feature, so a whole spec that keeps fighting
+          the verifier surfaces above its individual tasks. Shown when a corpus
+          spans more than one feature.
+
+Pass more than one directory to compare corpora side by side. Each corpus is read
+independently, so a task_id is never pooled across two unrelated projects (the
+same id in two features, or two projects, means two different tasks). The feature
+is the natural namespace for a task, which is what the spec rollup makes visible.
 
 Tier 0: pure standard library, no Claude Code, no network, no model. The HTML
 page is self-contained, inline CSS, an inline SVG sparkline, no JavaScript, no
@@ -35,6 +44,8 @@ from typing import Any
 
 _VERDICT_CLASS = {"pass": "ok", "conditional_pass": "warn", "fail": "bad"}
 _DEFAULT_TOP = 20  # churn leaderboard rows shown before truncation is announced
+_SCHEMA = "mergen-trends/1.1"  # the --json export envelope version
+_NO_FEATURE = "(no feature id)"  # bucket for a report missing a usable feature_id
 
 
 def load_runs(directory: Path) -> list[tuple[str, dict[str, Any]]]:
@@ -72,6 +83,18 @@ def _is_phantom(task: dict[str, Any]) -> bool:
     return task.get("claimed_status") == "done" and task.get("verified_status") == "fail"
 
 
+def _feature_key(report: dict[str, Any]) -> str:
+    """The feature a report belongs to, the namespace for its task ids.
+
+    A non-empty string feature_id is the key. The schema requires feature_id, but
+    load_runs tolerates a malformed report that omits it (it requires only a tasks
+    array), so a missing, empty, or non-string feature_id routes to a distinct
+    sentinel rather than colliding with a report that legitimately reads "unknown".
+    """
+    fid = report.get("feature_id")
+    return fid if isinstance(fid, str) and fid else _NO_FEATURE
+
+
 def run_metrics(name: str, report: dict[str, Any]) -> dict[str, Any]:
     """Reduce one report to the per-run trend row, computed from its tasks array."""
     tasks = [t for t in report.get("tasks", []) if isinstance(t, dict)]
@@ -88,7 +111,7 @@ def run_metrics(name: str, report: dict[str, Any]) -> dict[str, Any]:
     verdict = str(summary.get("verdict", "unknown")) if isinstance(summary, dict) else "unknown"
     return {
         "file": name,
-        "feature_id": str(report.get("feature_id", "unknown")),
+        "feature_id": _feature_key(report),
         "verified_at": str(report.get("verified_at", "")),
         "verdict": verdict,
         "total": len(tasks),
@@ -147,15 +170,101 @@ def task_churn(runs: list[tuple[str, dict[str, Any]]]) -> list[dict[str, Any]]:
     return rows
 
 
+def feature_churn(runs: list[tuple[str, dict[str, Any]]]) -> list[dict[str, Any]]:
+    """Per-feature churn, the same task churn rolled up by the owning spec.
+
+    A directory accumulates reports across many features over time, and a task_id
+    is only unique within its feature. So this partitions the runs by feature_id
+    and runs task_churn on each partition, never pooling a task_id across two
+    features. The feature row is the sum of its tasks: flips, phantom_runs, and
+    churn_score, plus the distinct task count and how many reports touched it. This
+    is what surfaces a spec that reliably fights the verifier, not just one task.
+    """
+    by_feature: dict[str, list[tuple[str, dict[str, Any]]]] = {}
+    order: list[str] = []
+    for name, report in runs:
+        fid = _feature_key(report)
+        if fid not in by_feature:
+            by_feature[fid] = []
+            order.append(fid)
+        by_feature[fid].append((name, report))
+    rows: list[dict[str, Any]] = []
+    for fid in order:
+        f_runs = by_feature[fid]
+        tc = task_churn(f_runs)
+        rows.append({
+            "feature_id": fid,
+            "runs": len(f_runs),
+            "tasks": len(tc),
+            "flips": sum(c["flips"] for c in tc),
+            "phantom_runs": sum(c["phantom_runs"] for c in tc),
+            "churn_score": sum(c["churn_score"] for c in tc),
+        })
+    # Most churny spec first, then most phantoms, then feature_id for a stable order.
+    rows.sort(key=lambda r: (-r["churn_score"], -r["phantom_runs"], r["feature_id"]))
+    return rows
+
+
+def _corpus_summary(label: str, runs: list[tuple[str, dict[str, Any]]]) -> dict[str, Any]:
+    """One comparison row for a corpus: the side-by-side view across directories.
+
+    Like task_churn, this trusts runs to be in chronological order, which is what
+    load_runs (and so load_corpora) guarantees, since latest_verdict and
+    latest_phantoms read the last run by position rather than re-sorting.
+    """
+    metrics = [run_metrics(name, rep) for name, rep in runs]
+    churn = task_churn(runs)
+    features = {_feature_key(rep) for _name, rep in runs}
+    rates = [m["work_done_rate"] for m in metrics if m["work_done_rate"] is not None]
+    latest = metrics[-1] if metrics else None
+    return {
+        "label": label,
+        "report_count": len(metrics),
+        "features": len(features),
+        "latest_verdict": latest["verdict"] if latest else "n/a",
+        "latest_phantoms": latest["phantoms"] if latest else 0,
+        "churny_tasks": sum(1 for c in churn if c["churn_score"] > 0),
+        "mean_work_done_rate": (sum(rates) / len(rates)) if rates else None,
+    }
+
+
+def _corpus_export(source: str, runs: list[tuple[str, dict[str, Any]]]) -> dict[str, Any]:
+    """The flat per-corpus metrics body. Shared by single and multi-corpus mode.
+
+    It carries no schema field of its own. The single-corpus export stamps the
+    envelope schema at the top level, and the multi-corpus export stamps it once on
+    the envelope, so a corpus slice never carries a second, redundant version.
+    """
+    return {
+        "source_dir": source,
+        "report_count": len(runs),
+        "runs": [run_metrics(name, rep) for name, rep in runs],
+        "churn": task_churn(runs),
+        "feature_churn": feature_churn(runs),
+    }
+
+
 def build_export(directory: Path, runs: list[tuple[str, dict[str, Any]]]) -> dict[str, Any]:
     """The machine-readable metrics export, the observability seam (--json)."""
-    metrics = [run_metrics(name, rep) for name, rep in runs]
+    return {"schema": _SCHEMA, **_corpus_export(str(directory), runs)}
+
+
+def load_corpora(
+    directories: list[Path],
+) -> list[tuple[str, list[tuple[str, dict[str, Any]]]]]:
+    """Load each directory as its own corpus, labelled by its path as given."""
+    return [(str(d), load_runs(d)) for d in directories]
+
+
+def build_multi_export(
+    corpora: list[tuple[str, list[tuple[str, dict[str, Any]]]]],
+) -> dict[str, Any]:
+    """The multi-corpus export: a comparison table plus each corpus in full."""
     return {
-        "schema": "mergen-trends/1.0",
-        "source_dir": str(directory),
-        "report_count": len(runs),
-        "runs": metrics,
-        "churn": task_churn(runs),
+        "schema": _SCHEMA,
+        "report_count": sum(len(runs) for _label, runs in corpora),
+        "comparison": [_corpus_summary(label, runs) for label, runs in corpora],
+        "corpora": [_corpus_export(label, runs) for label, runs in corpora],
     }
 
 
@@ -167,6 +276,7 @@ _CSS = """
 body { font: 15px/1.5 system-ui, sans-serif; margin: 2rem; color: #1c2128; background: #fff; }
 h1 { font-size: 1.4rem; margin: 0 0 .25rem; }
 h2 { font-size: 1.05rem; margin: 1.75rem 0 .5rem; }
+h2.corpus { font-size: 1.2rem; border-top: 2px solid #d0d7de; padding-top: 1rem; margin-top: 2.25rem; }
 .sub { color: #57606a; margin: 0 0 1.5rem; }
 .cards { display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem; }
 .card { border: 1px solid #d0d7de; border-radius: 8px; padding: .75rem 1rem; min-width: 7rem; }
@@ -216,8 +326,95 @@ def _rate(value: Any) -> str:
     return "n/a" if value is None else f"{value * 100:.0f}%"
 
 
-def render_html(runs: list[tuple[str, dict[str, Any]]], top: int = _DEFAULT_TOP) -> str:
-    """Render the cross-run trends and churn leaderboard into one HTML page."""
+def _spec_table(runs: list[tuple[str, dict[str, Any]]], top: int) -> str:
+    """The spec (feature) churn leaderboard.
+
+    Empty when a corpus has at most one feature, where the rollup would only echo
+    the task totals and add noise. Shown when reports span several specs, so the
+    spec that fights the verifier hardest surfaces above its individual tasks.
+    """
+    rows = feature_churn(runs)
+    if len(rows) <= 1:
+        return ""
+
+    def esc(value: Any) -> str:
+        return html.escape(str(value))
+
+    body = "".join(
+        "<tr>"
+        f"<td>{esc(c['feature_id'])}</td>"
+        f"<td>{esc(c['churn_score'])}</td>"
+        f"<td>{esc(c['flips'])}</td>"
+        f"<td>{esc(c['phantom_runs'])}</td>"
+        f"<td>{esc(c['tasks'])}</td>"
+        f"<td>{esc(c['runs'])}</td>"
+        "</tr>"
+        for c in rows[:top]
+    )
+    table = (
+        "<h2>Spec churn leaderboard</h2>"
+        "<table><thead><tr>"
+        "<th>spec (feature)</th><th>churn</th><th>flips</th><th>phantom runs</th>"
+        "<th>tasks</th><th>appearances</th>"
+        "</tr></thead><tbody>" + body + "</tbody></table>"
+    )
+    if len(rows) > top:
+        table += (
+            f'<p class="note">Showing the {top} most churny of {len(rows)} specs. '
+            "Pass --top to widen.</p>"
+        )
+    return table
+
+
+def _comparison_table(
+    corpora: list[tuple[str, list[tuple[str, dict[str, Any]]]]],
+) -> str:
+    """The corpora-compared table, the multi-directory headline."""
+
+    def esc(value: Any) -> str:
+        return html.escape(str(value))
+
+    rows = "".join(
+        "<tr>"
+        f"<td>{esc(s['label'])}</td>"
+        f"<td>{esc(s['report_count'])}</td>"
+        f"<td>{esc(s['features'])}</td>"
+        f'<td><span class="tag {_VERDICT_CLASS.get(s["latest_verdict"], "muted")}">'
+        f'{esc(s["latest_verdict"])}</span></td>'
+        f"<td>{esc(s['latest_phantoms'])}</td>"
+        f"<td>{esc(s['churny_tasks'])}</td>"
+        f"<td>{esc(_rate(s['mean_work_done_rate']))}</td>"
+        "</tr>"
+        for s in (_corpus_summary(label, runs) for label, runs in corpora)
+    )
+    return (
+        "<h2>Corpora compared</h2>"
+        "<table><thead><tr>"
+        "<th>corpus</th><th>reports</th><th>specs</th><th>latest verdict</th>"
+        "<th>latest phantoms</th><th>churny tasks</th><th>mean work-done</th>"
+        "</tr></thead><tbody>" + rows + "</tbody></table>"
+    )
+
+
+def _page(inner: str) -> str:
+    """Wrap a body in the self-contained, offline trends page shell."""
+    return (
+        "<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\">"
+        "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">"
+        "<title>Mergen verification trends</title>"
+        f"<style>{_CSS}</style></head><body>"
+        "<h1>Mergen verification trends</h1>"
+        '<p class="sub">Static, offline, generated from one or more directories of '
+        "verification reports over time. A phantom completion is a task claimed done "
+        "that no lens confirmed. Churn is how often a task flips verdict or returns as "
+        "a phantom.</p>"
+        + inner +
+        "</body></html>\n"
+    )
+
+
+def _sections(runs: list[tuple[str, dict[str, Any]]], top: int) -> str:
+    """One corpus body: the summary cards, the trend table, and the churn tables."""
     metrics = [run_metrics(name, rep) for name, rep in runs]
     churn = task_churn(runs)
 
@@ -275,7 +472,6 @@ def render_html(runs: list[tuple[str, dict[str, Any]]], top: int = _DEFAULT_TOP)
         trend_table = '<p class="empty">No verification reports with a tasks array in this directory.</p>'
 
     if churn:
-        shown = churn[:top]
         churn_rows = "".join(
             "<tr>"
             f"<td>{esc(c['task_id'])}</td>"
@@ -285,7 +481,7 @@ def render_html(runs: list[tuple[str, dict[str, Any]]], top: int = _DEFAULT_TOP)
             f"<td>{esc(c['runs'])}</td>"
             f'<td class="muted">{esc(c["last_status"])}</td>'
             "</tr>"
-            for c in shown
+            for c in churn[:top]
         )
         churn_table = (
             "<table><thead><tr>"
@@ -302,28 +498,39 @@ def render_html(runs: list[tuple[str, dict[str, Any]]], top: int = _DEFAULT_TOP)
         churn_table = '<p class="empty">No tasks seen across the runs.</p>'
 
     return (
-        "<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\">"
-        "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">"
-        "<title>Mergen verification trends</title>"
-        f"<style>{_CSS}</style></head><body>"
-        "<h1>Mergen verification trends</h1>"
-        '<p class="sub">Static, offline, generated from a directory of verification '
-        "reports over time. A phantom completion is a task claimed done that no lens "
-        "confirmed. Churn is how often a task flips verdict or returns as a phantom.</p>"
         f'<div class="cards">{cards}</div>'
         "<h2>Trends across runs</h2>"
         f"{trend_table}"
         "<h2>Task churn leaderboard</h2>"
         f"{churn_table}"
-        "</body></html>\n"
+        f"{_spec_table(runs, top)}"
     )
+
+
+def render_html(runs: list[tuple[str, dict[str, Any]]], top: int = _DEFAULT_TOP) -> str:
+    """Render the cross-run trends and churn leaderboards into one HTML page."""
+    return _page(_sections(runs, top))
+
+
+def render_multi(
+    corpora: list[tuple[str, list[tuple[str, dict[str, Any]]]]],
+    top: int = _DEFAULT_TOP,
+) -> str:
+    """Render a corpora comparison followed by each corpus in full, one page."""
+    parts = [_comparison_table(corpora)]
+    for label, runs in corpora:
+        parts.append(f'<h2 class="corpus">Corpus: {html.escape(label)}</h2>')
+        parts.append(_sections(runs, top))
+    return _page("".join(parts))
 
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(
-        description="Cross-run verification trends and per-task churn over a reports directory."
+        description="Cross-run verification trends and per-task churn over reports directories."
     )
-    ap.add_argument("reports_dir", help="directory holding verification-report.json files")
+    ap.add_argument("reports_dir", nargs="+",
+                    help="one or more directories of verification-report.json files "
+                         "(pass several to compare corpora side by side)")
     ap.add_argument("--out", help="write the HTML here (default: stdout)")
     ap.add_argument("--json", action="store_true",
                     help="emit the machine-readable metrics export instead of HTML")
@@ -331,18 +538,22 @@ def main(argv: list[str] | None = None) -> int:
                     help=f"churn leaderboard rows before truncation (default: {_DEFAULT_TOP})")
     args = ap.parse_args(argv)
 
-    directory = Path(args.reports_dir)
-    if not directory.is_dir():
-        print(f"error: not a directory: {directory}", file=sys.stderr)
+    directories = [Path(p) for p in args.reports_dir]
+    bad = [d for d in directories if not d.is_dir()]
+    if bad:
+        for d in bad:
+            print(f"error: not a directory: {d}", file=sys.stderr)
         return 2
-
-    runs = load_runs(directory)
+    multi = len(directories) > 1
 
     if args.json:
-        sys.stdout.write(json.dumps(build_export(directory, runs), indent=2) + "\n")
+        export = (build_multi_export(load_corpora(directories)) if multi
+                  else build_export(directories[0], load_runs(directories[0])))
+        sys.stdout.write(json.dumps(export, indent=2) + "\n")
         return 0
 
-    html_text = render_html(runs, top=args.top)
+    html_text = (render_multi(load_corpora(directories), top=args.top) if multi
+                 else render_html(load_runs(directories[0]), top=args.top))
     if args.out:
         out_path = Path(args.out)
         out_path.parent.mkdir(parents=True, exist_ok=True)
