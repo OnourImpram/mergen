@@ -3,437 +3,259 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Mergen: the execution backbone for AI coding agents</title>
-<meta name="description" content="Mergen is the execution half of the Agent Continuity Stack. It judges with wisdom how much care a task deserves, and proves with accuracy that the work was done and was minimal. mneme remembers why. Mergen proves what.">
+<title>Mergen: wisdom that judges, the arrow that proves</title>
+<meta name="description" content="Mergen is the execution backbone for AI coding agents, named for the Turkic archer-god whose name means both the wise one and the marksman. Wisdom judges how much care a change deserves. Accuracy proves, against the real filesystem and real tests, that the change happened and was minimal.">
 <meta name="color-scheme" content="dark">
-<meta property="og:title" content="Mergen: wisdom and accuracy for AI coding agents">
-<meta property="og:description" content="Memory that can be trusted, execution that can be proven, joined by one seam. mneme remembers why. Mergen proves what.">
+<meta property="og:title" content="Mergen: wisdom that judges, the arrow that proves">
+<meta property="og:description" content="Named for the Turkic archer-god. The word means both the wise one and the marksman. A tool that judges what a task needs and proves the shot landed.">
 <meta property="og:type" content="website">
 <meta property="og:image" content="https://thegoatpsy.github.io/mergen/assets/mergen-emblem.png">
 <link rel="icon" href="assets/mergen-emblem.png" type="image/png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Karla:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
   :root {
-    --night: #0a0e1c;
-    --night-2: #0c1326;
-    --panel: #0e1730;
-    --ink-deep: #070a14;
-    --gold: #c9a24e;
-    --gold-bright: #e4c572;
-    --gold-deep: #8a6b2e;
-    --teal: #2fa6b8;
-    --teal-bright: #5cd0de;
-    --bone: #ece6d6;
-    --mist: #aeb6c6;
-    --mist-dim: #7e879b;
-    --rule: rgba(201, 162, 78, 0.20);
-    --rule-soft: rgba(174, 182, 198, 0.12);
+    /* the night sky */
+    --night:       oklch(0.16 0.028 264);
+    --night-2:     oklch(0.19 0.030 263);
+    --panel:       oklch(0.22 0.030 262);
+    --ink-deep:    oklch(0.12 0.022 264);
+    /* the gilded arrow */
+    --gold:        oklch(0.76 0.115 81);
+    --gold-bright: oklch(0.86 0.120 86);
+    --gold-deep:   oklch(0.56 0.085 72);
+    /* the Seljuk tile turquoise */
+    --turq:        oklch(0.70 0.105 196);
+    --turq-bright: oklch(0.81 0.100 196);
+    /* parchment and mist */
+    --bone:        oklch(0.93 0.018 86);
+    --mist:        oklch(0.75 0.020 250);
+    --mist-dim:    oklch(0.60 0.018 252);
+    --rule:        color-mix(in oklab, var(--gold) 22%, transparent);
+    --rule-soft:   color-mix(in oklab, var(--mist) 14%, transparent);
     --maxw: 1080px;
-    --shadow: 0 24px 60px -28px rgba(0, 0, 0, 0.85);
+    --shadow: 0 28px 70px -30px rgba(0, 0, 0, 0.9);
+    --ease: cubic-bezier(0.16, 1, 0.3, 1);
   }
 
   * { box-sizing: border-box; }
-
   html { scroll-behavior: smooth; }
 
   body {
     margin: 0;
     background:
-      radial-gradient(1200px 800px at 50% -8%, #11203f 0%, rgba(17, 32, 63, 0) 60%),
-      radial-gradient(900px 600px at 85% 12%, rgba(47, 166, 184, 0.08) 0%, rgba(47, 166, 184, 0) 55%),
+      radial-gradient(1200px 820px at 50% -10%, oklch(0.24 0.045 264) 0%, transparent 62%),
+      radial-gradient(900px 620px at 86% 10%, color-mix(in oklab, var(--turq) 14%, transparent) 0%, transparent 55%),
       var(--night);
     color: var(--mist);
-    font-family: "IBM Plex Sans", system-ui, sans-serif;
+    font-family: "Karla", system-ui, sans-serif;
     font-size: 17px;
-    line-height: 1.65;
+    line-height: 1.62;
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
+    overflow-x: hidden;
   }
 
-  /* faint star field, decorative only */
+  /* --- the lattice: a faint Seljuk eight-point star lattice over the whole sky --- */
+  .lattice-bg {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    opacity: 0.08;
+  }
+  .lattice-bg svg { width: 100%; height: 100%; display: block; }
+  .lattice-bg g { stroke: var(--gold); fill: none; stroke-width: 1; }
+
+  /* the carved gold wolves of Turkic myth, prowling the margins, background only */
+  .wolves { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
+  .wolf-slot { position: fixed; top: 50%; opacity: 0.58; animation: wolfBreathe 12s ease-in-out infinite; }
+  .wolf-slot.left { left: -18px; transform: translateY(-50%); }
+  .wolf-slot.right { right: -18px; transform: translateY(-50%); animation-delay: -6s; }
+  .wolf-img { width: clamp(180px, 15vw, 250px); height: auto; display: block; transform-origin: center; animation: wolfProwl 10s ease-in-out infinite; filter: drop-shadow(0 12px 32px rgba(0, 0, 0, 0.55)); }
+  .wolf-slot.right .wolf-img { animation-delay: -5s; }
+  @keyframes wolfProwl { 0%, 100% { transform: translateY(0) scale(1); } 50% { transform: translateY(-12px) scale(1.012); } }
+  @keyframes wolfBreathe { 0%, 100% { opacity: 0.46; } 50% { opacity: 0.62; } }
+  @media (max-width: 1200px) { .wolves { display: none; } }
+
+  /* faint stars of the night sky, decorative only */
   body::before {
     content: "";
     position: fixed;
     inset: 0;
     pointer-events: none;
-    background-image:
-      radial-gradient(1.4px 1.4px at 12% 22%, rgba(236, 230, 214, 0.55) 50%, transparent 51%),
-      radial-gradient(1.2px 1.2px at 78% 14%, rgba(236, 230, 214, 0.40) 50%, transparent 51%),
-      radial-gradient(1px 1px at 33% 68%, rgba(92, 208, 222, 0.45) 50%, transparent 51%),
-      radial-gradient(1.3px 1.3px at 62% 82%, rgba(236, 230, 214, 0.35) 50%, transparent 51%),
-      radial-gradient(1px 1px at 88% 60%, rgba(201, 162, 78, 0.45) 50%, transparent 51%),
-      radial-gradient(1px 1px at 22% 88%, rgba(236, 230, 214, 0.30) 50%, transparent 51%);
-    opacity: 0.7;
     z-index: 0;
+    background-image:
+      radial-gradient(1.4px 1.4px at 12% 22%, color-mix(in oklab, var(--bone) 55%, transparent) 50%, transparent 51%),
+      radial-gradient(1.2px 1.2px at 78% 14%, color-mix(in oklab, var(--bone) 40%, transparent) 50%, transparent 51%),
+      radial-gradient(1px 1px at 33% 68%, color-mix(in oklab, var(--turq) 50%, transparent) 50%, transparent 51%),
+      radial-gradient(1.3px 1.3px at 62% 82%, color-mix(in oklab, var(--bone) 32%, transparent) 50%, transparent 51%),
+      radial-gradient(1px 1px at 88% 60%, color-mix(in oklab, var(--gold) 48%, transparent) 50%, transparent 51%),
+      radial-gradient(1px 1px at 22% 88%, color-mix(in oklab, var(--bone) 28%, transparent) 50%, transparent 51%);
+    opacity: 0.7;
   }
 
-  a { color: var(--teal-bright); text-decoration: none; }
+  a { color: var(--turq-bright); text-decoration: none; }
   a:hover { text-decoration: underline; text-underline-offset: 3px; }
-  a:focus-visible,
-  .button:focus-visible {
+  a:focus-visible, .button:focus-visible {
     outline: 2px solid var(--gold-bright);
     outline-offset: 3px;
     border-radius: 2px;
   }
 
   .skip {
-    position: absolute;
-    left: -999px;
-    top: 0;
-    background: var(--gold-bright);
-    color: var(--ink-deep);
-    padding: 10px 16px;
-    z-index: 10;
-    border-radius: 0 0 6px 0;
-    font-weight: 600;
+    position: absolute; left: -999px; top: 0;
+    background: var(--gold-bright); color: var(--ink-deep);
+    padding: 10px 16px; z-index: 20; border-radius: 0 0 6px 0; font-weight: 700;
   }
   .skip:focus { left: 0; }
 
-  .wrap {
-    position: relative;
-    z-index: 1;
-    max-width: var(--maxw);
-    margin: 0 auto;
-    padding: 0 24px;
-  }
+  .wrap { position: relative; z-index: 1; max-width: var(--maxw); margin: 0 auto; padding: 0 24px; }
 
   .eyebrow {
     font-family: "IBM Plex Mono", monospace;
-    font-size: 13px;
-    letter-spacing: 0.16em;
-    text-transform: uppercase;
-    color: var(--gold);
+    font-size: 13px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--gold);
+    display: inline-flex; align-items: center; gap: 10px;
+  }
+  .eyebrow .tamga { width: 16px; height: 16px; flex: none; }
+  .eyebrow .tamga path, .eyebrow .tamga line, .eyebrow .tamga rect, .eyebrow .tamga circle {
+    stroke: var(--gold); fill: none; stroke-width: 1.4;
   }
 
-  h1, h2, h3 {
-    font-family: "Fraunces", Georgia, serif;
-    color: var(--bone);
-    font-weight: 500;
-    line-height: 1.1;
-    margin: 0;
-  }
+  h1, h2, h3 { font-family: "Fraunces", Georgia, serif; color: var(--bone); font-weight: 500; line-height: 1.08; margin: 0; }
+  h1 { letter-spacing: -0.012em; }
+  em { font-style: italic; color: var(--gold-bright); }
 
   /* ---------- hero ---------- */
   .hero {
-    position: relative;
-    z-index: 1;
-    text-align: center;
-    padding: 72px 24px 40px;
-    max-width: 940px;
-    margin: 0 auto;
+    position: relative; z-index: 1; text-align: center;
+    padding: 78px 24px 30px; max-width: 940px; margin: 0 auto;
   }
-
   .emblem {
-    width: min(340px, 64vw);
-    height: auto;
-    display: block;
-    margin: 0 auto 30px;
-    filter: drop-shadow(0 18px 44px rgba(0, 0, 0, 0.7));
-    animation: rise 1100ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+    width: min(330px, 62vw); height: auto; display: block; margin: 0 auto 28px;
+    filter: drop-shadow(0 20px 48px rgba(0,0,0,0.72));
+    animation: rise 1100ms var(--ease) both;
   }
-
   .hero h1 {
-    font-size: clamp(3.2rem, 9vw, 6rem);
-    letter-spacing: -0.01em;
-    margin: 6px 0 0;
-    animation: rise 900ms 120ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+    font-size: clamp(3.4rem, 9.4vw, 6.4rem); margin: 4px 0 0;
+    animation: rise 900ms 120ms var(--ease) both;
   }
-
-  .hero .eyebrow {
-    animation: rise 900ms 60ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
-    display: inline-block;
-  }
-
+  .hero .eyebrow { animation: rise 900ms 60ms var(--ease) both; }
   .lede {
-    font-size: clamp(1.1rem, 2.4vw, 1.4rem);
-    color: var(--bone);
-    max-width: 30ch;
-    margin: 22px auto 0;
-    line-height: 1.45;
-    animation: rise 900ms 220ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+    font-family: "Fraunces", Georgia, serif; font-weight: 400;
+    font-size: clamp(1.2rem, 2.6vw, 1.55rem); color: var(--bone);
+    max-width: 30ch; margin: 20px auto 0; line-height: 1.4;
+    animation: rise 900ms 220ms var(--ease) both;
   }
+  .sub { max-width: 56ch; margin: 18px auto 0; color: var(--mist); animation: rise 900ms 320ms var(--ease) both; }
 
-  .sub {
-    max-width: 56ch;
-    margin: 18px auto 0;
-    color: var(--mist);
-    animation: rise 900ms 320ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
-  }
+  /* the arrow that draws its flight and strikes the mark */
+  .flight { width: min(440px, 78vw); height: 56px; margin: 26px auto 0; display: block; animation: rise 900ms 420ms var(--ease) both; }
+  .flight .shaft { stroke: var(--gold); stroke-width: 1.5; stroke-dasharray: 420; stroke-dashoffset: 420; animation: draw 1100ms 640ms cubic-bezier(0.4,0,0.1,1) forwards; }
+  .flight .head { fill: var(--gold-bright); opacity: 0; animation: headIn 700ms 1500ms var(--ease) forwards; }
+  .flight .fletch { stroke: var(--gold-deep); stroke-width: 1.5; fill: none; opacity: 0; animation: fadeIn 500ms 760ms ease forwards; }
+  .flight .target { stroke: var(--turq); fill: none; stroke-width: 1.4; opacity: 0.5; }
+  .flight .target .core { transform-origin: 412px 28px; animation: strike 700ms 1560ms var(--ease) both; }
 
-  /* the struck mark: a thin gold line that draws toward a point */
-  .mark {
-    width: min(420px, 70vw);
-    height: 14px;
-    margin: 30px auto 0;
-    position: relative;
-    animation: rise 900ms 420ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
-  }
-  .mark::before {
-    content: "";
-    position: absolute;
-    top: 50%;
-    left: 0;
-    height: 1px;
-    width: 100%;
-    transform: translateY(-50%);
-    background: linear-gradient(90deg, transparent, var(--gold-deep) 18%, var(--gold) 82%, var(--gold-bright));
-    transform-origin: left center;
-    animation: draw 1200ms 560ms cubic-bezier(0.4, 0, 0.1, 1) both;
-  }
-  .mark::after {
-    content: "";
-    position: absolute;
-    top: 50%;
-    right: 0;
-    width: 9px;
-    height: 9px;
-    transform: translate(0, -50%) rotate(45deg);
-    border: 1.5px solid var(--gold-bright);
-    box-shadow: 0 0 18px rgba(228, 197, 114, 0.6);
-    opacity: 0;
-    animation: strike 600ms 1500ms ease-out both;
-  }
-
-  .cta-row {
-    display: flex;
-    gap: 14px;
-    justify-content: center;
-    flex-wrap: wrap;
-    margin-top: 36px;
-    animation: rise 900ms 520ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
-  }
+  .cta-row { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; margin-top: 34px; animation: rise 900ms 520ms var(--ease) both; }
   .button {
-    font-family: "IBM Plex Sans", sans-serif;
-    font-weight: 600;
-    font-size: 15px;
-    padding: 12px 22px;
-    border-radius: 8px;
-    border: 1px solid var(--gold-deep);
-    color: var(--bone);
-    background: linear-gradient(180deg, rgba(201, 162, 78, 0.16), rgba(201, 162, 78, 0.06));
+    font-family: "Karla", sans-serif; font-weight: 700; font-size: 15px; padding: 12px 22px;
+    border-radius: 9px; border: 1px solid var(--gold-deep); color: var(--bone);
+    background: linear-gradient(180deg, color-mix(in oklab, var(--gold) 16%, transparent), color-mix(in oklab, var(--gold) 6%, transparent));
     transition: border-color 160ms ease, transform 160ms ease, background 160ms ease;
   }
-  .button:hover {
-    border-color: var(--gold-bright);
-    transform: translateY(-1px);
-    text-decoration: none;
-    background: linear-gradient(180deg, rgba(201, 162, 78, 0.24), rgba(201, 162, 78, 0.10));
-  }
-  .button.ghost {
-    background: transparent;
-    border-color: var(--rule-soft);
-    color: var(--mist);
-  }
-  .button.ghost:hover { border-color: var(--teal); color: var(--bone); }
+  .button:hover { border-color: var(--gold-bright); transform: translateY(-2px); text-decoration: none; background: linear-gradient(180deg, color-mix(in oklab, var(--gold) 24%, transparent), color-mix(in oklab, var(--gold) 10%, transparent)); }
+  .button:active { transform: translateY(0) scale(0.985); }
+  .button.ghost { background: transparent; border-color: var(--rule-soft); color: var(--mist); }
+  .button.ghost:hover { border-color: var(--turq); color: var(--bone); }
 
   /* ---------- sections ---------- */
-  section { position: relative; z-index: 1; padding: 64px 0; }
-  .divider { border-top: 1px solid var(--rule); max-width: var(--maxw); margin: 0 auto; }
+  section { position: relative; z-index: 1; padding: 60px 0; }
+  /* sections are always visible. the one orchestrated reveal lives in the hero. */
 
-  .section-head { max-width: 60ch; margin-bottom: 36px; }
-  .section-head h2 {
-    font-size: clamp(1.9rem, 4vw, 2.7rem);
-    margin-top: 10px;
-  }
+  /* divider: a hairline carrying a small eight-point star medallion */
+  .divider { position: relative; max-width: var(--maxw); margin: 0 auto; height: 26px; }
+  .divider::before { content: ""; position: absolute; top: 50%; left: 0; right: 0; height: 1px; background: linear-gradient(90deg, transparent, var(--rule) 18%, var(--rule) 82%, transparent); }
+  .divider svg { position: absolute; top: 50%; left: 50%; width: 26px; height: 26px; transform: translate(-50%, -50%); background: var(--night); padding: 4px; }
+  .divider svg [stroke] { stroke: var(--gold); fill: none; stroke-width: 1.3; }
+
+  .section-head { max-width: 62ch; margin-bottom: 34px; }
+  .section-head h2 { font-size: clamp(1.95rem, 4vw, 2.75rem); margin-top: 12px; }
   .section-head p { margin: 14px 0 0; color: var(--mist); }
 
+  /* the name: myth grounding band */
+  .name-band { text-align: center; }
+  .name-band .wrap { max-width: 760px; }
+  .name-band .glyph-row { display: flex; justify-content: center; gap: 26px; margin: 4px 0 22px; }
+  .name-band .glyph-row svg { width: 38px; height: 38px; }
+  .name-band .glyph-row svg [stroke] { stroke: var(--turq); fill: none; stroke-width: 1.4; }
+  .name-band .glyph-row svg [data-fill] { fill: var(--gold); stroke: none; }
+  .name-band p { font-family: "Fraunces", Georgia, serif; font-size: clamp(1.15rem, 2.5vw, 1.5rem); line-height: 1.5; color: var(--bone); margin: 0 auto; }
+  .name-band .gloss { font-family: "IBM Plex Mono", monospace; font-size: 12.5px; letter-spacing: 0.04em; color: var(--mist-dim); text-transform: none; margin-top: 22px; line-height: 1.8; }
+  .name-band .gloss b { color: var(--gold); font-weight: 500; }
+
   /* the stack */
-  .stack {
-    display: grid;
-    grid-template-columns: 1fr auto 1fr;
-    gap: 0;
-    align-items: stretch;
-    border: 1px solid var(--rule);
-    border-radius: 14px;
-    overflow: hidden;
-    background: linear-gradient(180deg, rgba(14, 23, 48, 0.7), rgba(7, 10, 20, 0.5));
-    box-shadow: var(--shadow);
-  }
+  .stack { display: grid; grid-template-columns: 1fr auto 1fr; align-items: stretch; border: 1px solid var(--rule); border-radius: 16px; overflow: hidden; background: linear-gradient(180deg, color-mix(in oklab, var(--panel) 70%, transparent), color-mix(in oklab, var(--ink-deep) 50%, transparent)); box-shadow: var(--shadow); }
   .half { padding: 32px 30px; }
   .half h3 { font-size: 1.5rem; margin-bottom: 6px; }
-  .half .role {
-    font-family: "IBM Plex Mono", monospace;
-    font-size: 12px;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    margin-bottom: 14px;
-  }
+  .half .role { font-family: "IBM Plex Mono", monospace; font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 14px; }
   .half.memory { border-right: 1px solid var(--rule); }
-  .half.memory .role { color: var(--teal-bright); }
-  .half.memory h3 { color: #d8efef; }
+  .half.memory .role { color: var(--turq-bright); }
+  .half.memory h3 { color: oklch(0.90 0.04 196); }
   .half.execution .role { color: var(--gold-bright); }
   .half p { margin: 0; font-size: 15.5px; }
-  .seam {
-    width: 1px;
-    background: linear-gradient(180deg, transparent, var(--gold), transparent);
-    position: relative;
-  }
-  .seam::after {
-    content: "one seam";
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%) rotate(90deg);
-    font-family: "IBM Plex Mono", monospace;
-    font-size: 10px;
-    letter-spacing: 0.2em;
-    text-transform: uppercase;
-    color: var(--gold);
-    white-space: nowrap;
-    background: var(--night);
-    padding: 6px 0;
-  }
-  .stack-note {
-    margin-top: 20px;
-    font-size: 14.5px;
-    color: var(--mist-dim);
-  }
+  .seam { width: 1px; background: linear-gradient(180deg, transparent, var(--gold), transparent); position: relative; }
+  .seam::after { content: "one seam"; position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%) rotate(90deg); font-family: "IBM Plex Mono", monospace; font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--gold); white-space: nowrap; background: var(--night); padding: 6px 0; }
+  .stack-note { margin-top: 20px; font-size: 14.5px; color: var(--mist-dim); }
 
-  /* two-up wisdom / accuracy */
+  /* wisdom + the pole star */
+  .wisdom-grid { display: grid; grid-template-columns: 1fr; gap: 0; }
+  .polestar-row { display: grid; grid-template-columns: 1fr auto; gap: 30px; align-items: center; margin-top: 30px; padding-top: 30px; border-top: 1px solid var(--rule-soft); }
+  .polestar { width: 150px; height: 150px; flex: none; }
+  .polestar [data-orbit] { stroke: var(--rule); fill: none; stroke-width: 1; stroke-dasharray: 3 5; }
+  .polestar [data-star] { stroke: var(--turq-bright); fill: none; stroke-width: 1.4; }
+  .polestar [data-core] { fill: var(--gold-bright); }
+  @media (min-width: 760px) { .polestar-row { grid-template-columns: 1fr 150px; } }
+
+  .tier-table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 14.5px; }
+  .tier-table th, .tier-table td { text-align: left; padding: 11px 12px; border-bottom: 1px solid var(--rule-soft); vertical-align: top; }
+  .tier-table th { font-family: "IBM Plex Mono", monospace; font-size: 11.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--mist-dim); font-weight: 500; }
+  .tier-table td:first-child { font-family: "IBM Plex Mono", monospace; color: var(--gold-bright); white-space: nowrap; }
+  .tier-table tr:last-child td { border-bottom: none; }
+  .tier-table tr.floor td:first-child { color: var(--turq-bright); }
+
+  .floor-head { font-family: "Fraunces", serif; font-size: 1.2rem; margin: 0 0 4px; color: var(--bone); }
+  .triggers { margin: 18px 0 0; padding: 0; list-style: none; display: grid; grid-template-columns: 1fr 1fr; gap: 8px 24px; }
+  .triggers li { position: relative; padding-left: 22px; font-size: 14.5px; }
+  .triggers li::before { content: ""; position: absolute; left: 0; top: 0.5em; width: 9px; height: 9px; border: 1.4px solid var(--gold); transform: rotate(45deg); }
+
+  /* evidence / code block */
   .duo { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; }
-  .card {
-    border: 1px solid var(--rule);
-    border-radius: 14px;
-    padding: 30px 28px;
-    background: linear-gradient(180deg, rgba(14, 23, 48, 0.55), rgba(7, 10, 20, 0.35));
-  }
-  .card .kicker {
-    font-family: "IBM Plex Mono", monospace;
-    font-size: 12px;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: var(--gold);
-  }
-  .card h3 { font-size: 1.6rem; margin: 8px 0 12px; }
+  .card { border: 1px solid var(--rule); border-radius: 16px; padding: 30px 28px; background: linear-gradient(180deg, color-mix(in oklab, var(--panel) 55%, transparent), color-mix(in oklab, var(--ink-deep) 35%, transparent)); }
+  .card .kicker { font-family: "IBM Plex Mono", monospace; font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--gold); }
+  .card h3 { font-size: 1.55rem; margin: 8px 0 12px; }
   .card p { margin: 0 0 14px; font-size: 15.5px; }
   .card p:last-child { margin-bottom: 0; }
 
-  /* governor tier table */
-  .tier-table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-top: 8px;
-    font-size: 14.5px;
-  }
-  .tier-table th, .tier-table td {
-    text-align: left;
-    padding: 11px 12px;
-    border-bottom: 1px solid var(--rule-soft);
-    vertical-align: top;
-  }
-  .tier-table th {
-    font-family: "IBM Plex Mono", monospace;
-    font-size: 11.5px;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--mist-dim);
-    font-weight: 500;
-  }
-  .tier-table td:first-child {
-    font-family: "IBM Plex Mono", monospace;
-    color: var(--gold-bright);
-    white-space: nowrap;
-  }
-  .tier-table tr:last-child td { border-bottom: none; }
-  .tier-table tr.floor td:first-child { color: var(--teal-bright); }
-
-  .triggers {
-    margin: 22px 0 0;
-    padding: 0;
-    list-style: none;
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 8px 24px;
-  }
-  .triggers li {
-    position: relative;
-    padding-left: 20px;
-    font-size: 14.5px;
-  }
-  .triggers li::before {
-    content: "";
-    position: absolute;
-    left: 0;
-    top: 0.62em;
-    width: 7px;
-    height: 7px;
-    transform: rotate(45deg);
-    border: 1.4px solid var(--gold);
-  }
-
-  /* evidence / code block */
-  .evidence {
-    font-family: "IBM Plex Mono", monospace;
-    font-size: 13px;
-    line-height: 1.7;
-    background: var(--ink-deep);
-    border: 1px solid var(--rule);
-    border-radius: 12px;
-    padding: 20px 22px;
-    overflow-x: auto;
-    color: var(--mist);
-    margin: 0;
-  }
-  .evidence .cap {
-    display: block;
-    color: var(--mist-dim);
-    margin-bottom: 10px;
-    font-size: 11.5px;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-  }
-  .evidence .k { color: var(--teal-bright); }
+  .evidence { font-family: "IBM Plex Mono", monospace; font-size: 13px; line-height: 1.7; background: var(--ink-deep); border: 1px solid var(--rule); border-radius: 14px; padding: 20px 22px; overflow-x: auto; color: var(--mist); margin: 0; }
+  .evidence .cap { display: block; color: var(--mist-dim); margin-bottom: 10px; font-size: 11.5px; letter-spacing: 0.1em; text-transform: uppercase; }
+  .evidence .k { color: var(--turq-bright); }
   .evidence .v { color: var(--bone); }
-  .evidence .pass { color: #86d39a; }
-  .evidence .fail { color: #e08a7a; }
+  .evidence .pass { color: oklch(0.80 0.13 150); }
+  .evidence .fail { color: oklch(0.72 0.14 32); }
   .evidence .lbl { color: var(--gold-bright); }
 
   .chips { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 16px; }
-  .chip {
-    font-family: "IBM Plex Mono", monospace;
-    font-size: 12px;
-    padding: 5px 11px;
-    border: 1px solid var(--rule);
-    border-radius: 999px;
-    color: var(--gold);
-  }
+  .chip { font-family: "IBM Plex Mono", monospace; font-size: 12px; padding: 5px 11px; border: 1px solid var(--rule); border-radius: 999px; color: var(--gold); }
 
   /* honesty */
-  .honesty .layers { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin-top: 8px; }
-  .layer {
-    border: 1px solid var(--rule);
-    border-radius: 12px;
-    padding: 24px 22px;
-    background: linear-gradient(180deg, rgba(14, 23, 48, 0.5), rgba(7, 10, 20, 0.3));
-  }
-  .layer .verb {
-    font-family: "Fraunces", serif;
-    font-size: 1.5rem;
-    color: var(--bone);
-    display: block;
-    margin-bottom: 8px;
-  }
-  .layer .tag {
-    font-family: "IBM Plex Mono", monospace;
-    font-size: 11px;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: var(--gold);
-    display: block;
-    margin-bottom: 14px;
-  }
+  .layers { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin-top: 8px; }
+  .layer { border: 1px solid var(--rule); border-radius: 14px; padding: 24px 22px; background: linear-gradient(180deg, color-mix(in oklab, var(--panel) 50%, transparent), color-mix(in oklab, var(--ink-deep) 30%, transparent)); }
+  .layer .verb { font-family: "Fraunces", serif; font-size: 1.5rem; color: var(--bone); display: block; margin-bottom: 8px; }
+  .layer .tag { font-family: "IBM Plex Mono", monospace; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--gold); display: block; margin-bottom: 14px; }
   .layer p { margin: 0; font-size: 14.5px; }
-  .honesty .coda {
-    margin-top: 26px;
-    padding: 20px 24px;
-    border-left: 2px solid var(--gold);
-    background: rgba(201, 162, 78, 0.05);
-    color: var(--bone);
-    font-size: 15.5px;
-    border-radius: 0 10px 10px 0;
-  }
+  .coda { margin-top: 26px; padding: 20px 24px; border-left: 2px solid var(--gold); background: color-mix(in oklab, var(--gold) 6%, transparent); color: var(--bone); font-size: 15.5px; border-radius: 0 12px 12px 0; }
 
   /* principles */
   .principles { display: grid; grid-template-columns: 1fr 1fr; gap: 16px 40px; margin-top: 8px; }
@@ -442,67 +264,98 @@
   .principle p { margin: 0; font-size: 14.5px; }
 
   /* footer */
-  footer {
-    position: relative;
-    z-index: 1;
-    border-top: 1px solid var(--rule);
-    margin-top: 40px;
-    padding: 48px 24px 60px;
-    text-align: center;
-    color: var(--mist-dim);
-    font-size: 14px;
-  }
+  footer { position: relative; z-index: 1; border-top: 1px solid var(--rule); margin-top: 40px; padding: 48px 24px 60px; text-align: center; color: var(--mist-dim); font-size: 14px; }
   footer .fstack { color: var(--mist); max-width: 52ch; margin: 0 auto 18px; }
   footer .links { display: flex; gap: 22px; justify-content: center; flex-wrap: wrap; margin-bottom: 22px; }
   footer .fine { font-size: 12.5px; line-height: 1.7; max-width: 64ch; margin: 14px auto 0; }
   footer .sig { color: var(--gold); font-family: "Fraunces", serif; font-style: italic; }
 
-  @keyframes rise {
-    from { opacity: 0; transform: translateY(16px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-  @keyframes draw {
-    from { transform: translateY(-50%) scaleX(0); }
-    to { transform: translateY(-50%) scaleX(1); }
-  }
-  @keyframes strike {
-    0% { opacity: 0; transform: translate(-14px, -50%) rotate(45deg) scale(0.4); }
-    60% { opacity: 1; transform: translate(0, -50%) rotate(45deg) scale(1.25); }
-    100% { opacity: 1; transform: translate(0, -50%) rotate(45deg) scale(1); }
-  }
+  @keyframes rise { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes draw { to { stroke-dashoffset: 0; } }
+  @keyframes headIn { from { opacity: 0; transform: translateX(-16px); } to { opacity: 1; transform: translateX(0); } }
+  @keyframes strike { 0% { opacity: 0.5; transform: scale(0.5); } 55% { opacity: 1; transform: scale(1.3); } 100% { opacity: 1; transform: scale(1); } }
 
   @media (max-width: 820px) {
     .stack { grid-template-columns: 1fr; }
     .half.memory { border-right: none; border-bottom: 1px solid var(--rule); }
     .seam { display: none; }
     .duo { grid-template-columns: 1fr; }
-    .honesty .layers { grid-template-columns: 1fr; }
+    .layers { grid-template-columns: 1fr; }
     .principles { grid-template-columns: 1fr; }
     .triggers { grid-template-columns: 1fr; }
   }
 
   @media (prefers-reduced-motion: reduce) {
     html { scroll-behavior: auto; }
-    .emblem, .hero h1, .hero .eyebrow, .lede, .sub, .mark, .cta-row { animation: none; }
-    .mark::before { animation: none; transform: translateY(-50%) scaleX(1); }
-    .mark::after { animation: none; opacity: 1; }
+    .emblem, .hero h1, .hero .eyebrow, .lede, .sub, .flight, .cta-row, .reveal { animation: none; opacity: 1; transform: none; }
+    .flight .shaft { stroke-dashoffset: 0; }
+    .flight .head, .flight .fletch, .flight .target .core { opacity: 1; transform: none; }
+    .wolf-img, .wolf-slot { animation: none; }
   }
 </style>
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
 
+<!-- the lattice: faint Seljuk eight-point star lattice -->
+<div class="lattice-bg" aria-hidden="true">
+  <svg xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <pattern id="lattice" width="128" height="128" patternUnits="userSpaceOnUse">
+        <g>
+          <rect x="40" y="40" width="48" height="48"/>
+          <rect x="40" y="40" width="48" height="48" transform="rotate(45 64 64)"/>
+          <rect x="-9" y="-9" width="18" height="18" transform="rotate(45 0 0)"/>
+          <rect x="119" y="-9" width="18" height="18" transform="rotate(45 128 0)"/>
+          <rect x="-9" y="119" width="18" height="18" transform="rotate(45 0 128)"/>
+          <rect x="119" y="119" width="18" height="18" transform="rotate(45 128 128)"/>
+          <line x1="9" y1="9" x2="40" y2="40"/>
+          <line x1="119" y1="9" x2="88" y2="40"/>
+          <line x1="9" y1="119" x2="40" y2="88"/>
+          <line x1="119" y1="119" x2="88" y2="88"/>
+        </g>
+      </pattern>
+    </defs>
+    <rect width="100%" height="100%" fill="url(#lattice)"/>
+  </svg>
+</div>
+
+<!-- the carved gold wolves of Turkic myth, prowling the side margins -->
+<div class="wolves" aria-hidden="true">
+  <div class="wolf-slot left">
+    <img class="wolf-img" src="assets/wolf-left.webp" alt="" width="480" height="773">
+  </div>
+  <div class="wolf-slot right">
+    <img class="wolf-img" src="assets/wolf-right.webp" alt="" width="480" height="784">
+  </div>
+</div>
+
 <header class="hero">
   <picture>
     <source srcset="assets/mergen-emblem.webp" type="image/webp">
-    <img class="emblem" src="assets/mergen-emblem.png" width="340" height="340"
+    <img class="emblem" src="assets/mergen-emblem.png" width="330" height="330"
       alt="The Mergen emblem. A gold arrow points up to its mark above a verify checkmark in a central medallion, a bow drawn beneath it, two wolves facing the arrow, ringed by a runic border on a deep night sky.">
   </picture>
-  <span class="eyebrow">Sound judgment, the arrow that finds its mark</span>
+  <span class="eyebrow">
+    <svg class="tamga" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2 L12 22 M12 2 L8 7 M12 2 L16 7"/><circle cx="12" cy="18" r="3.4"/></svg>
+    Sound judgment, the arrow that finds its mark
+  </span>
   <h1>Mergen</h1>
   <p class="lede">It judges what a task needs. It proves the work was done.</p>
   <p class="sub">Mergen is the execution backbone for AI coding agents. Wisdom decides how much care a change deserves. Accuracy confirms, against the real filesystem and real tests, that the change happened and was no larger than it needed to be.</p>
-  <div class="mark" aria-hidden="true"></div>
+  <svg class="flight" viewBox="0 0 460 56" role="img" aria-label="An arrow drawing its flight and striking a target">
+    <g class="target">
+      <circle cx="412" cy="28" r="20"/>
+      <g class="core">
+        <rect x="402" y="18" width="20" height="20" transform="rotate(45 412 28)"/>
+        <circle cx="412" cy="28" r="3.5" fill="var(--gold-bright)" stroke="none"/>
+      </g>
+    </g>
+    <line class="shaft" x1="14" y1="28" x2="404" y2="28"/>
+    <path class="fletch" d="M14 28 L30 20 M14 28 L30 36 M24 28 L40 20 M24 28 L40 36"/>
+    <path class="head" d="M404 28 L388 21 L392 28 L388 35 Z"/>
+  </svg>
   <div class="cta-row">
     <a class="button" href="#stack">See the stack</a>
     <a class="button ghost" href="#honesty">What it does not pretend</a>
@@ -511,11 +364,31 @@
 
 <main id="main">
 
-  <div class="divider"></div>
+  <div class="divider" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" stroke=""/><rect x="6" y="6" width="12" height="12" transform="rotate(45 12 12)" stroke=""/></svg></div>
+
+  <!-- the name: myth grounding -->
+  <section class="name-band" id="name">
+    <div class="wrap reveal">
+      <span class="eyebrow" style="justify-content:center">
+        <svg class="tamga" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12 H21 M16 7 L21 12 L16 17"/></svg>
+        the name is the architecture
+      </span>
+      <div class="glyph-row" aria-hidden="true">
+        <svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="15" stroke=""/><path d="M20 6 L20 34 M20 6 L15 12 M20 6 L25 12" stroke=""/></svg>
+        <svg viewBox="0 0 40 40"><rect x="10" y="10" width="20" height="20" stroke=""/><rect x="10" y="10" width="20" height="20" transform="rotate(45 20 20)" stroke=""/><circle cx="20" cy="20" r="2.5" data-fill></circle></svg>
+        <svg viewBox="0 0 40 40"><path d="M8 32 Q20 4 32 32" stroke=""/><line x1="20" y1="8" x2="20" y2="32" stroke=""/></svg>
+      </div>
+      <p>Mergen is a god of the old Turkic sky, drawn with a bow, his arrow unerring. The name itself carries the whole design. In Turkic it is <em>the marksman</em>, the one whose shot does not miss, and the god who bears that name is <em>wisdom</em>. Aim and intellect in a single figure. A tool that decides what a task needs and then proves the shot landed could not be called anything else.</p>
+      <p class="gloss">wisdom <b>&rarr;</b> the Governor &nbsp;&middot;&nbsp; the hit <b>&rarr;</b> the verify gate &nbsp;&middot;&nbsp; one name, both halves</p>
+    </div>
+  </section>
+
+  <div class="divider" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" stroke=""/><rect x="6" y="6" width="12" height="12" transform="rotate(45 12 12)" stroke=""/></svg></div>
+
   <section id="stack">
-    <div class="wrap">
+    <div class="wrap reveal">
       <div class="section-head">
-        <span class="eyebrow">the agent continuity stack</span>
+        <span class="eyebrow"><svg class="tamga" viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="12" r="3"/><circle cx="18" cy="12" r="3"/><line x1="9" y1="12" x2="15" y2="12"/></svg> the agent continuity stack</span>
         <h2>Memory that can be trusted. Execution that can be proven.</h2>
         <p>Mergen is one half of a two part whole. <a href="https://github.com/TheGoatPsy/mneme">mneme</a> is the memory half. It remembers why a project is the way it is, with provenance visible and nothing fabricated. Mergen is the execution half. It decides what a task needs and proves it was hit. They are joined by one seam and nothing more. Mergen keeps no memory of its own.</p>
       </div>
@@ -536,11 +409,12 @@
     </div>
   </section>
 
-  <div class="divider"></div>
+  <div class="divider" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" stroke=""/><rect x="6" y="6" width="12" height="12" transform="rotate(45 12 12)" stroke=""/></svg></div>
+
   <section id="wisdom">
-    <div class="wrap">
+    <div class="wrap reveal">
       <div class="section-head">
-        <span class="eyebrow">wisdom . the governor</span>
+        <span class="eyebrow"><svg class="tamga" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 L12 21 M5 8 L12 3 L19 8 M7 21 H17"/></svg> wisdom . the governor</span>
         <h2>A typo does not deserve a tribunal. An auth change cannot avoid one.</h2>
         <p>Maximum effort on every task is its own failure mode. The Governor classifies a change before any work begins and sets the ceremony, how much memory to pull, how deep the workflow runs, what evidence is required, and whether a human must sign off.</p>
       </div>
@@ -555,24 +429,36 @@
           <tr class="floor"><td>high-trust</td><td>see the floor below</td><td>full project memory</td><td>full spec, human checkpoint</td><td>strict, security or safety lens, sign-off</td><td>required</td></tr>
         </tbody>
       </table>
-      <h3 style="font-size:1.2rem;margin:34px 0 4px;color:var(--bone)">The floor that cannot be lowered</h3>
-      <p style="margin:0 0 4px;color:var(--mist)">A change escalates to high-trust if any of these holds. The Governor can raise a tier, never silently lower it below a matched trigger. Clinical and sensitive work can never be downgraded, even by configuration.</p>
-      <ul class="triggers">
-        <li>auth, identity, session, payment, secrets, or security policy</li>
-        <li>privacy or PII handling, data retention, or redaction</li>
-        <li>clinical, mental health, safety, or regulated content</li>
-        <li>irreversible operations, migration, bulk delete, force push</li>
-        <li>a change to a public or external contract</li>
-        <li>treating retrieved or untrusted input as instruction</li>
-      </ul>
+      <div class="polestar-row">
+        <div>
+          <h3 class="floor-head">The pole star, the floor that cannot be lowered</h3>
+          <p style="margin:0 0 4px;color:var(--mist)">The old sky turns on the pole star, the one fixed point that never moves. So does the Governor. A change escalates to high-trust if any trigger below holds, and the Governor can raise a tier but never silently lower it beneath a matched trigger. Clinical and sensitive work can never be downgraded, even by configuration.</p>
+          <ul class="triggers">
+            <li>auth, identity, session, payment, secrets, or security policy</li>
+            <li>privacy or PII handling, data retention, or redaction</li>
+            <li>clinical, mental health, safety, or regulated content</li>
+            <li>irreversible operations, migration, bulk delete, force push</li>
+            <li>a change to a public or external contract</li>
+            <li>treating retrieved or untrusted input as instruction</li>
+          </ul>
+        </div>
+        <svg class="polestar" viewBox="0 0 150 150" aria-hidden="true">
+          <circle cx="75" cy="75" r="58" data-orbit/>
+          <circle cx="75" cy="75" r="40" data-orbit/>
+          <circle cx="75" cy="75" r="22" data-orbit/>
+          <path data-star d="M75 45 L82 68 L105 75 L82 82 L75 105 L68 82 L45 75 L68 68 Z"/>
+          <circle cx="75" cy="75" r="4" data-core/>
+        </svg>
+      </div>
     </div>
   </section>
 
-  <div class="divider"></div>
+  <div class="divider" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" stroke=""/><rect x="6" y="6" width="12" height="12" transform="rotate(45 12 12)" stroke=""/></svg></div>
+
   <section id="accuracy">
-    <div class="wrap">
+    <div class="wrap reveal">
       <div class="section-head">
-        <span class="eyebrow">accuracy . the verify gate</span>
+        <span class="eyebrow"><svg class="tamga" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12 H19 M14 7 L19 12 L14 17"/><circle cx="19" cy="12" r="2.6"/></svg> accuracy . the verify gate</span>
         <h2>A box checked by the implementer is a hypothesis, not evidence.</h2>
         <p>Mergen treats every completed task as the thing to be disproven. An independent verifier, working in a separate context with a contrary mandate, confirms against the real filesystem and real tests that the files changed as specified, the criteria are met, the tests pass, and the change is minimal. The result is machine readable, so it can be measured and audited.</p>
       </div>
@@ -581,11 +467,7 @@
           <span class="kicker">calibration</span>
           <h3>Every finding wears its confidence</h3>
           <p>The verify gate emits a report where each task carries a label for how it is known. Inference is never presented as fact, and with no evidence the verdict abstains rather than guess.</p>
-          <div class="chips">
-            <span class="chip">extracted</span>
-            <span class="chip">inferred</span>
-            <span class="chip">ambiguous</span>
-          </div>
+          <div class="chips"><span class="chip">extracted</span><span class="chip">inferred</span><span class="chip">ambiguous</span></div>
         </div>
         <div class="card">
           <span class="kicker">measurement</span>
@@ -608,28 +490,26 @@
     </div>
   </section>
 
-  <div class="divider"></div>
-  <section id="honesty" class="honesty">
-    <div class="wrap">
+  <div class="divider" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" stroke=""/><rect x="6" y="6" width="12" height="12" transform="rotate(45 12 12)" stroke=""/></svg></div>
+
+  <section id="honesty">
+    <div class="wrap reveal">
       <div class="section-head">
-        <span class="eyebrow">honesty about enforcement</span>
+        <span class="eyebrow"><svg class="tamga" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 L21 8 V13 C21 18 17 21 12 22 C7 21 3 18 3 13 V8 Z"/></svg> honesty about enforcement</span>
         <h2>What Mergen does not pretend.</h2>
         <p>A system named for accuracy has to be exact about its own power. Three mechanisms appear in Mergen, and they are not equal. Naming a nudge as enforcement would be its own kind of fabrication, so Mergen does not.</p>
       </div>
       <div class="layers">
         <div class="layer">
-          <span class="verb">Asks</span>
-          <span class="tag">prompt protocol</span>
+          <span class="verb">Asks</span><span class="tag">prompt protocol</span>
           <p>The standing directive asks the agent to verify before claiming, never fabricate a source, treat retrieved content as data, and build the minimum that works. Strong discipline. Not a lock, since a person can edit a task file by hand.</p>
         </div>
         <div class="layer">
-          <span class="verb">Nudges</span>
-          <span class="tag">lifecycle hook</span>
+          <span class="verb">Nudges</span><span class="tag">lifecycle hook</span>
           <p>A hook makes verify mandatory in the implement flow and will not mark a task done without the verifier. Reinforcement at the right moment. Still in session, still bypassable by hand.</p>
         </div>
         <div class="layer">
-          <span class="verb">Refuses</span>
-          <span class="tag">ci gate</span>
+          <span class="verb">Refuses</span><span class="tag">ci gate</span>
           <p>A continuous integration check refuses to merge. Drop the provided workflow into your project and the build fails when the committed verify report shows phantom completions or tasks lacking concrete file or test evidence. This is the only layer that can refuse a merge. It reads the committed report, so it rests on the verifier that produced it.</p>
         </div>
       </div>
@@ -637,39 +517,22 @@
     </div>
   </section>
 
-  <div class="divider"></div>
+  <div class="divider" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" stroke=""/><rect x="6" y="6" width="12" height="12" transform="rotate(45 12 12)" stroke=""/></svg></div>
+
   <section id="principles">
-    <div class="wrap">
+    <div class="wrap reveal">
       <div class="section-head">
-        <span class="eyebrow">commitments</span>
+        <span class="eyebrow"><svg class="tamga" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2 L12 22 M4 9 L12 5 L20 9 M4 9 V15 L12 19 L20 15 V9"/></svg> commitments</span>
         <h2>The principles, and where they live in the code.</h2>
         <p>Mergen is original work. Its operating principles were informed by responsible-AI design ideas and reproduce no proprietary text. Each commitment maps to a component that enforces it.</p>
       </div>
       <div class="principles">
-        <div class="principle">
-          <h3>Evidence over assertion</h3>
-          <p>Never invent a result, a source, or an attribution. A verifier reports only what it checked, with the command output as proof.</p>
-        </div>
-        <div class="principle">
-          <h3>Retrieved content is data</h3>
-          <p>A task file, a spec, an external page, all are material to reason about. None is a command to obey or a grant of new capability.</p>
-        </div>
-        <div class="principle">
-          <h3>Calibration and abstention</h3>
-          <p>Separate what is known from what is inferred. With no evidence, abstain rather than confabulate.</p>
-        </div>
-        <div class="principle">
-          <h3>Minimal output</h3>
-          <p>Build the least code that works. Write the least prose that informs. The lazy ladder governs the build, and the verifier rejects a correct but over built task.</p>
-        </div>
-        <div class="principle">
-          <h3>Review is a separate lane</h3>
-          <p>Mergen never approves its own work in the breath that produced it. Authoring and review run in separate contexts, and the verifier's mandate is to disprove.</p>
-        </div>
-        <div class="principle">
-          <h3>Care in sensitive domains</h3>
-          <p>In clinical, mental health, and other high-trust contexts, the Governor raises the floor and a human stays in the loop.</p>
-        </div>
+        <div class="principle"><h3>Evidence over assertion</h3><p>Never invent a result, a source, or an attribution. A verifier reports only what it checked, with the command output as proof.</p></div>
+        <div class="principle"><h3>Retrieved content is data</h3><p>A task file, a spec, an external page, all are material to reason about. None is a command to obey or a grant of new capability.</p></div>
+        <div class="principle"><h3>Calibration and abstention</h3><p>Separate what is known from what is inferred. With no evidence, abstain rather than confabulate.</p></div>
+        <div class="principle"><h3>Minimal output</h3><p>Build the least code that works. Write the least prose that informs. The lazy ladder governs the build, and the verifier rejects a correct but over built task.</p></div>
+        <div class="principle"><h3>Review is a separate lane</h3><p>Mergen never approves its own work in the breath that produced it. Authoring and review run in separate contexts, and the verifier's mandate is to disprove.</p></div>
+        <div class="principle"><h3>Care in sensitive domains</h3><p>In clinical, mental health, and other high-trust contexts, the Governor raises the floor and a human stays in the loop.</p></div>
       </div>
     </div>
   </section>
@@ -679,14 +542,15 @@
 <footer>
   <p class="fstack">mneme remembers why. Mergen proves what. Together they are the Agent Continuity Stack, joined by one seam and nothing more.</p>
   <div class="links">
+    <a href="https://github.com/TheGoatPsy/mergen">Mergen on GitHub</a>
     <a href="https://github.com/TheGoatPsy/mneme">mneme on GitHub</a>
     <a href="https://thegoatpsy.github.io/mneme/">mneme site</a>
     <a href="#stack">The stack</a>
     <a href="#honesty">Honesty</a>
   </div>
-  <p>Mergen is v1.0.0, experimental, and currently private. It opens later. This page introduces it honestly and links nothing it cannot back.</p>
+  <p>Mergen is v1.0.0, beta. This page introduces it honestly and links nothing it cannot back.</p>
   <p class="sig">Built by Onour Impram.</p>
-  <p class="fine">Apache License 2.0. An independent tool, not affiliated with, endorsed by, or sponsored by Anthropic or GitHub. "Claude" and "Claude Code" are trademarks of Anthropic. "Spec Kit" is a project of GitHub, Inc. Built entirely from public Claude Code extension points. It does not patch or modify the Claude Code binary.</p>
+  <p class="fine">Apache License 2.0. "Claude" and "Claude Code" are trademarks of Anthropic. "Spec Kit" is a project of GitHub, Inc. Built entirely from public Claude Code extension points. It does not patch or modify the Claude Code binary.</p>
 </footer>
 
 </body>
