@@ -67,7 +67,17 @@
           "files_checked": { "type": "array", "items": { "type": "string" } },
           "tests_run": { "type": "array", "items": { "type": "string" } },
           "evidence": { "type": "array", "items": { "type": "string" } },
-          "failures": { "type": "array", "items": { "type": "string" } }
+          "failures": { "type": "array", "items": { "type": "string" } },
+          "evidence_strength": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1,
+            "description": "Optional calibration. The share of total lens weight that returned a pass for this task, a deterministic ranking of how strongly the passing evidence grounds the verdict. It is not a calibrated probability and it never changes the verdict."
+          },
+          "evidence_tier": {
+            "enum": ["executed", "corroborated", "none"],
+            "description": "Optional calibration. The strongest passing evidence class: executed (a test ran and passed), corroborated (a static lens passed but no test did), or none (no lens passed). Describes corroboration, not the verdict."
+          }
         },
         "allOf": [
           {

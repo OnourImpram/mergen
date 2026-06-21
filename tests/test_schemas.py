@@ -68,6 +68,18 @@ def test_confidence_vocabulary_is_unified_across_code_and_schema():
     assert set(verify_core.CONFIDENCE) == schema_enum  # every label is defined
 
 
+def test_evidence_tiers_vocabulary_is_unified_across_code_and_schema():
+    # The same anti-drift guarantee for the calibration tiers: the code tuple and
+    # the schema enum hold exactly the same labels in the same order, so a future
+    # editor cannot add a tier to one without the other.
+    verify_core = _load_verify_core()
+    schema_enum = (
+        _schema("verification-report")["properties"]["tasks"]["items"]
+        ["properties"]["evidence_tier"]["enum"]
+    )
+    assert list(verify_core.EVIDENCE_TIERS) == schema_enum
+
+
 def test_policy_results_shape_is_shared_across_schemas():
     # The "unify policy_results" guarantee: the Governor decision and the
     # verification report use one policy-result item shape and one vocabulary.
@@ -160,6 +172,20 @@ def test_verification_report_accepts_the_committed_sample():
     sample = json.loads(
         (REPO / "eval" / "sample" / "verification-report.json").read_text(encoding="utf-8"))
     assert v.is_valid(sample)
+
+
+def test_verification_report_evidence_calibration_fields_are_optional_and_enumerated():
+    # The calibration fields are additive: a report without them still validates,
+    # a valid tier and in-range strength validate, and an out-of-vocabulary tier
+    # or out-of-range strength is rejected.
+    v = _validator("verification-report")
+    assert v.is_valid({**_VER_BASE, "tasks": [_task(files_checked=["a.py"])]})  # absent, fine
+    assert v.is_valid({**_VER_BASE, "tasks": [
+        _task(files_checked=["a.py"], evidence_tier="corroborated", evidence_strength=0.5)]})
+    assert not v.is_valid({**_VER_BASE, "tasks": [
+        _task(files_checked=["a.py"], evidence_tier="bogus")]})
+    assert not v.is_valid({**_VER_BASE, "tasks": [
+        _task(files_checked=["a.py"], evidence_strength=1.5)]})
 
 
 def test_tasks_state_status_enum_includes_blocked_and_conditional():

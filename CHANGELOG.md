@@ -12,6 +12,16 @@ tagged as a release.
 
 ### Added
 
+- Evidence calibration on every verified task, a non-verdict-changing observability
+  signal that ranks how strongly the passing lenses ground a pass. The deterministic
+  harness records `evidence_tier` (executed when a test ran and passed, corroborated
+  when only a static lens passed, none when no lens passed) and `evidence_strength`
+  (the share of total lens weight that passed, in 0 to 1), with the summary counting
+  `untested_passes`. The per-lens weights encode a strict ordering (tests over git
+  over file presence), not a calibrated probability, and nothing here changes a
+  verdict: a failed hard gate still fails the task, and the Governor floor and
+  human_review_required are untouched, so a soft signal can never weaken a hard gate.
+  The report stays on schema_version 1.0 because the fields are additive and optional.
 - Evidence hardening, so a verdict without proof cannot pass as one. The three
   JSON schemas now enforce their own invariants declaratively. A verification
   report whose task is verified `pass` must carry concrete evidence (a file, a

@@ -20,7 +20,10 @@ from typing import Any
 
 #: Bumped when the meaning of a lens or the report shape changes. Recorded in
 #: every report's provenance so a consumer knows which verifier produced it.
-VERIFIER_VERSION = "1.0"
+#: 1.1 adds the per-task evidence calibration fields (evidence_strength,
+#: evidence_tier) and the summary untested_passes count. The report still
+#: conforms to schema_version 1.0 because those fields are additive and optional.
+VERIFIER_VERSION = "1.1"
 
 
 # ---------------------------------------------------------------------------
@@ -52,6 +55,64 @@ CONFIDENCE: dict[str, str] = {
 
 #: The canonical label set, in calibration order (most to least grounded).
 CONFIDENCE_LABELS: tuple[str, ...] = tuple(CONFIDENCE)
+
+
+# ---------------------------------------------------------------------------
+# Evidence calibration
+#
+# A pass backed by an executed test is qualitatively stronger than a pass backed
+# only by a file existing on disk. Calibration records that strength so a reader
+# can tell a test-backed pass from a presence-only one, and so a reviewer can
+# triage the weak passes first. It is pure observability. The weights below rank
+# evidence strength, they are NOT calibrated probabilities, and nothing here
+# changes a verdict: a failed hard gate still fails the task no matter how much
+# other evidence corroborates it, and the Governor floor and human_review_required
+# are untouched, so a soft signal can never weaken a hard gate.
+# ---------------------------------------------------------------------------
+
+#: Per-lens evidence weight, a strict ordering not a probability: an executed test
+#: is the strongest evidence a task is done, a file being known to git is a weaker
+#: corroboration, and mere file presence is weakest.
+LENS_WEIGHTS: dict[str, int] = {
+    "tests_pass": 3,
+    "git_consistent": 2,
+    "file_exists": 1,
+}
+
+#: Evidence tiers a task can earn, strongest first. "executed" means a test ran
+#: and passed. "corroborated" means no test passed but a static lens did. "none"
+#: means no lens passed (an all-na or wholly unverified task).
+EVIDENCE_TIERS: tuple[str, ...] = ("executed", "corroborated", "none")
+
+
+def calibrate(lens_results: dict[str, str]) -> tuple[float, str]:
+    """Score how strongly the passing lenses ground this task.
+
+    lens_results maps a lens name ("file_exists", "tests_pass", "git_consistent")
+    to "pass", "fail", or "na". Returns (evidence_strength, evidence_tier).
+    evidence_strength is the share of total lens weight that returned a pass,
+    rounded to two places, in [0.0, 1.0]. evidence_tier names the strongest
+    passing evidence class. Both describe the corroborating evidence, never the
+    verdict: this function does not know and cannot change whether the task passed.
+
+    Unknown keys are silently ignored (they earn no weight), so the caller is
+    responsible for using the canonical lens names from LENS_WEIGHTS. The one
+    caller, verify_task, passes a hardcoded dict literal, so a typo is caught at
+    review rather than at runtime.
+    """
+    total = sum(LENS_WEIGHTS.values())
+    earned = sum(
+        weight for name, weight in LENS_WEIGHTS.items()
+        if lens_results.get(name) == "pass"
+    )
+    strength = round(earned / total, 2) if total else 0.0
+    if lens_results.get("tests_pass") == "pass":
+        tier = "executed"
+    elif any(lens_results.get(name) == "pass" for name in ("git_consistent", "file_exists")):
+        tier = "corroborated"
+    else:
+        tier = "none"
+    return strength, tier
 
 
 # ---------------------------------------------------------------------------
@@ -223,11 +284,22 @@ def verify_task(task: dict[str, Any], root: Path) -> dict[str, Any]:
     all_evidence = fe_evidence + tp_evidence + gc_evidence
     all_failures = fe_failures + tp_failures + gc_failures
 
+    # Calibration is a non-verdict-changing observability signal computed from the
+    # same three lens results the verdict used. It records how strongly the passing
+    # lenses ground this task, never whether it passed.
+    evidence_strength, evidence_tier = calibrate({
+        "file_exists": fe_result,
+        "tests_pass": tp_result,
+        "git_consistent": gc_result,
+    })
+
     return {
         "task_id": task_id,
         "claimed_status": "done",
         "verified_status": verified_status,
         "confidence": confidence,
+        "evidence_strength": evidence_strength,
+        "evidence_tier": evidence_tier,
         "lens_file_exists": fe_result,
         "lens_tests_pass": tp_result,
         "lens_git_consistent": gc_result,
@@ -275,6 +347,8 @@ def build_report(
                     "claimed_status": "todo",
                     "verified_status": "fail",
                     "confidence": CONFIDENCE_AMBIGUOUS,
+                    "evidence_strength": 0.0,
+                    "evidence_tier": "none",
                     "lens_file_exists": "na",
                     "lens_tests_pass": "na",
                     "lens_git_consistent": "na",
@@ -300,6 +374,17 @@ def build_report(
         1
         for i in verified_items
         if i["confidence"] == CONFIDENCE_EXTRACTED and i["verified_status"] == "fail"
+    )
+
+    # A pass that no test exercised is a weaker pass. "corroborated" is the only
+    # non-executed pass tier (a pass always has at least one passing lens, so a
+    # verified pass can never be tier "none"), so this filter captures every
+    # untested pass. Surfacing the count lets a reviewer triage the soft passes
+    # without changing any verdict.
+    untested_passes = sum(
+        1
+        for i in verified_items
+        if i["verified_status"] == "pass" and i["evidence_tier"] == "corroborated"
     )
 
     # Ambiguous tasks do not fail the overall pass check.
@@ -329,6 +414,7 @@ def build_report(
             "mechanically_passed": mech_passed,
             "mechanically_failed": mech_failed,
             "ambiguous": ambiguous,
+            "untested_passes": untested_passes,
         },
         "tasks": all_items,
     }

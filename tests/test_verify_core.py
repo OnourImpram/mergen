@@ -100,6 +100,49 @@ def write_failing_test(repo: Path, rel: str) -> None:
 
 
 # ---------------------------------------------------------------------------
+# calibrate(): the pure evidence-strength scorer, no filesystem needed.
+# ---------------------------------------------------------------------------
+
+
+def test_calibrate_all_pass_is_executed_at_full_strength() -> None:
+    strength, tier = verify_core.calibrate(
+        {"file_exists": "pass", "tests_pass": "pass", "git_consistent": "pass"})
+    assert tier == "executed"
+    assert strength == 1.0
+
+
+def test_calibrate_test_only_is_executed_at_half_strength() -> None:
+    # A passing test alone is the strong tier, but only 3 of 6 total lens weight.
+    strength, tier = verify_core.calibrate(
+        {"file_exists": "na", "tests_pass": "pass", "git_consistent": "na"})
+    assert tier == "executed"
+    assert strength == 0.5
+
+
+def test_calibrate_static_only_is_corroborated() -> None:
+    strength, tier = verify_core.calibrate(
+        {"file_exists": "pass", "tests_pass": "na", "git_consistent": "pass"})
+    assert tier == "corroborated"
+    assert strength == 0.5  # (file 1 + git 2) / 6
+
+
+def test_calibrate_no_pass_is_none_at_zero() -> None:
+    strength, tier = verify_core.calibrate(
+        {"file_exists": "na", "tests_pass": "na", "git_consistent": "na"})
+    assert tier == "none"
+    assert strength == 0.0
+
+
+def test_calibrate_failing_test_earns_no_weight_and_no_executed_tier() -> None:
+    # A failing test is not an executed pass: it contributes zero weight and the
+    # tier falls to whatever static lens passed.
+    strength, tier = verify_core.calibrate(
+        {"file_exists": "pass", "tests_pass": "fail", "git_consistent": "pass"})
+    assert tier == "corroborated"
+    assert strength == 0.5  # the failed test earns nothing, (1 + 2) / 6
+
+
+# ---------------------------------------------------------------------------
 # Case (a): done task, file exists, test passes, git knows it.
 # ---------------------------------------------------------------------------
 
@@ -144,12 +187,46 @@ def test_done_task_all_lenses_pass(tmp_path: Path) -> None:
     assert item["lens_file_exists"] == "pass"
     assert item["lens_tests_pass"] == "pass"
     assert item["lens_git_consistent"] == "pass"
+    # A test ran and passed, so this is the strongest evidence tier at full strength.
+    assert item["evidence_tier"] == "executed"
+    assert item["evidence_strength"] == 1.0
 
     # Summary counts must be coherent.
     s = report["summary"]
     assert s["total_done_tasks"] == 1
     assert s["mechanically_passed"] == 1
     assert s["mechanically_failed"] == 0
+    assert s["untested_passes"] == 0  # the pass was test-backed
+
+
+# ---------------------------------------------------------------------------
+# Calibration: a pass with no executed test is corroborated, not executed.
+# ---------------------------------------------------------------------------
+
+
+def test_done_task_files_only_is_corroborated_and_counts_as_untested(tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    init_git_repo(repo)
+    src = "src/m.py"
+    write_and_stage(repo, src, "x = 1\n")
+    commit_all(repo)
+
+    tasks_file = tmp_path / "tasks-state.json"
+    write_tasks_state(tasks_file, [{"id": "T1", "status": "done", "files": [src]}])
+
+    report, overall_pass = verify_core.build_report(
+        json.loads(tasks_file.read_text(encoding="utf-8")), repo
+    )
+
+    assert overall_pass is True
+    item = [i for i in report["tasks"] if i["claimed_status"] == "done"][0]
+    assert item["verified_status"] == "pass"
+    # No test ran, so the pass is corroborated by the two static lenses only.
+    assert item["evidence_tier"] == "corroborated"
+    assert item["evidence_strength"] == 0.5  # (file 1 + git 2) / total 6
+    # The report flags that this pass was never exercised by a test.
+    assert report["summary"]["untested_passes"] == 1
 
 
 # ---------------------------------------------------------------------------
@@ -185,6 +262,10 @@ def test_done_task_missing_file_fails(tmp_path: Path) -> None:
     assert item["verified_status"] == "fail"
     assert item["lens_file_exists"] == "fail"
     assert any("missing" in f for f in item["failures"])
+    # The failed hard gate earns no corroboration. Calibration records the
+    # weakness, it does not soften the fail.
+    assert item["evidence_tier"] == "none"
+    assert item["evidence_strength"] == 0.0
 
     s = report["summary"]
     assert s["mechanically_failed"] == 1
@@ -226,9 +307,14 @@ def test_done_task_failing_test(tmp_path: Path) -> None:
     item = done_items[0]
     assert item["verified_status"] == "fail"
     assert item["lens_tests_pass"] == "fail"
+    # A failing test is not executed evidence: it earns no weight and no tier, and
+    # a fail is never counted as an untested pass.
+    assert item["evidence_tier"] == "none"
+    assert item["evidence_strength"] == 0.0
 
     s = report["summary"]
     assert s["mechanically_failed"] == 1
+    assert s["untested_passes"] == 0
 
 
 # ---------------------------------------------------------------------------
@@ -266,10 +352,14 @@ def test_done_task_no_files_no_test_is_ambiguous(tmp_path: Path) -> None:
     assert item["lens_file_exists"] == "na"
     assert item["lens_tests_pass"] == "na"
     assert item["lens_git_consistent"] == "na"
+    # No lens applied, so there is no corroboration to score.
+    assert item["evidence_tier"] == "none"
+    assert item["evidence_strength"] == 0.0
 
     s = report["summary"]
     assert s["ambiguous"] == 1
     assert s["mechanically_failed"] == 0
+    assert s["untested_passes"] == 0
 
 
 # ---------------------------------------------------------------------------
