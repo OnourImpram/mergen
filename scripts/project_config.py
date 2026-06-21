@@ -18,7 +18,7 @@ The overlay can only RAISE the floor, never lower it, exactly like the built-in
 classifier. A malformed or absent config yields no overlay, so the built-in
 floor still applies. The full TOML grammar is read with tomllib on Python 3.11+.
 On 3.9 and 3.10, where tomllib is absent, a deterministic reader for the small
-fixed shape above is used instead (string, boolean, and single-line array
+fixed shape above is used instead (string, boolean, number, and single-line array
 values, section headers, and whole-line comments).
 
 Stdlib only. Deterministic and side-effect free.
@@ -68,7 +68,7 @@ def _parse_simple_toml(text: str) -> dict[str, Any]:
     """Deterministic reader for the small fixed shape mergen.toml uses.
 
     Handles whole-line comments, [section] headers, and key = value where value
-    is a quoted string, a boolean, or a single-line array of quoted strings.
+    is a quoted string, a boolean, a bare number, or a single-line array of those.
     Inline comments are stripped only on lines that contain no quote character,
     which is sufficient for this fixed shape. Not a general TOML parser.
     """
@@ -96,14 +96,52 @@ def _parse_simple_toml(text: str) -> dict[str, Any]:
 
 
 def _parse_value(value: str) -> Any:
-    if value.startswith("[") and value.endswith("]"):
-        inner = value[1:-1].strip()
-        if not inner:
-            return []
-        return [_unquote(item.strip()) for item in inner.split(",") if item.strip()]
+    if value.startswith("["):
+        # An inline comment can follow the closing bracket on an array line. Cut at
+        # the last bracket so a single-line array with a trailing comment still
+        # parses to a list, rather than degrading to a raw string the overlay would
+        # silently ignore (which on 3.9 and 3.10 would mean zero protection).
+        rbracket = value.rfind("]")
+        if rbracket != -1:
+            value = value[: rbracket + 1]
+        if value.endswith("]"):
+            inner = value[1:-1].strip()
+            if not inner:
+                return []
+            return [_parse_scalar(item.strip()) for item in inner.split(",") if item.strip()]
+    return _parse_scalar(value)
+
+
+def _parse_scalar(value: str) -> Any:
+    """Type a single TOML scalar the way tomllib would, for the fixed shape.
+
+    A quoted token is a string, true/false is a boolean, a bare numeric token is an
+    integer or float, and anything else falls back to the unquoted text. Typing bare
+    numbers rather than leaving them as strings keeps this reader faithful to tomllib,
+    so a pack validates identically on 3.9 and 3.10 as on 3.11. Without it a numeric
+    value would read as a string here and as a number under tomllib, and the conformance
+    check would accept on the weakest host what it rejects on the strongest.
+    """
+    if len(value) >= 2 and value[0] == value[-1] and value[0] in ("'", '"'):
+        return value[1:-1]
     if value in ("true", "false"):
         return value == "true"
+    number = _as_number(value)
+    if number is not None:
+        return number
     return _unquote(value)
+
+
+def _as_number(value: str) -> int | float | None:
+    """Parse a bare integer or float token, or None when the token is not numeric."""
+    try:
+        return int(value)
+    except ValueError:
+        pass
+    try:
+        return float(value)
+    except ValueError:
+        return None
 
 
 def _unquote(value: str) -> str:

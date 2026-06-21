@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/TheGoatPsy/mergen/schemas/policy-pack.schema.json",
+  "title": "Mergen policy pack",
+  "description": "A shareable domain policy pack (domains/<name>/pack.toml). Policy as data, loaded by the Governor floor engine, never code the engine executes. A pack can only RAISE the high-trust floor, never lower it. additionalProperties is false so a pack carries only the known raise-only fields and cannot smuggle a directive a future engine might misread as a downgrade. The runtime enforcement that mirrors this declaration is scripts/pack_validate.py (mergen pack validate), which also checks name matches the directory and that extra_high_trust_paths is a single-line array the 3.9 and 3.10 fallback TOML reader can recover.",
+  "type": "object",
+  "required": ["name"],
+  "additionalProperties": false,
+  "properties": {
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "description": "the pack name, which must equal the directory name under domains/"
+    },
+    "floor_all_content_changes": {
+      "type": "boolean",
+      "description": "when true, any content change in a project that activates this domain is floored to high-trust"
+    },
+    "safety_note": {
+      "type": "string",
+      "description": "a human-readable note the Governor surfaces on a decision made under this domain"
+    },
+    "extra_high_trust_paths": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "description": "glob or directory-prefix patterns. A changed path matching one is floored to high-trust. Must be a single-line array so the standard-library fallback reader used on Python 3.9 and 3.10, where tomllib is absent, recovers it rather than silently reading zero paths"
+    }
+  }
+}

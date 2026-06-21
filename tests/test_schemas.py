@@ -43,10 +43,22 @@ def _load_verify_core():
 
 
 def test_schemas_parse():
-    for name in ("verification-report", "tasks-state", "governor-decision"):
+    for name in ("verification-report", "tasks-state", "governor-decision", "policy-pack"):
         data = _schema(name)
         assert data["$schema"].startswith("https://json-schema.org/")
         assert "properties" in data
+
+
+def test_policy_pack_schema_is_raise_only_and_name_required():
+    # The pack schema is the declarative half of the Policy Pack SDK. It requires a
+    # name, refuses unknown fields (the structural raise-only guarantee), and the
+    # runtime pack_validate enforces the same in pure stdlib.
+    v = _validator("policy-pack")
+    assert v.is_valid({"name": "clinical"})
+    assert v.is_valid({"name": "security", "floor_all_content_changes": False,
+                       "extra_high_trust_paths": ["**/auth*"]})
+    assert not v.is_valid({"floor_all_content_changes": True})  # missing name
+    assert not v.is_valid({"name": "x", "lower_floor": True})   # unknown field rejected
 
 
 def test_sample_report_carries_confidence_labels():
