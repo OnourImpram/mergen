@@ -25,7 +25,7 @@ governance real regardless of which agent, if any, sits above it.
 | `scripts/project_config.py` | Reads `.specify/mergen.toml`, applies the floor-raising overlay | imported by `governor_floor --config` |
 | `scripts/injection_quarantine.py` | Scans, fences, and classifies untrusted text | `python scripts/injection_quarantine.py` |
 | `scripts/ledger.py` | Append-only event ledger | `python scripts/ledger.py` |
-| `scripts/mneme_emit.py` | Emits, reads, and writes decision records across the mneme seam (`--write DIR`, redaction preflight) | `python scripts/mneme_emit.py` |
+| `scripts/mneme_emit.py` | Emits, reads, and writes decision records across the mneme seam (`--write DIR`, redaction preflight). Each record is a verified writeback: it carries the trust-graph node id of the report that earns it, so a remembered decision walks back to its proof (`--read --proof-graph`). Dedup keys on the source commit, so the same feature at a new commit is a new decision, not a duplicate | `python scripts/mneme_emit.py` |
 | `scripts/dashboard.py` | Static, offline HTML dashboard over a directory of verification reports (verdicts, phantom counts, provenance) | `python scripts/dashboard.py <dir>` or `mergen dashboard <dir>` |
 | `scripts/tasks_status.py` | Summarizes a `tasks-state.json` (done versus pending, per task). The Spec Kit analog is `specify status` | `python scripts/tasks_status.py <file>` or `mergen status <file>` |
 | `scripts/tasks_to_issues.py` | Renders GitHub issue stubs from a `tasks.md` (it renders, it does not create). The Spec Kit analog is taskstoissues | `python scripts/tasks_to_issues.py <file>` or `mergen issues <file>` |

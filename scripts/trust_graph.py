@@ -287,10 +287,13 @@ def ingest_report(path: str | Path, report: dict[str, Any],
     review = review if isinstance(review, dict) else {}
 
     if report_sha256 is None:
-        # Mirror verify_core's on-disk serialization exactly (json.dumps with
-        # indent 2, the default ensure_ascii), so the fallback hash equals the
-        # sha256 of the file verify_core would write and stays consistent with the
-        # manifest sidecar and the mneme report-sha256.
+        # Mirror verify_core's on-disk serialization (json.dumps with indent 2, the
+        # default ensure_ascii, no trailing newline). The fallback hash equals the
+        # sha256 of a file verify_core ITSELF wrote, so an automated pipeline resolves
+        # to the same id as the sidecar and the mneme record. It does NOT match a
+        # hand-edited file, a file with a trailing newline, or any other serialization:
+        # such a caller must pass report_sha256 from the file bytes, or the node id will
+        # not match. The CLI always does, so only the bare-API path carries this caveat.
         serialized = json.dumps(report, indent=2).encode("utf-8")
         report_sha256 = hashlib.sha256(serialized).hexdigest()
 

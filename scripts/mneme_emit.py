@@ -3,9 +3,14 @@
 
 Write direction: convert a Mergen verification-report.json into a mneme-style
 decision record in Markdown, so mneme can ingest it through its own public vault
-format. Read direction (weighted equally): parse those same records back from a
-mneme vault directory, so a new decision can be informed by prior ones. This is
-the only bridge between the two systems. Mergen stores no memory of its own. It
+format. The record is a VERIFIED writeback: it carries the trust-graph node id of
+the report that produced it (the same id trust_graph.ingest_report assigns), so a
+remembered decision can be walked back to the proof that earns it, the tasks-state
+it verified and the commit it sat at, without re-reading any artifact. Read
+direction (weighted equally): parse those same records back from a mneme vault
+directory, so a new decision can be informed by prior ones, optionally with each
+record's proof chain attached (proof_chain_for_record). This is the only bridge
+between the two systems. Mergen stores no memory of its own. It
 emits an already-safe, provenance-bearing, confidence-labeled record and hands
 it to mneme, and reads records back in that same documented shape.
 
@@ -24,6 +29,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import importlib.util
 import json
 import re
 import sys
@@ -32,6 +38,26 @@ from typing import Any
 
 
 _RECORD_TYPES = ("decision", "trajectory", "failure", "policy")
+
+_MODS: dict[str, Any] = {}
+
+
+def _load(name: str) -> Any:
+    """Load a sibling scripts/<name>.py by path and cache it (scripts/ not a package).
+
+    Used to reach trust_graph for the verification-report node id, so the anchor a
+    decision record carries is derived by the same function the graph uses. A single
+    source of truth: if the graph changes how it ids a report, the seam follows.
+    """
+    if name in _MODS:
+        return _MODS[name]
+    spec = importlib.util.spec_from_file_location(name, Path(__file__).resolve().parent / f"{name}.py")
+    if spec is None or spec.loader is None:  # pragma: no cover - import wiring
+        raise ImportError(f"cannot load {name}")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    _MODS[name] = mod
+    return mod
 
 
 def to_decision_markdown(
@@ -59,6 +85,14 @@ def to_decision_markdown(
     ]
     unproven = [t.get("task_id", "?") for t in tasks if t.get("verified_status") != "pass"]
 
+    # The anchor into the trust graph. The graph ids a verification-report node by the
+    # sha256 of the report, the same hash recorded as report-sha256, so this is the exact
+    # node id trust_graph.ingest_report assigns. A remembered decision therefore carries the
+    # one id that lets a reader walk to the proof that earns it without re-reading anything.
+    graph_node = "none"
+    if source_sha256:
+        graph_node = _load("trust_graph").node_id("verification-report", source_sha256)
+
     lines = [
         f"# Decision: {feature_id}",
         "",
@@ -72,6 +106,7 @@ def to_decision_markdown(
         f"- source-commit: {source_commit}",
         f"- tasks-state-sha256: {tasks_state_sha}",
         f"- verifier-version: {verifier_version}",
+        f"- trust-graph-node: {graph_node}",
         "",
         "Provenance is the verification report. Each proven task carries filesystem and test evidence. "
         "Unproven tasks are recorded as such and are not claimed as done.",
@@ -98,7 +133,8 @@ def parse_decision_record(markdown: str) -> dict[str, Any]:
     record: dict[str, Any] = {"feature_id": "", "verdict": "", "confidence": "",
                               "verified_at": "", "record_type": "", "report_sha256": "",
                               "source_commit": "", "tasks_state_sha256": "",
-                              "verifier_version": "", "proven": [], "unproven": []}
+                              "verifier_version": "", "trust_graph_node": "",
+                              "proven": [], "unproven": []}
     for raw in markdown.splitlines():
         s = raw.strip()
         if s.startswith("# Decision:"):
@@ -125,6 +161,8 @@ def parse_decision_record(markdown: str) -> dict[str, Any]:
             record["tasks_state_sha256"] = s[len("- tasks-state-sha256:"):].strip()
         elif s.startswith("- verifier-version:"):
             record["verifier_version"] = s[len("- verifier-version:"):].strip()
+        elif s.startswith("- trust-graph-node:"):
+            record["trust_graph_node"] = s[len("- trust-graph-node:"):].strip()
     return record
 
 
@@ -211,11 +249,46 @@ def _slug(text: str) -> str:
 def _dedup_key(record: dict[str, Any]) -> tuple[Any, ...]:
     """Substantive identity of a decision, ignoring the timestamp.
 
-    Two records with the same feature, verdict, and proven/unproven sets are the
-    same decision even if re-verified at a different time.
+    Two records with the same feature, verdict, source commit, and proven/unproven
+    sets are the same decision even if re-verified at a different time. The source
+    commit is part of the identity: the same feature verified at a different commit
+    is a different decision, not a duplicate, so a later commit's record is kept
+    rather than silently dropped. The trust-graph node is deliberately NOT part of
+    the key, since it changes with every re-serialization (a new verified_at alone
+    moves it), which would defeat dedup entirely.
     """
     return (record.get("feature_id", ""), record.get("verdict", ""),
+            record.get("source_commit", ""),
             tuple(record.get("proven", [])), tuple(record.get("unproven", [])))
+
+
+def proof_chain_for_record(record: dict[str, Any], graph_path: str | Path) -> dict[str, Any]:
+    """Walk from a remembered decision to the proof that earns it.
+
+    The record carries the trust-graph node id of the verification report that produced
+    it. This loads that graph and returns the proof chain rooted at that node: the
+    tasks-state it verified, the commit it sat at, the policy results it cited. An empty
+    anchor ('none' or blank) yields an empty chain, as does a node id that the graph
+    neither records nor references. A dangling reference (referenced but with no node
+    record) returns whatever chain the graph can reconstruct, which the dashboard then
+    surfaces as broken lineage. An absent OR unreadable graph (missing file, corrupt or
+    partially-written JSONL) also yields an empty chain rather than raising, so the seam
+    keeps its zero-hard-dependency contract on any caller input.
+    """
+    node = str(record.get("trust_graph_node") or "").strip()
+    if not node or node == "none":
+        return {"root": "", "nodes": [], "edges": []}
+    tg = _load("trust_graph")
+    try:
+        graph = tg.load_graph(graph_path)
+    except (OSError, ValueError):
+        # A missing, corrupt, or partially-written graph file is not an error here: the
+        # remembered decision simply has no walkable proof, which is an empty chain.
+        return {"root": node, "nodes": [], "edges": []}
+    if node not in graph.nodes and node not in graph.referenced_ids():
+        return {"root": node, "nodes": [], "edges": []}
+    chain: dict[str, Any] = tg.proof_chain(graph, node)
+    return chain
 
 
 def write_decision_record(
@@ -233,6 +306,11 @@ def write_decision_record(
       written    a new record was written at path.
     Filenames embed a content hash, so two distinct records get distinct names
     (a collision needs two different records to share a 48-bit prefix).
+
+    source_sha256 is the report's own hash, used to derive the trust-graph anchor. The
+    CLI always supplies it from the report file bytes. A library caller that omits it
+    gets a record whose anchor reads 'none', so the record is well-formed but carries no
+    walkable proof link. Pass the sha256 of the report file bytes to anchor the record.
     """
     markdown = to_decision_markdown(report, record_type=record_type, source_sha256=source_sha256)
     findings = redaction_preflight(markdown)
@@ -263,6 +341,10 @@ def main(argv: list[str] | None = None) -> int:
                     help="read prior decision records from a mneme vault directory")
     ap.add_argument("--feature", metavar="ID",
                     help="with --read, return only records for this feature_id")
+    ap.add_argument("--proof-graph", metavar="FILE",
+                    help="with --read, attach each record's proof chain from this trust-graph "
+                         "JSONL: the decision walked back to the report, tasks-state, and commit "
+                         "that earn it. An absent graph or anchor yields an empty chain.")
     ap.add_argument("--write", metavar="DIR",
                     help="write the decision record into DIR. Runs a redaction "
                          "preflight (fails closed on a secret) and skips a "
@@ -278,6 +360,9 @@ def main(argv: list[str] | None = None) -> int:
     if args.read:
         records = (prior_decisions_for(args.read, args.feature)
                    if args.feature else read_decision_records(args.read))
+        if args.proof_graph:
+            for rec in records:
+                rec["proof"] = proof_chain_for_record(rec, args.proof_graph)
         print(json.dumps(records, indent=2))
         return 0
 
