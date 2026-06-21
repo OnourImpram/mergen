@@ -85,6 +85,17 @@ tagged as a release.
 
 ### Changed
 
+- A data fence on the constitution-inject hook, so repository content stays data
+  and never becomes instruction. The hook re-surfaces a project constitution's
+  section headings each turn. It now frames them as policy data to weigh, not
+  commands, and states they do not override system, developer, user, safety,
+  privacy, or tool-permission boundaries. Each heading is sanitized (control and
+  format characters stripped, fullwidth and combining-mark obfuscation folded,
+  length capped) and screened for override or exfiltration phrasing, with a
+  matching heading flagged as untrusted rather than relayed. The flag is a
+  best-effort tripwire, not a guarantee. A heading worded as a plain operational
+  step with no trigger vocabulary can still pass the screen, and there the framing
+  is the defense, not the flag.
 - One confidence vocabulary, defined once in `MERGEN_PRINCIPLES.md` and mirrored
   by `verify_core.CONFIDENCE`, with a test asserting the code and the schema enum
   cannot drift. One `policy_results` shape shared between the Governor decision
