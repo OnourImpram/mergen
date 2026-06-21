@@ -47,11 +47,14 @@ The verbs:
   replay     record a deterministic verification run and replay it against the
              current tree, reporting match or divergence. The recorded input is the
              tasks-state, the variable is the tree. Agent agnostic, pure stdlib.
+  impacted   continuous verification: from a diff and the tasks DAG, re-verify only
+             the impacted slice and flag any task that flips pass to fail against a
+             prior report. Agent agnostic, pure standard library.
 
 install, uninstall, and upgrade act on the real ~/.claude. doctor takes optional
 directory flags so it can inspect any tree, which is also how it is tested.
-verify, dashboard, status, issues, trends, graph, and replay act on whatever
-project paths the forwarded flags name.
+verify, dashboard, status, issues, trends, graph, replay, and impacted act on
+whatever project paths the forwarded flags name.
 """
 
 from __future__ import annotations
@@ -77,6 +80,7 @@ _ISSUES = _REPO / "scripts" / "tasks_to_issues.py"
 _TRENDS = _REPO / "scripts" / "trends.py"
 _GRAPH = _REPO / "scripts" / "trust_graph.py"
 _REPLAY = _REPO / "scripts" / "replay.py"
+_IMPACTED = _REPO / "scripts" / "impacted.py"
 _SCHEMAS_DIR = _REPO / "core" / "schemas"
 _EFFORT_PATCH = _REPO / "effort-mode" / "scripts" / "patch_settings.py"
 _EFFORT_CMD = _REPO / "effort-mode" / "commands" / "mergen.md"
@@ -416,6 +420,12 @@ def build_parser() -> argparse.ArgumentParser:
         help="record a verification run and replay it against the current tree, "
              "reporting match or divergence (forwards to replay.py, try: mergen replay --help)",
     )
+    sub.add_parser(
+        "impacted",
+        add_help=False,
+        help="continuous verification: re-verify only the tasks a change impacts and "
+             "flag pass-to-fail regressions (forwards to impacted.py, try: mergen impacted --help)",
+    )
 
     return parser
 
@@ -442,6 +452,8 @@ def main(argv: list[str] | None = None) -> int:
         return _run(_GRAPH, *raw[1:])
     if raw and raw[0] == "replay":
         return _run(_REPLAY, *raw[1:])
+    if raw and raw[0] == "impacted":
+        return _run(_IMPACTED, *raw[1:])
 
     parser = build_parser()
     args = parser.parse_args(raw)
