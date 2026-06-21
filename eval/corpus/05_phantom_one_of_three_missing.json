@@ -1,0 +1,20 @@
+{
+  "name": "phantom_one_of_three_missing",
+  "truth": "phantom",
+  "expect_lens": "lens_file_exists",
+  "create_files": {
+    "a.py": "A = 1\n",
+    "b.py": "B = 2\n"
+  },
+  "test_files": {},
+  "task": {
+    "id": "T102",
+    "status": "done",
+    "files": [
+      "a.py",
+      "b.py",
+      "missing.py"
+    ],
+    "test_task": null
+  }
+}

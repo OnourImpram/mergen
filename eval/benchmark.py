@@ -49,6 +49,25 @@ _REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(_REPO / "scripts"))
 import verify_core  # noqa: E402
 
+_CORPUS_DIR = _REPO / "eval" / "corpus"
+
+
+def load_corpus(corpus_dir: Path | None = None) -> list[dict[str, Any]]:
+    """Load the labelled scenario corpus from eval/corpus/*.json, sorted by file name.
+
+    The corpus is committed data, not code, so a new ground-truth scenario is a new file
+    rather than an edit to this module. Each file is one case in the same shape build_case
+    materializes. The in-code CASES below is the embedded mirror the fast benchmark uses; a
+    test asserts the two are identical, so the externalized corpus can never drift from it.
+    """
+    base = Path(corpus_dir) if corpus_dir is not None else _CORPUS_DIR
+    if not base.is_dir():
+        # A missing directory is an infrastructure error, not an empty corpus. Raising here
+        # turns a misconfigured path into a clear diagnostic rather than a silent zero-scenario
+        # run that would read as a harness regression.
+        raise FileNotFoundError(f"corpus directory not found: {base}")
+    return [json.loads(p.read_text(encoding="utf-8")) for p in sorted(base.glob("*.json"))]
+
 
 # ---------------------------------------------------------------------------
 # The corpus. Each case has exactly one done task so scoring is 1:1. `truth`
@@ -199,9 +218,14 @@ def run_case(case: dict[str, Any]) -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 
 
-def run_all() -> dict[str, Any]:
-    """Run every case and score the treatment arm against the baseline."""
-    results = [run_case(c) for c in CASES]
+def run_all(cases: list[dict[str, Any]] | None = None) -> dict[str, Any]:
+    """Run every case and score the treatment arm against the baseline.
+
+    Defaults to the embedded CASES. EvalOps passes the file corpus (load_corpus) so the same
+    scoring runs over the externalized, growable corpus without duplicating the logic here.
+    """
+    cases = CASES if cases is None else cases
+    results = [run_case(c) for c in cases]
 
     phantoms = [r for r in results if r["truth"] == "phantom"]
     reals = [r for r in results if r["truth"] == "real"]

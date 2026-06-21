@@ -1,0 +1,21 @@
+{
+  "name": "real_multi_file_all_present",
+  "truth": "real",
+  "expect_lens": null,
+  "create_files": {
+    "a.py": "A = 1\n",
+    "b.py": "B = 2\n",
+    "c.py": "C = 3\n"
+  },
+  "test_files": {},
+  "task": {
+    "id": "T003",
+    "status": "done",
+    "files": [
+      "a.py",
+      "b.py",
+      "c.py"
+    ],
+    "test_task": null
+  }
+}

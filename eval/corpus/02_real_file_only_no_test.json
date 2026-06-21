@@ -1,0 +1,17 @@
+{
+  "name": "real_file_only_no_test",
+  "truth": "real",
+  "expect_lens": null,
+  "create_files": {
+    "docs/guide.md": "# Guide\n"
+  },
+  "test_files": {},
+  "task": {
+    "id": "T002",
+    "status": "done",
+    "files": [
+      "docs/guide.md"
+    ],
+    "test_task": null
+  }
+}
