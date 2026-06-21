@@ -1,0 +1,26 @@
+name: Dependency Review
+
+# Flags a pull request that adds a dependency with a known vulnerability or a
+# disallowed license. Honest scope: the dependency-review API requires GitHub
+# Advanced Security on a PRIVATE repository, so this is committed but inert until
+# GHAS is enabled (or the repo is public). mergen's runtime ships no third-party
+# dependency, so the practical surface this guards is the dev group in pyproject
+# and any future addition.
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  review:
+    name: "Dependency review (PR)"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
+      - name: Dependency Review
+        uses: actions/dependency-review-action@e58c696e52cac8e62d61cc21fda89565d71505d7 # v4.3.1
+        with:
+          fail-on-severity: high
