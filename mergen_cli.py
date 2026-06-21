@@ -41,11 +41,14 @@ The verbs:
              comparison when several directories are passed. Where dashboard is a
              snapshot, this is the time dimension. Agent agnostic, pure standard
              library, no network.
+  graph      typed provenance graph over the ledger: ingest a verification report,
+             walk the proof chain that justifies an artifact, audit broken lineage
+             and unsigned high-trust nodes. Agent agnostic, pure standard library.
 
 install, uninstall, and upgrade act on the real ~/.claude. doctor takes optional
 directory flags so it can inspect any tree, which is also how it is tested.
-verify, dashboard, status, issues, and trends act on whatever project paths the
-forwarded flags name.
+verify, dashboard, status, issues, trends, and graph act on whatever project
+paths the forwarded flags name.
 """
 
 from __future__ import annotations
@@ -69,6 +72,7 @@ _DASHBOARD = _REPO / "scripts" / "dashboard.py"
 _STATUS = _REPO / "scripts" / "tasks_status.py"
 _ISSUES = _REPO / "scripts" / "tasks_to_issues.py"
 _TRENDS = _REPO / "scripts" / "trends.py"
+_GRAPH = _REPO / "scripts" / "trust_graph.py"
 _SCHEMAS_DIR = _REPO / "core" / "schemas"
 _EFFORT_PATCH = _REPO / "effort-mode" / "scripts" / "patch_settings.py"
 _EFFORT_CMD = _REPO / "effort-mode" / "commands" / "mergen.md"
@@ -396,6 +400,12 @@ def build_parser() -> argparse.ArgumentParser:
         help="cross-run trends, per-task and per-spec churn over one or more "
              "reports directories (forwards to trends.py, try: mergen trends --help)",
     )
+    sub.add_parser(
+        "graph",
+        add_help=False,
+        help="typed provenance graph over the ledger: ingest a report, walk a "
+             "proof chain, audit lineage (forwards to trust_graph.py, try: mergen graph --help)",
+    )
 
     return parser
 
@@ -418,6 +428,8 @@ def main(argv: list[str] | None = None) -> int:
         return _run(_ISSUES, *raw[1:])
     if raw and raw[0] == "trends":
         return _run(_TRENDS, *raw[1:])
+    if raw and raw[0] == "graph":
+        return _run(_GRAPH, *raw[1:])
 
     parser = build_parser()
     args = parser.parse_args(raw)
