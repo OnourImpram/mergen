@@ -8,7 +8,7 @@ description: "Per-task acceptance criteria and machine-checkable verification co
 
 **Generated**: [DATE]
 
-**Verified by**: `/mergen.verify` (or `/speckit.mergen.verify`)
+**Verified by**: `/mergen-verify` (or `/speckit.mergen.verify`)
 
 **Source tasks.md**: `[PATH]/tasks.md`
 

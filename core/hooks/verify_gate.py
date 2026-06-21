@@ -2,7 +2,7 @@
 """PostToolUse hook: reinforce the verify-gate when tasks.md gains an [X] mark.
 
 This is a REINFORCEMENT nudge, not the enforcement mechanism. Real enforcement
-is the /mergen.implement pipeline's adversarial verify stage: a separate
+is the /mergen-implement pipeline's adversarial verify stage: a separate
 context that checks the filesystem and tests before any task is marked [X], plus
 the final verify gate the pipeline will not skip. A PostToolUse hook cannot itself run a
 project's tests to prove completion, so it does not pretend to. What it does is
@@ -74,7 +74,7 @@ def main() -> int:
             "independent verifier confirms it against the FILESYSTEM and TESTS: the "
             "named file exists and changed as specified, the acceptance criteria are "
             "met, the task's tests pass, and git state is consistent. If you have not "
-            "run that check, run /mergen.verify (or /speckit.mergen.verify) before "
+            "run that check, run /mergen-verify (or /speckit.mergen.verify) before "
             "claiming completion. The [X] mark itself is not evidence."
         )
         out = {

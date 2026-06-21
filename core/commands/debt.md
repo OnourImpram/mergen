@@ -13,7 +13,7 @@ If `$ARGUMENTS` contains `check`, run in gate mode (see Gate mode below). If it 
 
 ## mergen substrate (do this first)
 
-This command runs under the mergen substrate: maximum reasoning effort plus Workflow orchestration. It is the bookkeeping counterpart to the lazy ladder (`core/lazy-ladder.md`). `/mergen.lean` finds over-engineering that should be cut now. This command tracks the simplifications already taken, so a deferred shortcut does not become permanent by silence.
+This command runs under the mergen substrate: maximum reasoning effort plus Workflow orchestration. It is the bookkeeping counterpart to the lazy ladder (`core/lazy-ladder.md`). `/mergen-lean` finds over-engineering that should be cut now. This command tracks the simplifications already taken, so a deferred shortcut does not become permanent by silence.
 
 The harvest itself is a deterministic scan, not a reasoning task. Do not inflate it. The substrate earns its place in two narrow steps: classifying each shortcut by risk, and enforcing that every shortcut named a ceiling and an upgrade path. For a small surface, do both in this context. For a large repository, use the Workflow tool to fan out one classifier per top-level source directory, then merge.
 

@@ -21,7 +21,7 @@ Every occurrence of the prior internal names was transformed into Mergen, preser
 - hyperspec, Hyperspec, HYPERSPEC became mergen, Mergen, MERGEN
 - the repository slug `claude-code-hypercode` became `mergen`
 
-Command surface. `/hypercode` became `/mergen`. The `/hyperspec.<cmd>` family became `/mergen.<cmd>`. The
+Command surface. `/hypercode` became `/mergen`. The `/hyperspec.<cmd>` family became `/mergen-<cmd>`. The
 native skill prefix `hyperspec-<name>` became `mergen-<name>`. The spec-kit preset and extension became
 `mergen` with `speckit.mergen.<cmd>` ids. The deferred-shortcut comment convention `hyperspec:` became
 `mergen:`. The state marker `~/.omc/state/hypercode.json` became `~/.claude/mergen.json`.

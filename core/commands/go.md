@@ -21,7 +21,7 @@ This command runs under the mergen substrate: maximum reasoning effort plus Work
 
 ## Routing (Governor is the only classifier)
 
-Classification follows the Governor, and only the Governor. Run `/mergen.govern $ARGUMENTS` first and read the `tier` field of its `governor-decision.json`. Do not re-derive the tier here from your own criteria. The Governor is the single source of both the tier and the criteria that set it, including the high-trust triggers. Restating those criteria in this command would create a second decision surface that can drift from the Governor and quietly contradict it, which is the exact inconsistency `go` must avoid.
+Classification follows the Governor, and only the Governor. Run `/mergen-govern $ARGUMENTS` first and read the `tier` field of its `governor-decision.json`. Do not re-derive the tier here from your own criteria. The Governor is the single source of both the tier and the criteria that set it, including the high-trust triggers. Restating those criteria in this command would create a second decision surface that can drift from the Governor and quietly contradict it, which is the exact inconsistency `go` must avoid.
 
 The paths below are the execution side of the Governor's tiers, not a place to re-decide which tier applies. The mapping is direct:
 
@@ -46,27 +46,27 @@ Stop here. Do not proceed to the standard or mergen paths.
 ## standard path
 
 1. State the tier classification and the files you expect to touch.
-2. If `$ARGUMENTS` is underspecified, run `/mergen.clarify $ARGUMENTS` first (at most five questions, encode answers back before continuing).
-3. Run `/mergen.specify $ARGUMENTS` to produce the spec. This command uses a judge-panel Workflow internally; you do not need to orchestrate it yourself.
-4. Run `/mergen.plan` to produce `plan.md` with a short multi-approach generation and architecture-critic pass.
-5. Run `/mergen.tasks` to produce `tasks.md` and `tasks-dag.json`.
-6. Use the Workflow tool to run `/mergen.implement` over the task waves as described in the implement command. Each task goes through an isolated implementer lane and an adversarial verifier lane before it can be marked `[X]`. Do not collapse the waves into this context.
-7. Run `/mergen.verify` as the required final gate. The pipeline will not advance without it.
+2. If `$ARGUMENTS` is underspecified, run `/mergen-clarify $ARGUMENTS` first (at most five questions, encode answers back before continuing).
+3. Run `/mergen-specify $ARGUMENTS` to produce the spec. This command uses a judge-panel Workflow internally; you do not need to orchestrate it yourself.
+4. Run `/mergen-plan` to produce `plan.md` with a short multi-approach generation and architecture-critic pass.
+5. Run `/mergen-tasks` to produce `tasks.md` and `tasks-dag.json`.
+6. Use the Workflow tool to run `/mergen-implement` over the task waves as described in the implement command. Each task goes through an isolated implementer lane and an adversarial verifier lane before it can be marked `[X]`. Do not collapse the waves into this context.
+7. Run `/mergen-verify` as the required final gate. The pipeline will not advance without it.
 8. Proceed to the Done When checklist below.
 
 ## mergen path
 
 1. State the tier classification and the reasons it qualified as mergen.
-2. Run `/mergen.clarify $ARGUMENTS` to resolve ambiguity before any spec work (at most five questions).
-3. Run `/mergen.specify $ARGUMENTS`. The judge panel spawns three spec drafts (user lens, architect lens, prod-failure skeptic) and an adversarial reviewer in separate Workflow lanes, then synthesizes. Ensure the Workflow tool is used for this fan-out; do not collapse into one context.
-4. Run `/mergen.constitution` if no constitution exists yet or if the spec introduces new governance constraints. Keep templates in sync.
-5. Run `/mergen.checklist` to apply the requirements-quality checklist before any implementation begins.
-6. Run `/mergen.plan`. A multi-approach generation lane and an architecture-critic lane run in parallel via the Workflow tool; the critic's mandate is to refute the leading approach, not to endorse it.
-7. Run `/mergen.tasks`. The completeness-critic loop runs until no new tasks emerge, then emits `tasks-dag.json` with the full dependency DAG.
-8. Run `/mergen.analyze` to surface cross-artifact inconsistencies (spec vs. plan vs. tasks vs. contracts) before a single line of code is written. Fix any flagged inconsistencies.
-9. Use the Workflow tool to run `/mergen.implement` at maximum parallelism. Every task wave fans out via the Workflow tool into isolated implementer contexts and separate adversarial verifier contexts. The verifier's mandate is to disprove completion. A task is marked `[X]` only on a verifier-signed `pass: true` with filesystem and test evidence. Failed tasks are re-queued with the verifier's failure list; retries are capped at two. After the cap the task is left `[ ]` and surfaced in the report.
-10. Run `/mergen.verify` as the required final gate: independent multi-lens verifiers (file-exists, spec-match, tests-pass, git-consistent) re-check every `[X]` task. Majority-or-FAIL. Any `[X]` that fails reverts to `[ ]` and is re-queued. The pipeline does not advance without it. A CI gate for your own project ships as `eval/ci/verify-gate.yml`. It fails the build when the committed verification report shows phantom or unverified work, and because it reads the committed artifact, the deepest guarantee rests on the verifier that produced it.
-11. Run `/mergen.rollup` to reconcile all specs into `project-state.md`.
+2. Run `/mergen-clarify $ARGUMENTS` to resolve ambiguity before any spec work (at most five questions).
+3. Run `/mergen-specify $ARGUMENTS`. The judge panel spawns three spec drafts (user lens, architect lens, prod-failure skeptic) and an adversarial reviewer in separate Workflow lanes, then synthesizes. Ensure the Workflow tool is used for this fan-out; do not collapse into one context.
+4. Run `/mergen-constitution` if no constitution exists yet or if the spec introduces new governance constraints. Keep templates in sync.
+5. Run `/mergen-checklist` to apply the requirements-quality checklist before any implementation begins.
+6. Run `/mergen-plan`. A multi-approach generation lane and an architecture-critic lane run in parallel via the Workflow tool; the critic's mandate is to refute the leading approach, not to endorse it.
+7. Run `/mergen-tasks`. The completeness-critic loop runs until no new tasks emerge, then emits `tasks-dag.json` with the full dependency DAG.
+8. Run `/mergen-analyze` to surface cross-artifact inconsistencies (spec vs. plan vs. tasks vs. contracts) before a single line of code is written. Fix any flagged inconsistencies.
+9. Use the Workflow tool to run `/mergen-implement` at maximum parallelism. Every task wave fans out via the Workflow tool into isolated implementer contexts and separate adversarial verifier contexts. The verifier's mandate is to disprove completion. A task is marked `[X]` only on a verifier-signed `pass: true` with filesystem and test evidence. Failed tasks are re-queued with the verifier's failure list; retries are capped at two. After the cap the task is left `[ ]` and surfaced in the report.
+10. Run `/mergen-verify` as the required final gate: independent multi-lens verifiers (file-exists, spec-match, tests-pass, git-consistent) re-check every `[X]` task. Majority-or-FAIL. Any `[X]` that fails reverts to `[ ]` and is re-queued. The pipeline does not advance without it. A CI gate for your own project ships as `eval/ci/verify-gate.yml`. It fails the build when the committed verification report shows phantom or unverified work, and because it reads the committed artifact, the deepest guarantee rests on the verifier that produced it.
+11. Run `/mergen-rollup` to reconcile all specs into `project-state.md`.
 12. Proceed to the Done When checklist below.
 
 ## high-trust path
@@ -86,5 +86,5 @@ For both standard and mergen paths, adversarial verification is not optional and
 - [ ] Every task is either verifier-confirmed `[X]` with filesystem and test evidence, or explicitly reported as failing with the verifier's failure list (no silent or assertion-only completions).
 - [ ] The required verify gate passed for all `[X]` tasks.
 - [ ] For high-trust: the operator signed off before any `[X]` was finalized, and the matched triggers were shown.
-- [ ] For mergen: `project-state.md` was updated by `/mergen.rollup`.
+- [ ] For mergen: `project-state.md` was updated by `/mergen-rollup`.
 - [ ] The user received a summary of tier, commands executed, verification results, and any remaining failures.

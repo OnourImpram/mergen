@@ -35,7 +35,7 @@ Fourteen command files in `core/commands/`, each defining a named Workflow-tool 
 | `go.md` | Complexity router that directs a request to the appropriate SDD tier. |
 | `lean.md` | Over-engineering review: parallel per-file reviewers against the lazy ladder, deduplicated ranked delete-list. Complexity only, never correctness. |
 | `debt.md` | Harvests `mergen:` deferred-shortcut comments into a risk-banded ledger. Gate mode fails on unceiled shortcuts. |
-| `govern.md` | The Governor. Classifies a task into tiny, standard, spec, or high-trust and sets memory scope, workflow depth, evidence standard, and human-approval threshold. Deterministic high-trust floor: can be raised by explicit configuration, never silently lowered. The wisdom organ that precedes routing. `/mergen.go` executes the chosen tier. |
+| `govern.md` | The Governor. Classifies a task into tiny, standard, spec, or high-trust and sets memory scope, workflow depth, evidence standard, and human-approval threshold. Deterministic high-trust floor: can be raised by explicit configuration, never silently lowered. The wisdom organ that precedes routing. `/mergen-go` executes the chosen tier. |
 
 Seven template files in `core/templates/`:
 
@@ -48,7 +48,7 @@ Vendored MIT helper scripts from Spec Kit in `core/scripts/`:
 
 Two hooks in `core/hooks/`:
 
-- **`verify_gate.py`** (`PostToolUse` on `Write`, `Edit`, `MultiEdit`): when `tasks.md` gains an `[X]` entry, it injects an `additionalContext` reminder to run `/mergen.verify`. Fail-soft. Exits `0` when not applicable.
+- **`verify_gate.py`** (`PostToolUse` on `Write`, `Edit`, `MultiEdit`): when `tasks.md` gains an `[X]` entry, it injects an `additionalContext` reminder to run `/mergen-verify`. Fail-soft. Exits `0` when not applicable.
 - **`constitution_inject.py`** (`UserPromptSubmit`): injects the section headings of `.specify/memory/constitution.md` at the start of each prompt. Fail-soft. Exits `0` when the file is absent.
 
 Both hooks are reinforcement nudges, not enforcement mechanisms. A prompt protocol asks, a hook nudges, a CI gate refuses. The non-bypassable guarantee is scoped to the spec-kit `after_implement` hook contract plus CI, not an absolute in-session lock. The real in-pipeline enforcement is the `/implement` pipeline's adversarial verify stage, which runs in a separate context and refuses to mark `[X]` until filesystem and tests confirm the task.
@@ -57,16 +57,16 @@ Both hooks are reinforcement nudges, not enforcement mechanisms. A prompt protoc
 
 ### Machine-readable verify output
 
-`/mergen.verify` emits two machine-readable files alongside the human-readable `verification-report.md`:
+`/mergen-verify` emits two machine-readable files alongside the human-readable `verification-report.md`:
 
 - **`verification-report.json`**: the full per-task verdict with evidence arrays and failure lists. Each task carries a `confidence` label from the one confidence vocabulary (`extracted`, `inferred`, `ambiguous`), defined once in `MERGEN_PRINCIPLES.md`.
 - **`tasks-state.json`**: a compact per-task state record (`id`, `status`, `files`, `test_task`, `last_verified_at`) mirroring the post-verification `[ ]` / `[X]` state. The confidence label lives on the verification report, not here.
 
 Schemas for both files live in `core/schemas/`. The JSON output is the input consumed by `eval/evidence_metric.py`.
 
-### The Governor (`/mergen.govern`)
+### The Governor (`/mergen-govern`)
 
-The Governor classifies an incoming task into one of four tiers (tiny, standard, spec, high-trust) and sets memory scope, workflow depth, evidence standard, and human-approval threshold for that tier. A deterministic high-trust floor is always enforced: it can be raised by explicit configuration but is never silently lowered. The Governor is the wisdom organ of the command suite. The `/mergen.go` complexity router then executes the chosen tier.
+The Governor classifies an incoming task into one of four tiers (tiny, standard, spec, high-trust) and sets memory scope, workflow depth, evidence standard, and human-approval threshold for that tier. A deterministic high-trust floor is always enforced: it can be raised by explicit configuration but is never silently lowered. The Governor is the wisdom organ of the command suite. The `/mergen-go` complexity router then executes the chosen tier.
 
 ### Eval evidence metric
 
@@ -86,7 +86,7 @@ Mergen is the execution layer and pairs with mneme (the memory layer) across one
 
 **`dist/native/build_native.py`** with two subcommands:
 
-- `build` renders each `core/commands/<name>.md` to `~/.claude/skills/mergen-<name>/SKILL.md`. It adds frontmatter (`name: mergen.<name>`, `user-invocable: true`, `disable-model-invocation: false`) and prefixes the vendored scripts path to `.specify/scripts/`. Skills are invoked in Claude Code as `/mergen.<name>`. Supports `--skills-dir` and `--dry-run`.
+- `build` renders each `core/commands/<name>.md` to `~/.claude/skills/mergen-<name>/SKILL.md`. It adds frontmatter (`name: mergen-<name>`, `user-invocable: true`, `disable-model-invocation: false`) and prefixes the vendored scripts path to `.specify/scripts/`. Skills are invoked in Claude Code as `/mergen-<name>`. Supports `--skills-dir` and `--dry-run`.
 - `init [project]` bootstraps `<project>/.specify/` (copies scripts and templates, creates `memory/`). Supports `--dry-run`.
 
 Built on the Python standard library only.
@@ -136,7 +136,7 @@ The spec-kit half ships a preset that replaces 8 commands and an extension that 
 The `mergen_prompt_hook.py` hook injects a standing orchestration directive on each turn, but it cannot flip Claude Code's live effort value to `max`. The user must paste the `/effort max` line once after arming the mode. This is documented in `docs/HOW-IT-WORKS.md`.
 
 **Hooks are reinforcement nudges, not enforcement.**
-`verify_gate.py` reminds the user to run `/mergen.verify` when `[X]` is written, and `constitution_inject.py` surfaces constitution headings at prompt time. Neither hook can prevent Claude Code from proceeding. Enforcement lives in the `/implement` pipeline's adversarial verify stage: a separate-context verifier checks the filesystem and tests and re-queues any task it cannot confirm.
+`verify_gate.py` reminds the user to run `/mergen-verify` when `[X]` is written, and `constitution_inject.py` surfaces constitution headings at prompt time. Neither hook can prevent Claude Code from proceeding. Enforcement lives in the `/implement` pipeline's adversarial verify stage: a separate-context verifier checks the filesystem and tests and re-queues any task it cannot confirm.
 
 **Eval has methodology and a reproduce procedure, not yet measured numbers.**
 The `eval/` directory defines the evaluation methodology and how to run it. `eval/evidence_metric.py` provides a minimal honest metric derived from the verify JSON. No full benchmark numbers have been published yet. Any figures shown in supporting documents that are labeled SYNTHETIC or ILLUSTRATIVE are not real measurements and must not be cited as such.

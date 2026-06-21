@@ -107,9 +107,10 @@ def test_build_agents_discipline_is_portable():
     build_agents = _load("dist/agents/build_agents.py")
     ladder = build_agents.LADDER.read_text(encoding="utf-8")
     discipline = build_agents.portable_discipline(ladder)
-    # The portable body must not instruct a non-Claude agent to run /mergen.*
+    # The portable body must not instruct a non-Claude agent to run /mergen-*
     # commands, and must not carry the Claude-specific lifecycle section.
     assert "/mergen." not in discipline
+    assert "/mergen-" not in discipline
     assert "How the lifecycle uses the ladder" not in discipline
     # But it must keep the ladder itself.
     assert "need to be built at all" in discipline

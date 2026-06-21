@@ -8,7 +8,7 @@
 # Setup is two steps.
 #   1. Vendor the metric into your repo, for example at tools/evidence_metric.py.
 #      It is Python standard library only, so there is nothing to install.
-#   2. Commit the verification-report.json that /mergen.verify emits, and point
+#   2. Commit the verification-report.json that /mergen-verify emits, and point
 #      the run step below at it.
 #
 # What it enforces. A phantom is a task claimed done that the verifier did not

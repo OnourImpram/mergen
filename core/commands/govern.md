@@ -69,9 +69,9 @@ When a fuller audit trail is wanted, the decision may also carry an optional `po
 
 ## How the rest of the lifecycle uses the decision
 
-- `/mergen.go` routes to the path the tier names. For a high-trust tier it adds the mandatory human checkpoint and the strict evidence standard before completion can be claimed.
-- `/mergen.plan` lets the tier set how deep the plan goes. A tiny task needs no plan. A high-trust task gets the full multi-approach and architecture-critic pass.
-- `/mergen.implement` lets the tier set the verifier's evidence standard and whether a human checkpoint gates the final `[X]`.
+- `/mergen-go` routes to the path the tier names. For a high-trust tier it adds the mandatory human checkpoint and the strict evidence standard before completion can be claimed.
+- `/mergen-plan` lets the tier set how deep the plan goes. A tiny task needs no plan. A high-trust task gets the full multi-approach and architecture-critic pass.
+- `/mergen-implement` lets the tier set the verifier's evidence standard and whether a human checkpoint gates the final `[X]`.
 
 The Governor is what makes maximum effort affordable. Without it, every task pays full ceremony and the cost drives people to skip the discipline entirely. With it, the discipline scales to the risk.
 
@@ -80,4 +80,4 @@ The Governor is what makes maximum effort affordable. Without it, every task pay
 - [ ] The task was classified into exactly one tier, and every high-trust trigger that matched is recorded.
 - [ ] The decision was emitted as `governor-decision.json` with all five fields plus `triggers_matched`.
 - [ ] The high-trust floor was honored: no matched trigger was silently lowered, and ties resolved upward.
-- [ ] The decision was handed to the work-running command (`/mergen.go`, `/mergen.plan`, or `/mergen.implement`) that consumes it.
+- [ ] The decision was handed to the work-running command (`/mergen-go`, `/mergen-plan`, or `/mergen-implement`) that consumes it.

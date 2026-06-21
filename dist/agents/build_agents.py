@@ -9,7 +9,7 @@ expects, so the "think exhaustively, build minimally" discipline travels even
 where the orchestration cannot.
 
 Honest scope: this ports the minimalism discipline ONLY. It does not port, and
-does not claim to port, the `/mergen.*` command suite, the verify gate, or
+does not claim to port, the `/mergen-*` command suite, the verify gate, or
 the wave-parallel implement pipeline. Each rendered file states this.
 
 Targets (each agent's documented passive-rule location):
@@ -49,7 +49,7 @@ PROVENANCE = (
 
 SCOPE_NOTE = (
     "> This file ports mergen's minimalism discipline only. mergen's "
-    "Workflow-orchestrated spec-driven-development engine (the `/mergen.*` "
+    "Workflow-orchestrated spec-driven-development engine (the `/mergen-*` "
     "commands, the adversarial verify gate, the wave-parallel implement pipeline) "
     "is Claude Code specific and is not included here."
 )
@@ -59,7 +59,7 @@ def portable_discipline(ladder_text: str) -> str:
     """Return the agent-portable body of the lazy ladder.
 
     Drops the Claude-specific "How the lifecycle uses the ladder" section and
-    rewrites the one sentence that references the `/mergen.debt` command, so
+    rewrites the one sentence that references the `/mergen-debt` command, so
     a non-Claude agent gets clean, applicable guidance.
     """
     body = ladder_text
@@ -68,10 +68,11 @@ def portable_discipline(ladder_text: str) -> str:
     idx = body.find(marker)
     if idx != -1:
         body = body[:idx]
-    # Rewrite any sentence that references a `/mergen.<cmd>` command into a
-    # portable instruction (robust to wording changes in the source).
+    # Rewrite any sentence that references a `/mergen-<cmd>` command into a
+    # portable instruction. The character class tolerates either the hyphen
+    # invocation or a legacy dot, so a stale source still renders clean.
     body = re.sub(
-        r"`/mergen\.\w+`[^\n]*",
+        r"`/mergen[.-]\w+`[^\n]*",
         "Track these comments so deferred work stays visible.",
         body,
     )

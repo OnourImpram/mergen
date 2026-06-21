@@ -59,7 +59,7 @@ Full mechanism in [docs/HOW-IT-WORKS.md](docs/HOW-IT-WORKS.md).
 
 Fourteen command files in `core/commands/` define the full SDD lifecycle, each as a named Workflow pattern. A
 single-source renderer produces two distribution shells: a native Claude Code skills install (invoked as
-`/mergen.*`) and a Spec Kit preset plus extension (invoked as `speckit.*` or `speckit.mergen.*`). Spec Kit
+`/mergen-*`) and a Spec Kit preset plus extension (invoked as `speckit.*` or `speckit.mergen.*`). Spec Kit
 prompt-suggests structured documents and relies on a single context to follow them. Mergen runs the same
 lifecycle under max effort plus Workflow orchestration, where each command is a multi-agent pattern, tasks
 run wave-parallel from a dependency DAG, and a separate-context adversarial verifier must confirm filesystem
@@ -71,7 +71,7 @@ Details and the full parity table in [docs/SDD-SUPERSET.md](docs/SDD-SUPERSET.md
 ### The Governor: wisdom over the lifecycle
 
 Maximum effort on every task is its own failure mode. A typo does not deserve a tribunal, and an auth change
-must not avoid one. The Governor (`/mergen.govern`) classifies a task into `tiny`, `standard`, `spec`, or
+must not avoid one. The Governor (`/mergen-govern`) classifies a task into `tiny`, `standard`, `spec`, or
 `high-trust` and sets the memory scope, the workflow depth, the evidence standard, and whether a human must
 sign off. High-trust triggers (auth, payment, secrets, privacy and PII, clinical and regulated content,
 irreversible operations, public-contract changes, and treating untrusted input as instruction) force a
@@ -101,7 +101,7 @@ On Windows PowerShell:
 The installer runs three steps in order:
 
 1. `effort-mode/install.sh` (or `.ps1`) installs the `/mergen` command and the `UserPromptSubmit` effort hook.
-2. `python dist/native/build_native.py build` renders the 14 `/mergen.*` skills to `~/.claude/skills/`.
+2. `python dist/native/build_native.py build` renders the 14 `/mergen-*` skills to `~/.claude/skills/`.
 3. `python dist/native/patch_settings_hooks.py` registers the two SDD hooks in `~/.claude/settings.json`
    (idempotent, corruption-safe, and tolerant of a UTF-8 BOM that Claude Code on Windows can write).
 
@@ -144,34 +144,34 @@ This creates `<project-dir>/.specify/` with scripts, templates, and a `memory/` 
 
 ---
 
-## The 14 /mergen.* commands
+## The 14 /mergen-* commands
 
 Each command is a named Workflow pattern. All run under the mergen substrate (max reasoning effort, standing
 orchestration), with the Governor setting how much of the pattern a given task earns.
 
 | Command | One-line purpose | Workflow pattern |
 |---|---|---|
-| `/mergen.govern` | Classify a task by risk and set its ceremony. | The Governor: tier (tiny/standard/spec/high-trust), memory scope, evidence standard, and human approval, with a deterministic high-trust floor. Emits `governor-decision.json`. |
-| `/mergen.constitution` | Author or update the project constitution. | Author plus adversarial self-check before accepting. |
-| `/mergen.specify` | Write a feature spec. | Judge panel: three parallel drafts (user, architect, rejection lens) plus an adversarial reviewer, then synthesis. |
-| `/mergen.clarify` | Ask targeted questions before spec work. | Targeted question loop, maximum 5, answers encoded back. |
-| `/mergen.checklist` | Apply a requirements-quality checklist. | Requirements-quality checklist ("unit tests for requirements") before implementation. |
-| `/mergen.plan` | Produce an implementation plan. | Multi-approach generation in parallel lanes plus a refute-biased architecture critic, then synthesis. |
-| `/mergen.tasks` | Break the plan into tasks and a dependency DAG. | Loop-until-dry completeness critic plus DAG builder. Outputs `tasks-dag.json`. |
-| `/mergen.analyze` | Check cross-artifact consistency before code. | Four parallel adversarial checker lanes, deduplicated. |
-| `/mergen.implement` | Execute the task list. | Wave-parallel pipeline from `tasks-dag.json`: isolated implementer per task, then a separate-context refute-biased verifier that checks filesystem and tests before marking `[X]`. Re-queues on failure. |
-| `/mergen.verify` | Re-check every `[X]` task as a standalone gate. | Parallel four-lens check per task (file-exists, spec-match, tests-pass, git-consistent). Majority-or-FAIL. Emits `verification-report.json` (a confidence label per task) and `tasks-state.json`. |
-| `/mergen.rollup` | Synthesize feature specs into canonical project state. | Parallel reader lanes plus conflict adjudication, writes `.specify/memory/project-state.md`. |
-| `/mergen.go` | Route a request to the tier the Governor chose. | Executes the Governor's tier (tiny/standard/spec/high-trust), adding the high-trust human checkpoint. |
-| `/mergen.lean` | Review the diff or repo for over-engineering. | Parallel per-file reviewers, deduped into a ranked delete-list (`delete`/`stdlib`/`native`/`yagni`/`shrink`). Complexity only, never correctness. |
-| `/mergen.debt` | Track deferred shortcuts. | Harvests `mergen:` comments into `.specify/memory/debt.md` by risk band. Gate mode fails on any shortcut with no named ceiling. |
+| `/mergen-govern` | Classify a task by risk and set its ceremony. | The Governor: tier (tiny/standard/spec/high-trust), memory scope, evidence standard, and human approval, with a deterministic high-trust floor. Emits `governor-decision.json`. |
+| `/mergen-constitution` | Author or update the project constitution. | Author plus adversarial self-check before accepting. |
+| `/mergen-specify` | Write a feature spec. | Judge panel: three parallel drafts (user, architect, rejection lens) plus an adversarial reviewer, then synthesis. |
+| `/mergen-clarify` | Ask targeted questions before spec work. | Targeted question loop, maximum 5, answers encoded back. |
+| `/mergen-checklist` | Apply a requirements-quality checklist. | Requirements-quality checklist ("unit tests for requirements") before implementation. |
+| `/mergen-plan` | Produce an implementation plan. | Multi-approach generation in parallel lanes plus a refute-biased architecture critic, then synthesis. |
+| `/mergen-tasks` | Break the plan into tasks and a dependency DAG. | Loop-until-dry completeness critic plus DAG builder. Outputs `tasks-dag.json`. |
+| `/mergen-analyze` | Check cross-artifact consistency before code. | Four parallel adversarial checker lanes, deduplicated. |
+| `/mergen-implement` | Execute the task list. | Wave-parallel pipeline from `tasks-dag.json`: isolated implementer per task, then a separate-context refute-biased verifier that checks filesystem and tests before marking `[X]`. Re-queues on failure. |
+| `/mergen-verify` | Re-check every `[X]` task as a standalone gate. | Parallel four-lens check per task (file-exists, spec-match, tests-pass, git-consistent). Majority-or-FAIL. Emits `verification-report.json` (a confidence label per task) and `tasks-state.json`. |
+| `/mergen-rollup` | Synthesize feature specs into canonical project state. | Parallel reader lanes plus conflict adjudication, writes `.specify/memory/project-state.md`. |
+| `/mergen-go` | Route a request to the tier the Governor chose. | Executes the Governor's tier (tiny/standard/spec/high-trust), adding the high-trust human checkpoint. |
+| `/mergen-lean` | Review the diff or repo for over-engineering. | Parallel per-file reviewers, deduped into a ranked delete-list (`delete`/`stdlib`/`native`/`yagni`/`shrink`). Complexity only, never correctness. |
+| `/mergen-debt` | Track deferred shortcuts. | Harvests `mergen:` comments into `.specify/memory/debt.md` by risk band. Gate mode fails on any shortcut with no named ceiling. |
 
 ---
 
 ## Proof, not assertion
 
 A box checked by the implementer is a hypothesis, not evidence. Mergen treats it as the thing to be
-disproven. `/mergen.verify` re-checks every `[X]` task in a separate context with a contrary mandate, against
+disproven. `/mergen-verify` re-checks every `[X]` task in a separate context with a contrary mandate, against
 the real filesystem and real tests, and emits `verification-report.json` so the result can be measured and
 audited. The eval evidence metric (`eval/evidence_metric.py`) reads that JSON and reports a work-done rate and
 a phantom-completion count, abstaining honestly when it has no data. Worth-remembering decisions cross the one
@@ -285,7 +285,7 @@ LICENSE / NOTICE / ATTRIBUTION.md Apache-2.0 and third-party attribution
 
 v1.0.0, experimental.
 
-- Native shell: 14 `/mergen.*` commands installed as Claude Code skills, plus the effort-mode hook and command.
+- Native shell: 14 `/mergen-*` commands installed as Claude Code skills, plus the effort-mode hook and command.
 - Spec Kit shell: a preset overriding 8 commands plus an extension adding 6 (`verify`, `rollup`, `go`, `lean`,
   `debt`, `govern`).
 - The Governor sets risk-calibrated ceremony with a deterministic high-trust floor.

@@ -10,7 +10,7 @@
 #   1. Vendor both stdlib-only scripts into your repo, for example at
 #      tools/verify_core.py and tools/evidence_metric.py. Nothing to install.
 #   2. Point the regenerate step at your project's tasks-state JSON (the file
-#      /mergen.tasks and /mergen.verify maintain under .specify/).
+#      /mergen-tasks and /mergen-verify maintain under .specify/).
 #   3. Make this check required on your default branch (a one-time repo setting).
 #
 # What it enforces. A phantom is a task claimed done that the verifier does not

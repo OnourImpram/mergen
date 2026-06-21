@@ -25,7 +25,7 @@ This command runs under the mergen substrate: maximum reasoning effort plus Work
 ## Pre-planning
 
 1. Run the setup-plan script from repo root and parse `FEATURE_SPEC`, `IMPL_PLAN`, and `SPECS_DIR` (absolute paths). The script copies the plan template if `plan.md` does not yet exist and returns the feature directory.
-2. Load context: REQUIRED `spec.md`; IF EXISTS `research.md`, `quickstart.md`, and `.specify/memory/constitution.md` (governance constraints). If `spec.md` is absent, stop and tell the user to run `/mergen.specify` first.
+2. Load context: REQUIRED `spec.md`; IF EXISTS `research.md`, `quickstart.md`, and `.specify/memory/constitution.md` (governance constraints). If `spec.md` is absent, stop and tell the user to run `/mergen-specify` first.
 3. Constitution check: scan the loaded constitution for architectural constraints (forbidden patterns, required patterns, complexity limits). Record violations that must be justified in the plan's Complexity Tracking table.
 4. Governor check: if a `governor-decision.json` exists for this task, let its tier set the planning depth. A tiny task needs no plan. A high-trust task gets the full multi-approach and architecture-critic pass and records that a human checkpoint will gate implementation.
 
@@ -75,7 +75,7 @@ After both lanes return, you (in this context) synthesize the final plan:
 5. Produce `contracts/` entries (one file per module boundary or API surface) if the design has non-trivial interfaces.
 6. Record every constitution violation that the chosen design retains (because they are necessary) in the Complexity Tracking table with justification.
 
-Do NOT produce tasks.md. That is the responsibility of `/mergen.tasks`.
+Do NOT produce tasks.md. That is the responsibility of `/mergen-tasks`.
 
 ## Adversarial verify before claiming done
 
@@ -96,4 +96,4 @@ The verifier returns `{ "pass": bool, "gaps": [...] }`. If `pass` is false, retu
 - [ ] `plan.md` is filled in from the chosen design: no placeholder option labels, no unresolved `NEEDS CLARIFICATION` fields where the spec provides the information, Complexity Tracking populated for any constitution violations.
 - [ ] `research.md`, `data-model.md`, and `contracts/` exist whenever the design requires them.
 - [ ] Adversarial verifier returned `pass: true` with evidence that all spec requirements are addressed.
-- [ ] `tasks.md` is NOT created (that is the job of `/mergen.tasks`).
+- [ ] `tasks.md` is NOT created (that is the job of `/mergen-tasks`).

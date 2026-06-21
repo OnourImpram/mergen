@@ -126,12 +126,12 @@ a renamed one, so its history begins here rather than carrying the seed project'
   verification), not a single-context monologue.
 - Single source, two renderers (`core/CONVENTIONS.md`):
   - Native renderer `dist/native/build_native.py` renders each command into
-    `~/.claude/skills/mergen-<name>/SKILL.md`, invoked as `/mergen.<name>`. `init` bootstraps a project's
+    `~/.claude/skills/mergen-<name>/SKILL.md`, invoked as `/mergen-<name>`. `init` bootstraps a project's
     `.specify/` directory.
   - spec-kit renderer `dist/speckit/build_speckit.py` emits a preset `mergen` that overrides 8 stock Spec Kit
     commands, and an extension `mergen` that adds 6 commands (`verify`, `rollup`, `go`, `lean`, `debt`,
     `govern`) plus an `after_implement` verify gate.
-- The Governor (`/mergen.govern`), Mergen's wisdom organ. It classifies a task into tiny, standard, spec, or
+- The Governor (`/mergen-govern`), Mergen's wisdom organ. It classifies a task into tiny, standard, spec, or
   high-trust, and sets the memory scope, workflow depth, evidence standard, and human-approval requirement.
   High-trust triggers (auth, payment, secrets, privacy, clinical and regulated content, irreversible
   operations, public-contract changes, untrusted-input-as-instruction) force a deterministic floor that can
@@ -145,7 +145,7 @@ a renamed one, so its history begins here rather than carrying the seed project'
   conflicts, restraint in reproduction, and care in sensitive domains. The principles were informed by
   responsible-AI design ideas and reproduce no proprietary text. A repository check enforces that.
 - The minimalism discipline (the lazy ladder, `core/lazy-ladder.md`, derived from `DietrichGebert/ponytail`,
-  MIT). `/mergen.lean` returns a tagged delete-list, `/mergen.debt` harvests `mergen:` deferred-shortcut
+  MIT). `/mergen-lean` returns a tagged delete-list, `/mergen-debt` harvests `mergen:` deferred-shortcut
   comments into a ledger, and `implement` builds to the ladder while its verifier checks the result is
   minimal as well as correct.
 - The cross-agent renderer `dist/agents/build_agents.py` ports the minimalism discipline only into passive
