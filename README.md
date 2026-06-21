@@ -9,7 +9,7 @@ adversarial verification, governed so the ceremony scales to the risk.**
 
 <p align="center">
   <a href="https://github.com/TheGoatPsy/mergen/actions/workflows/ci.yml"><img src="https://github.com/TheGoatPsy/mergen/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
-  <img src="https://img.shields.io/badge/status-experimental-orange" alt="status: experimental">
+  <img src="https://img.shields.io/badge/status-beta-blue" alt="status: beta">
   <img src="https://img.shields.io/badge/python-3.8%2B-blue" alt="Python 3.8+">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-blue" alt="License: Apache-2.0"></a>
 </p>
@@ -24,12 +24,12 @@ half. mneme remembers why a project is the way it is, with provenance visible an
 decides what a task needs and proves it was hit. Together they form the Agent Continuity Stack, joined by one
 seam and nothing more. Mergen stores no memory of its own.
 
-> Status: v1.0.0, experimental. Built entirely from public Claude Code extension points (slash commands,
+> Status: v1.0.0, beta. Built entirely from public Claude Code extension points (slash commands,
 > hooks, `settings.json`). Does not patch or modify the Claude Code binary.
 
 Mergen is original work. Its operating principles were informed by responsible-AI design ideas and reproduce
 no proprietary text. The charter is [MERGEN.md](MERGEN.md), the principle-to-component map is
-[MERGEN_PRINCIPLES.md](MERGEN_PRINCIPLES.md). Not affiliated with Anthropic or GitHub. "Claude" and "Claude
+[MERGEN_PRINCIPLES.md](MERGEN_PRINCIPLES.md). "Claude" and "Claude
 Code" are trademarks of Anthropic. "Spec Kit" is a project of GitHub, Inc. (MIT). Vendored Spec Kit material
 is attributed in [ATTRIBUTION.md](ATTRIBUTION.md) and [NOTICE](NOTICE). The lineage of Mergen's engine is
 recorded in [PROVENANCE.md](PROVENANCE.md).
@@ -263,7 +263,7 @@ LICENSE / NOTICE / ATTRIBUTION.md Apache-2.0 and third-party attribution
 
 ## Status
 
-v1.0.0, experimental.
+v1.0.0, beta.
 
 - Native shell: 14 `/mergen.*` commands installed as Claude Code skills, plus the effort-mode hook and command.
 - Spec Kit shell: a preset overriding 8 commands plus an extension adding 6 (`verify`, `rollup`, `go`, `lean`,
@@ -283,12 +283,6 @@ Further reading: [MERGEN.md](MERGEN.md), [docs/HOW-IT-WORKS.md](docs/HOW-IT-WORK
 [docs/MNEME-SEAM.md](docs/MNEME-SEAM.md).
 
 ---
-
-## Not affiliated with Anthropic or GitHub
-
-This is an independent tool. It is not affiliated with, endorsed by, or sponsored by Anthropic or GitHub, Inc.
-"Claude" and "Claude Code" are trademarks of Anthropic. "Spec Kit" is a project of GitHub, Inc. The behavior
-described here was observed in a specific Claude Code build and may change.
 
 ## License
 
