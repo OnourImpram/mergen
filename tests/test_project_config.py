@@ -47,6 +47,21 @@ def test_minimal_parser_strips_wholeline_inline_comment_without_quotes():
     assert cfg["governor"]["flag"] is True
 
 
+def test_minimal_parser_types_bare_numbers_like_tomllib():
+    # A bare number must read as a number, not a string, so a pack validates the
+    # same on 3.9 and 3.10 as under tomllib on 3.11. A quoted number stays a string.
+    cfg = pc._parse_simple_toml('count = 42\nratio = 1.5\nlabel = "7"\n')
+    assert cfg["count"] == 42 and isinstance(cfg["count"], int)
+    assert cfg["ratio"] == 1.5 and isinstance(cfg["ratio"], float)
+    assert cfg["label"] == "7" and isinstance(cfg["label"], str)
+
+
+def test_minimal_parser_types_numbers_inside_arrays():
+    cfg = pc._parse_simple_toml('mixed = [42, "ok"]\n')
+    assert cfg["mixed"] == [42, "ok"]
+    assert isinstance(cfg["mixed"][0], int)
+
+
 # --------------------------------------------------------------------------- #
 # Overlay
 # --------------------------------------------------------------------------- #

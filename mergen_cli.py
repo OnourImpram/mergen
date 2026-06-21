@@ -50,11 +50,14 @@ The verbs:
   impacted   continuous verification: from a diff and the tasks DAG, re-verify only
              the impacted slice and flag any task that flips pass to fail against a
              prior report. Agent agnostic, pure standard library.
+  pack       validate a domain policy pack: the name matches its directory, only the
+             raise-only fields appear, and the path list is a single-line array the
+             3.9 and 3.10 fallback reader can recover. Agent agnostic, pure stdlib.
 
 install, uninstall, and upgrade act on the real ~/.claude. doctor takes optional
 directory flags so it can inspect any tree, which is also how it is tested.
-verify, dashboard, status, issues, trends, graph, replay, and impacted act on
-whatever project paths the forwarded flags name.
+verify, dashboard, status, issues, trends, graph, replay, impacted, and pack act
+on whatever project paths the forwarded flags name.
 """
 
 from __future__ import annotations
@@ -81,6 +84,7 @@ _TRENDS = _REPO / "scripts" / "trends.py"
 _GRAPH = _REPO / "scripts" / "trust_graph.py"
 _REPLAY = _REPO / "scripts" / "replay.py"
 _IMPACTED = _REPO / "scripts" / "impacted.py"
+_PACK = _REPO / "scripts" / "pack_validate.py"
 _SCHEMAS_DIR = _REPO / "core" / "schemas"
 _EFFORT_PATCH = _REPO / "effort-mode" / "scripts" / "patch_settings.py"
 _EFFORT_CMD = _REPO / "effort-mode" / "commands" / "mergen.md"
@@ -426,6 +430,12 @@ def build_parser() -> argparse.ArgumentParser:
         help="continuous verification: re-verify only the tasks a change impacts and "
              "flag pass-to-fail regressions (forwards to impacted.py, try: mergen impacted --help)",
     )
+    sub.add_parser(
+        "pack",
+        add_help=False,
+        help="validate a domain policy pack: name matches directory, raise-only fields, "
+             "single-line array (forwards to pack_validate.py, try: mergen pack --help)",
+    )
 
     return parser
 
@@ -454,6 +464,8 @@ def main(argv: list[str] | None = None) -> int:
         return _run(_REPLAY, *raw[1:])
     if raw and raw[0] == "impacted":
         return _run(_IMPACTED, *raw[1:])
+    if raw and raw[0] == "pack":
+        return _run(_PACK, *raw[1:])
 
     parser = build_parser()
     args = parser.parse_args(raw)
