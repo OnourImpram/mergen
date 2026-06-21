@@ -27,6 +27,16 @@ tagged as a release.
   and this lint together. The `summary` block records a machine-readable
   `human_review` sign-off state, so an unsigned high-trust report fails the lint
   by default.
+- A PR Guardian (`scripts/pr_guardian.py`) and its drop-in CI Action
+  (`eval/ci/pr-guardian.yml`). The script reads one verification report and emits
+  a compact markdown summary a CI step posts as a pull-request comment (verdict,
+  risk level, tasks claimed versus verified, phantom count, human sign-off state,
+  and any integrity finding), gating the same way `verify-lint` does and failing
+  additionally on any phantom completion. The gate decision reuses
+  `verify_report_lint` rather than re-deriving the rules, so the two cannot drift.
+  The Action regenerates the report from the live tree, comments with the gh CLI
+  (no third-party action beyond the SHA-pinned setup steps), and the exit code is
+  the gate. Tier 0, pure standard library, no network in the script itself.
 - A deterministic, agent-agnostic core, pure standard library, no network and no
   model. `scripts/verify_core.py` (the mechanical verify harness that emits
   `verification-report.json`), `scripts/governor_floor.py` (the non-downgradable
