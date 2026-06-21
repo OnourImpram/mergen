@@ -44,11 +44,14 @@ The verbs:
   graph      typed provenance graph over the ledger: ingest a verification report,
              walk the proof chain that justifies an artifact, audit broken lineage
              and unsigned high-trust nodes. Agent agnostic, pure standard library.
+  replay     record a deterministic verification run and replay it against the
+             current tree, reporting match or divergence. The recorded input is the
+             tasks-state, the variable is the tree. Agent agnostic, pure stdlib.
 
 install, uninstall, and upgrade act on the real ~/.claude. doctor takes optional
 directory flags so it can inspect any tree, which is also how it is tested.
-verify, dashboard, status, issues, trends, and graph act on whatever project
-paths the forwarded flags name.
+verify, dashboard, status, issues, trends, graph, and replay act on whatever
+project paths the forwarded flags name.
 """
 
 from __future__ import annotations
@@ -73,6 +76,7 @@ _STATUS = _REPO / "scripts" / "tasks_status.py"
 _ISSUES = _REPO / "scripts" / "tasks_to_issues.py"
 _TRENDS = _REPO / "scripts" / "trends.py"
 _GRAPH = _REPO / "scripts" / "trust_graph.py"
+_REPLAY = _REPO / "scripts" / "replay.py"
 _SCHEMAS_DIR = _REPO / "core" / "schemas"
 _EFFORT_PATCH = _REPO / "effort-mode" / "scripts" / "patch_settings.py"
 _EFFORT_CMD = _REPO / "effort-mode" / "commands" / "mergen.md"
@@ -406,6 +410,12 @@ def build_parser() -> argparse.ArgumentParser:
         help="typed provenance graph over the ledger: ingest a report, walk a "
              "proof chain, audit lineage (forwards to trust_graph.py, try: mergen graph --help)",
     )
+    sub.add_parser(
+        "replay",
+        add_help=False,
+        help="record a verification run and replay it against the current tree, "
+             "reporting match or divergence (forwards to replay.py, try: mergen replay --help)",
+    )
 
     return parser
 
@@ -430,6 +440,8 @@ def main(argv: list[str] | None = None) -> int:
         return _run(_TRENDS, *raw[1:])
     if raw and raw[0] == "graph":
         return _run(_GRAPH, *raw[1:])
+    if raw and raw[0] == "replay":
+        return _run(_REPLAY, *raw[1:])
 
     parser = build_parser()
     args = parser.parse_args(raw)
