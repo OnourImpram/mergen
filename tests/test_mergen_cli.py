@@ -187,6 +187,7 @@ def test_forward_verbs_dispatch_to_the_right_script(monkeypatch):
         ("replay", mergen_cli._REPLAY),
         ("impacted", mergen_cli._IMPACTED),
         ("pack", mergen_cli._PACK),
+        ("calibrate", mergen_cli._CALIBRATE),
     ):
         seen.clear()
         rc = mergen_cli.main([verb, "PASSTHROUGH_ARG", "--flag"])
