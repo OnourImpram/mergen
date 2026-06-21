@@ -59,11 +59,14 @@ The verbs:
   adapter    the Adapter SDK: validate the per-host capability manifests, print the
              generated capability matrix, or check whether a host provides a capability
              so a renderer refuses to overclaim. Agent agnostic, pure standard library.
+  sign       bind a pre-action authorization token to an artifact's exact bytes (HMAC
+             under a local key), or verify one, so an acknowledgement cannot be copied
+             onto a different change. Agent agnostic, pure standard library.
 
 install, uninstall, and upgrade act on the real ~/.claude. doctor takes optional
 directory flags so it can inspect any tree, which is also how it is tested.
 verify, dashboard, status, issues, trends, graph, replay, impacted, pack, calibrate,
-and adapter act on whatever project paths the forwarded flags name.
+adapter, and sign act on whatever project paths the forwarded flags name.
 """
 
 from __future__ import annotations
@@ -93,6 +96,7 @@ _IMPACTED = _REPO / "scripts" / "impacted.py"
 _PACK = _REPO / "scripts" / "pack_validate.py"
 _CALIBRATE = _REPO / "scripts" / "governor_adaptive.py"
 _ADAPTER = _REPO / "scripts" / "adapter_sdk.py"
+_SIGN = _REPO / "scripts" / "preaction_sign.py"
 _SCHEMAS_DIR = _REPO / "core" / "schemas"
 _EFFORT_PATCH = _REPO / "effort-mode" / "scripts" / "patch_settings.py"
 _EFFORT_CMD = _REPO / "effort-mode" / "commands" / "mergen.md"
@@ -457,6 +461,12 @@ def build_parser() -> argparse.ArgumentParser:
         help="Adapter SDK: validate per-host capability manifests, print the capability matrix, "
              "or check a host capability (forwards to adapter_sdk.py, try: mergen adapter --help)",
     )
+    sub.add_parser(
+        "sign",
+        add_help=False,
+        help="bind or verify a pre-action authorization token over an artifact's bytes "
+             "(forwards to preaction_sign.py, try: mergen sign --help)",
+    )
 
     return parser
 
@@ -491,6 +501,8 @@ def main(argv: list[str] | None = None) -> int:
         return _run(_CALIBRATE, *raw[1:])
     if raw and raw[0] == "adapter":
         return _run(_ADAPTER, *raw[1:])
+    if raw and raw[0] == "sign":
+        return _run(_SIGN, *raw[1:])
 
     parser = build_parser()
     args = parser.parse_args(raw)
