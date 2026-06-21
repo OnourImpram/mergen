@@ -116,6 +116,31 @@ def test_load_domain_pack_absent_is_empty(tmp_path):
     assert pc.load_domain_pack("nope", packs_dir=tmp_path) == {}
 
 
+def test_load_committed_security_pack():
+    pack = pc.load_domain_pack("security")
+    # Security is path-based, not floor-all, so an ordinary change is untouched.
+    assert pack.get("floor_all_content_changes") is False
+    assert "security reviewer" in pack.get("safety_note", "")
+    paths = pack.get("extra_high_trust_paths", [])
+    assert any("auth" in p for p in paths)
+    assert any("secret" in p for p in paths)
+
+
+def test_overlay_security_pack_floors_sensitive_paths_only():
+    base = {"tier": "tiny", "triggers_matched": []}
+    # An auth-surface change is floored to high-trust and carries the note.
+    out1 = pc.apply_overlay(base, {"domain": "security"}, ["src/auth/login.py"])
+    assert out1["tier"] == "high-trust"
+    assert "project-protected-path" in out1["triggers_matched"]
+    assert "security reviewer" in out1.get("safety_note", "")
+    # A secret-bearing env file is floored too.
+    out2 = pc.apply_overlay(base, {"domain": "security"}, ["config/prod.env"])
+    assert out2["tier"] == "high-trust"
+    # An unrelated docs change is NOT floored: security floors paths, not all changes.
+    out3 = pc.apply_overlay(base, {"domain": "security"}, ["docs/readme.md"])
+    assert out3["tier"] == "tiny"
+
+
 def test_overlay_surfaces_clinical_pack_safety_note():
     base = {"tier": "tiny", "triggers_matched": []}
     out = pc.apply_overlay(base, {"domain": "clinical"}, ["docs/x.md"])
