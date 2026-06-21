@@ -382,6 +382,24 @@ def _cmd_audit(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_dashboard(args: argparse.Namespace) -> int:
+    """Forward to the offline HTML renderer in trust_dashboard.py.
+
+    Lazy-loaded so the graph library carries no rendering code and the two modules
+    do not form an import cycle (trust_dashboard imports this module at render time).
+    """
+    repo = Path(__file__).resolve().parent
+    spec = importlib.util.spec_from_file_location("trust_dashboard", repo / "trust_dashboard.py")
+    if spec is None or spec.loader is None:  # pragma: no cover - import wiring
+        raise ImportError("cannot load trust_dashboard")
+    td = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(td)
+    forward = [str(args.graph)]
+    if args.out:
+        forward += ["--out", str(args.out)]
+    return int(td.main(forward))
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(
         description="Typed, append-only provenance graph over the mergen ledger.")
@@ -400,6 +418,11 @@ def main(argv: list[str] | None = None) -> int:
     p_au = sub.add_parser("audit", help="report node and edge counts, broken lineage, unsigned high-trust")
     p_au.add_argument("--graph", required=True, help="path to the trust-graph JSONL file")
     p_au.set_defaults(func=_cmd_audit)
+
+    p_db = sub.add_parser("dashboard", help="render an offline HTML dashboard over the graph")
+    p_db.add_argument("--graph", required=True, help="path to the trust-graph JSONL file")
+    p_db.add_argument("--out", help="write the HTML here (default: stdout)")
+    p_db.set_defaults(func=_cmd_dashboard)
 
     args = ap.parse_args(argv)
     result: int = args.func(args)
