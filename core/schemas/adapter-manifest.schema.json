@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/TheGoatPsy/mergen/schemas/adapter-manifest.schema.json",
+  "title": "Mergen adapter manifest",
+  "description": "A per-host capability manifest (core/adapters/<host>.json). It declares, as data, exactly what a render target can and cannot do, so a renderer never claims a capability the host lacks and the capability matrix is generated from these manifests rather than hand-maintained. Each capability is a boolean and the full vocabulary is required, so a host states a yes or a no for every capability and none is left ambiguous. additionalProperties is false at every level so a manifest cannot smuggle an undeclared capability a reader might misinterpret. The runtime that enforces this is scripts/adapter_sdk.py (mergen adapter validate).",
+  "type": "object",
+  "required": ["host", "title", "capabilities"],
+  "additionalProperties": false,
+  "properties": {
+    "host": {
+      "type": "string",
+      "minLength": 1,
+      "description": "the host name, which must equal the manifest file stem under core/adapters/"
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "description": "a human-readable title for the host shown in the generated capability matrix"
+    },
+    "note": {
+      "type": "string",
+      "description": "an honest one-line statement of what the host does and does not port"
+    },
+    "capabilities": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "slash_commands",
+        "command_suite",
+        "lifecycle_hooks",
+        "settings_registration",
+        "project_bootstrap",
+        "workflow_orchestration",
+        "verify_gate",
+        "passive_rules"
+      ],
+      "properties": {
+        "slash_commands": {
+          "type": "boolean",
+          "description": "the host exposes mergen commands as invocable slash commands"
+        },
+        "command_suite": {
+          "type": "boolean",
+          "description": "the host carries the full mergen command suite (verify, rollup, go, lean, debt, govern)"
+        },
+        "lifecycle_hooks": {
+          "type": "boolean",
+          "description": "the host runs mergen lifecycle hooks at tool and session events"
+        },
+        "settings_registration": {
+          "type": "boolean",
+          "description": "the host registers mergen into its own settings file"
+        },
+        "project_bootstrap": {
+          "type": "boolean",
+          "description": "the host bootstraps a per-project mergen scaffold"
+        },
+        "workflow_orchestration": {
+          "type": "boolean",
+          "description": "the host runs the Workflow-orchestrated SDD engine"
+        },
+        "verify_gate": {
+          "type": "boolean",
+          "description": "the host enforces the verification gate before work is accepted"
+        },
+        "passive_rules": {
+          "type": "boolean",
+          "description": "the host carries the portable lazy-ladder minimalism discipline as a passive rule file"
+        }
+      }
+    }
+  }
+}

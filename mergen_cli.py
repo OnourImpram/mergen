@@ -56,11 +56,14 @@ The verbs:
   calibrate  the Adaptive Governor: compute review-scope thresholds from the recorded
              governor history, bounded so adaptation can never weaken the floor. Use
              classify to show one decision. Agent agnostic, pure standard library.
+  adapter    the Adapter SDK: validate the per-host capability manifests, print the
+             generated capability matrix, or check whether a host provides a capability
+             so a renderer refuses to overclaim. Agent agnostic, pure standard library.
 
 install, uninstall, and upgrade act on the real ~/.claude. doctor takes optional
 directory flags so it can inspect any tree, which is also how it is tested.
-verify, dashboard, status, issues, trends, graph, replay, impacted, pack, and
-calibrate act on whatever project paths the forwarded flags name.
+verify, dashboard, status, issues, trends, graph, replay, impacted, pack, calibrate,
+and adapter act on whatever project paths the forwarded flags name.
 """
 
 from __future__ import annotations
@@ -89,6 +92,7 @@ _REPLAY = _REPO / "scripts" / "replay.py"
 _IMPACTED = _REPO / "scripts" / "impacted.py"
 _PACK = _REPO / "scripts" / "pack_validate.py"
 _CALIBRATE = _REPO / "scripts" / "governor_adaptive.py"
+_ADAPTER = _REPO / "scripts" / "adapter_sdk.py"
 _SCHEMAS_DIR = _REPO / "core" / "schemas"
 _EFFORT_PATCH = _REPO / "effort-mode" / "scripts" / "patch_settings.py"
 _EFFORT_CMD = _REPO / "effort-mode" / "commands" / "mergen.md"
@@ -447,6 +451,12 @@ def build_parser() -> argparse.ArgumentParser:
              "bounded so adaptation cannot weaken the floor (forwards to governor_adaptive.py, "
              "try: mergen calibrate --help)",
     )
+    sub.add_parser(
+        "adapter",
+        add_help=False,
+        help="Adapter SDK: validate per-host capability manifests, print the capability matrix, "
+             "or check a host capability (forwards to adapter_sdk.py, try: mergen adapter --help)",
+    )
 
     return parser
 
@@ -479,6 +489,8 @@ def main(argv: list[str] | None = None) -> int:
         return _run(_PACK, *raw[1:])
     if raw and raw[0] == "calibrate":
         return _run(_CALIBRATE, *raw[1:])
+    if raw and raw[0] == "adapter":
+        return _run(_ADAPTER, *raw[1:])
 
     parser = build_parser()
     args = parser.parse_args(raw)

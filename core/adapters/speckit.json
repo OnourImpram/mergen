@@ -1,0 +1,15 @@
+{
+  "host": "speckit",
+  "title": "GitHub Spec Kit (preset plus extension)",
+  "note": "A preset that overrides Spec Kit's own commands plus a mergen extension. The command suite is present and the verify gate runs as an after_implement hook. It does not run Claude Code lifecycle hooks or the Workflow orchestration, and it does not bootstrap a mergen scaffold of its own. Spec Kit's own specify init creates the .specify directory.",
+  "capabilities": {
+    "slash_commands": true,
+    "command_suite": true,
+    "lifecycle_hooks": false,
+    "settings_registration": false,
+    "project_bootstrap": false,
+    "workflow_orchestration": false,
+    "verify_gate": true,
+    "passive_rules": false
+  }
+}
