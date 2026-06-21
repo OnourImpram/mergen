@@ -163,8 +163,8 @@ def test_status_subcommand_forwards_to_the_summarizer():
 
 
 def test_forward_verbs_dispatch_to_the_right_script(monkeypatch):
-    # The four forwarding verbs must each reach their own helper with the trailing
-    # args passed through verbatim. Recording _run pins the dispatch table directly,
+    # Each forwarding verb must reach its own helper with the trailing args passed
+    # through verbatim. Recording _run pins the dispatch table directly,
     # which is stronger than an exit code and answers the "wrong helper, returned 0
     # for an unrelated reason" concern without depending on fd-level capture of a
     # child process (unreliable across platforms).
@@ -183,6 +183,7 @@ def test_forward_verbs_dispatch_to_the_right_script(monkeypatch):
         ("status", mergen_cli._STATUS),
         ("issues", mergen_cli._ISSUES),
         ("trends", mergen_cli._TRENDS),
+        ("graph", mergen_cli._GRAPH),
     ):
         seen.clear()
         rc = mergen_cli.main([verb, "PASSTHROUGH_ARG", "--flag"])
