@@ -53,11 +53,14 @@ The verbs:
   pack       validate a domain policy pack: the name matches its directory, only the
              raise-only fields appear, and the path list is a single-line array the
              3.9 and 3.10 fallback reader can recover. Agent agnostic, pure stdlib.
+  calibrate  the Adaptive Governor: compute review-scope thresholds from the recorded
+             governor history, bounded so adaptation can never weaken the floor. Use
+             classify to show one decision. Agent agnostic, pure standard library.
 
 install, uninstall, and upgrade act on the real ~/.claude. doctor takes optional
 directory flags so it can inspect any tree, which is also how it is tested.
-verify, dashboard, status, issues, trends, graph, replay, impacted, and pack act
-on whatever project paths the forwarded flags name.
+verify, dashboard, status, issues, trends, graph, replay, impacted, pack, and
+calibrate act on whatever project paths the forwarded flags name.
 """
 
 from __future__ import annotations
@@ -85,6 +88,7 @@ _GRAPH = _REPO / "scripts" / "trust_graph.py"
 _REPLAY = _REPO / "scripts" / "replay.py"
 _IMPACTED = _REPO / "scripts" / "impacted.py"
 _PACK = _REPO / "scripts" / "pack_validate.py"
+_CALIBRATE = _REPO / "scripts" / "governor_adaptive.py"
 _SCHEMAS_DIR = _REPO / "core" / "schemas"
 _EFFORT_PATCH = _REPO / "effort-mode" / "scripts" / "patch_settings.py"
 _EFFORT_CMD = _REPO / "effort-mode" / "commands" / "mergen.md"
@@ -436,6 +440,13 @@ def build_parser() -> argparse.ArgumentParser:
         help="validate a domain policy pack: name matches directory, raise-only fields, "
              "single-line array (forwards to pack_validate.py, try: mergen pack --help)",
     )
+    sub.add_parser(
+        "calibrate",
+        add_help=False,
+        help="Adaptive Governor: compute review-scope thresholds from the governor history, "
+             "bounded so adaptation cannot weaken the floor (forwards to governor_adaptive.py, "
+             "try: mergen calibrate --help)",
+    )
 
     return parser
 
@@ -466,6 +477,8 @@ def main(argv: list[str] | None = None) -> int:
         return _run(_IMPACTED, *raw[1:])
     if raw and raw[0] == "pack":
         return _run(_PACK, *raw[1:])
+    if raw and raw[0] == "calibrate":
+        return _run(_CALIBRATE, *raw[1:])
 
     parser = build_parser()
     args = parser.parse_args(raw)
