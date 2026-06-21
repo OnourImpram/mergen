@@ -24,7 +24,17 @@
       "properties": {
         "verdict": { "enum": ["pass", "conditional_pass", "fail"] },
         "risk_level": { "enum": ["tiny", "standard", "spec", "high-trust"] },
+        "risk_triggers": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "The Governor floor trigger ids that classified this report's risk_level (for example auth-path, secrets-path). Empty when the change touched no guarded surface. Records why the tier is what it is."
+        },
         "human_review_required": { "type": "boolean" },
+        "total_done_tasks": { "type": "integer", "minimum": 0, "description": "Count of tasks marked done that the harness verified." },
+        "mechanically_passed": { "type": "integer", "minimum": 0, "description": "Done tasks a mechanical lens confirmed as a pass." },
+        "mechanically_failed": { "type": "integer", "minimum": 0, "description": "Done tasks a mechanical lens confirmed as a fail (a phantom completion)." },
+        "ambiguous": { "type": "integer", "minimum": 0, "description": "Done tasks no mechanical lens could decide, neither passed nor failed." },
+        "untested_passes": { "type": "integer", "minimum": 0, "description": "Verified passes whose strongest evidence was a static lens, no test executed (evidence_tier corroborated)." },
         "human_review": {
           "type": "object",
           "description": "Machine-readable human sign-off state. When human_review_required is true, a strict gate requires status approved before a final pass.",

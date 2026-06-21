@@ -219,11 +219,15 @@ not as claims already met.
 - Unsigned high-trust merges: high-trust changes that reached the default branch
   without a recorded human sign-off. Target: zero, enforced by the gate, surfaced
   by the dashboard.
+- Phantom-detection rate: the share of planted phantoms the harness catches on the
+  labelled corpus, held at or above the v2.0 benchmark as the lens set changes. This
+  is what EvalOps measures and regression-gates today, alongside the false-alarm rate
+  and the expected-lens hit rate, recorded as a trend over the corpus.
 - Verifier calibration: the gap between the verifier's stated confidence and its
-  measured accuracy on the labelled corpus, tracked by EvalOps. Target: narrowing
-  over time, never silently widening.
-- Phantom-detection rate: held at or above the v2.0 benchmark as the lens set
-  changes, regression-gated by EvalOps.
+  measured accuracy on the labelled corpus. Target: narrowing over time, never
+  silently widening. NOT yet measured. EvalOps records detection rates, not a
+  confidence-versus-accuracy gap; computing that gap from the per-task confidence
+  labels is a named forward item, not a current EvalOps metric.
 
 ## Honest scope and known limits
 

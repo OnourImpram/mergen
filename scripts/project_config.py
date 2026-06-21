@@ -208,6 +208,10 @@ def apply_overlay(
     floor_all = bool(pack.get("floor_all_content_changes")) or bool(
         DOMAIN_OVERLAYS.get(domain, {}).get("floor_all_content_changes")
     )
+    # A floor-all domain raises any NON-EMPTY change set to high-trust. An empty change set is
+    # not a change, so there is nothing to floor and the base tier stands. The gate always
+    # classifies a real diff (a non-empty path list), so the empty case is a no-op invocation
+    # with no input, not a content change that slips through.
     if domain and floor_all and changed_paths:
         tag = f"domain:{domain}"
         if tag not in triggers:
