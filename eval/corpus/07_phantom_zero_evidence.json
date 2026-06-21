@@ -1,0 +1,13 @@
+{
+  "name": "phantom_zero_evidence",
+  "truth": "phantom",
+  "expect_lens": null,
+  "create_files": {},
+  "test_files": {},
+  "task": {
+    "id": "T104",
+    "status": "done",
+    "files": [],
+    "test_task": null
+  }
+}

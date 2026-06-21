@@ -1,0 +1,56 @@
+# Mergen EvalOps, a reusable drop-in that gates the verify harness on a committed corpus.
+#
+# It scores the shipped harness (scripts/verify_core.py) over the labelled corpus in
+# eval/corpus/ and fails the build when a planted phantom goes uncaught, a genuine task
+# false-alarms, or a phantom does not trip its expected lens. With a committed trend history
+# it also fails when the catch rate regresses below the best the corpus ever scored. Copy this
+# into a consuming project's .github/workflows/ and point it at that project's corpus.
+#
+# Honest scope: this is the DETERMINISTIC surface only, the three mechanical lenses. It does
+# not measure a live model or a live tool chain. That live-chain eval needs a real Claude Code
+# binary, a model, and the network, and stays named on the roadmap, not run here. The exit code
+# of the gate step is the enforcement.
+
+name: EvalOps
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  evalops:
+    name: "verify-harness corpus gate"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
+
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.12"
+
+      - name: Install pytest (the tests-pass lens runs pytest in throwaway repos)
+        run: pip install pytest
+
+      - name: Score the corpus and gate on a regression
+        # --history is optional. With a committed eval/evalops-trend.jsonl the gate also fails
+        # when the corpus shrinks below the largest the history ever recorded, the one thing the
+        # floor cannot see. With no history file yet, load_trend returns empty and only the floor
+        # is enforced, so the trend guard arms once the first row is recorded.
+        run: python eval/evalops.py gate --history eval/evalops-trend.jsonl
+
+      - name: Record the trend on a main push (uploaded as an artifact, not committed)
+        if: github.event_name == 'push'
+        run: |
+          python eval/evalops.py record \
+            --history eval/evalops-trend.jsonl \
+            --timestamp "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: github.event_name == 'push'
+        with:
+          name: evalops-trend
+          path: eval/evalops-trend.jsonl

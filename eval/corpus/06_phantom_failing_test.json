@@ -1,0 +1,19 @@
+{
+  "name": "phantom_failing_test",
+  "truth": "phantom",
+  "expect_lens": "lens_tests_pass",
+  "create_files": {
+    "feature.py": "VALUE = 1\n"
+  },
+  "test_files": {
+    "test_feature.py": "def test_bad():\n    assert False\n"
+  },
+  "task": {
+    "id": "T103",
+    "status": "done",
+    "files": [
+      "feature.py"
+    ],
+    "test_task": "test_feature.py"
+  }
+}
