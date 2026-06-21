@@ -2,6 +2,8 @@
 
 This document records what shipped in v1.0.0, where the boundaries of that release are, and what is planned next. It is written to be honest rather than promotional.
 
+For the longer arc beyond the near-term backlog, see [`ROADMAP-V2_5.md`](ROADMAP-V2_5.md), the Trust Fabric design line: a connected, replayable, continuously-verified trust substrate built on the v2.0 deterministic core.
+
 ---
 
 ## 1. Shipped in v1.0.0
