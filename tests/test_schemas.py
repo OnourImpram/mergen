@@ -43,10 +43,24 @@ def _load_verify_core():
 
 
 def test_schemas_parse():
-    for name in ("verification-report", "tasks-state", "governor-decision", "policy-pack"):
+    for name in ("verification-report", "tasks-state", "governor-decision", "policy-pack",
+                 "adapter-manifest"):
         data = _schema(name)
         assert data["$schema"].startswith("https://json-schema.org/")
         assert "properties" in data
+
+
+def test_adapter_manifest_schema_requires_a_complete_capability_set():
+    # The adapter manifest is the declarative half of the Adapter SDK. It requires a host, a
+    # title, and the full capability vocabulary, refuses unknown fields, and the runtime
+    # adapter_sdk enforces the same in pure stdlib.
+    v = _validator("adapter-manifest")
+    caps = {k: False for k in (
+        "slash_commands", "command_suite", "lifecycle_hooks", "settings_registration",
+        "project_bootstrap", "workflow_orchestration", "verify_gate", "passive_rules")}
+    assert v.is_valid({"host": "h", "title": "t", "capabilities": caps})
+    assert not v.is_valid({"host": "h", "title": "t", "capabilities": {"slash_commands": True}})
+    assert not v.is_valid({"host": "h", "title": "t", "capabilities": caps, "surprise": 1})
 
 
 def test_policy_pack_schema_is_raise_only_and_name_required():
