@@ -17,16 +17,15 @@ modified to add mergen capabilities; modified files carry a header note.
 - `core/templates/tasks-template.md`
 - `core/templates/checklist-template.md`
 - `core/templates/constitution-template.md`
-- `core/scripts/bash/check-prerequisites.sh`
-- `core/scripts/bash/common.sh`
-- `core/scripts/bash/create-new-feature.sh`
-- `core/scripts/bash/setup-plan.sh`
-- `core/scripts/bash/setup-tasks.sh`
-- `core/scripts/powershell/check-prerequisites.ps1`
-- `core/scripts/powershell/common.ps1`
-- `core/scripts/powershell/create-new-feature.ps1`
-- `core/scripts/powershell/setup-plan.ps1`
-- `core/scripts/powershell/setup-tasks.ps1`
+- `core/scripts/feature_ops.py` reimplements, in Python, the helper logic of
+  Spec Kit's bash and PowerShell SDD scripts (check-prerequisites, setup-plan,
+  setup-tasks, create-new-feature, and their shared common helper). It is a
+  derivative of that MIT-licensed logic, consolidated into one module.
+
+The per-command files under `core/scripts/bash/` and `core/scripts/powershell/`
+are now thin original shims that resolve their own directory and delegate to
+`feature_ops.py`. They are authored by this project and contain no Spec Kit
+content.
 
 The `dist/speckit/` preset and extensions are authored by this project to plug
 into a user-installed Spec Kit via Spec Kit's own preset and extension systems.

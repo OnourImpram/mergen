@@ -1,0 +1,15 @@
+# Security domain pack for mergen.
+#
+# Activate it with `domain = "security"` in a project's .specify/mergen.toml.
+# Unlike the clinical pack it does NOT floor every change. It floors a change to
+# the security-sensitive surfaces below (authentication, secrets, cryptography,
+# network boundaries, and personal data) to high-trust, and carries a safety note
+# the Governor surfaces on the decision. The high-trust floor is non-downgradable.
+#
+# The path list is one line on purpose: the standard-library fallback reader used
+# on Python 3.9 and 3.10 (where tomllib is absent) parses a single-line array, not
+# a multi-line one.
+name = "security"
+floor_all_content_changes = false
+safety_note = "Security-sensitive surface. Authentication, secrets, cryptography, network boundaries, and personal data require a security reviewer before merge. The high-trust floor is non-downgradable."
+extra_high_trust_paths = ["**/auth*", "**/login*", "**/session*", "**/oauth*", "**/jwt*", "**/secret*", "**/credential*", "**/token*", "**/*.env", "**/keystore*", "**/vault*", "**/crypto*", "**/encrypt*", "**/decrypt*", "**/signing*", "**/cipher*", "**/network*", "**/cors*", "**/csrf*", "**/firewall*", "**/pii*", "**/personal-data*", "**/gdpr*"]

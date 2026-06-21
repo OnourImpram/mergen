@@ -2,6 +2,8 @@
 
 This document records what shipped in v1.0.0, where the boundaries of that release are, and what is planned next. It is written to be honest rather than promotional.
 
+For the longer arc beyond the near-term backlog, see [`ROADMAP-V2_5.md`](ROADMAP-V2_5.md), the Trust Fabric design line: a connected, replayable, continuously-verified trust substrate built on the v2.0 deterministic core.
+
 ---
 
 ## 1. Shipped in v1.0.0
@@ -35,7 +37,7 @@ Fourteen command files in `core/commands/`, each defining a named Workflow-tool 
 | `go.md` | Complexity router that directs a request to the appropriate SDD tier. |
 | `lean.md` | Over-engineering review: parallel per-file reviewers against the lazy ladder, deduplicated ranked delete-list. Complexity only, never correctness. |
 | `debt.md` | Harvests `mergen:` deferred-shortcut comments into a risk-banded ledger. Gate mode fails on unceiled shortcuts. |
-| `govern.md` | The Governor. Classifies a task into tiny, standard, spec, or high-trust and sets memory scope, workflow depth, evidence standard, and human-approval threshold. Deterministic high-trust floor: can be raised by explicit configuration, never silently lowered. The wisdom organ that precedes routing. `/mergen.go` executes the chosen tier. |
+| `govern.md` | The Governor. Classifies a task into tiny, standard, spec, or high-trust and sets memory scope, workflow depth, evidence standard, and human-approval threshold. Deterministic high-trust floor: can be raised by explicit configuration, never silently lowered. The wisdom organ that precedes routing. `/mergen-go` executes the chosen tier. |
 
 Seven template files in `core/templates/`:
 
@@ -48,7 +50,7 @@ Vendored MIT helper scripts from Spec Kit in `core/scripts/`:
 
 Two hooks in `core/hooks/`:
 
-- **`verify_gate.py`** (`PostToolUse` on `Write`, `Edit`, `MultiEdit`): when `tasks.md` gains an `[X]` entry, it injects an `additionalContext` reminder to run `/mergen.verify`. Fail-soft. Exits `0` when not applicable.
+- **`verify_gate.py`** (`PostToolUse` on `Write`, `Edit`, `MultiEdit`): when `tasks.md` gains an `[X]` entry, it injects an `additionalContext` reminder to run `/mergen-verify`. Fail-soft. Exits `0` when not applicable.
 - **`constitution_inject.py`** (`UserPromptSubmit`): injects the section headings of `.specify/memory/constitution.md` at the start of each prompt. Fail-soft. Exits `0` when the file is absent.
 
 Both hooks are reinforcement nudges, not enforcement mechanisms. A prompt protocol asks, a hook nudges, a CI gate refuses. The non-bypassable guarantee is scoped to the spec-kit `after_implement` hook contract plus CI, not an absolute in-session lock. The real in-pipeline enforcement is the `/implement` pipeline's adversarial verify stage, which runs in a separate context and refuses to mark `[X]` until filesystem and tests confirm the task.
@@ -57,16 +59,16 @@ Both hooks are reinforcement nudges, not enforcement mechanisms. A prompt protoc
 
 ### Machine-readable verify output
 
-`/mergen.verify` emits two machine-readable files alongside the human-readable `verification-report.md`:
+`/mergen-verify` emits two machine-readable files alongside the human-readable `verification-report.md`:
 
-- **`verification-report.json`**: the full per-task verdict with evidence arrays and failure lists.
-- **`tasks-state.json`**: a compact per-task state record, each entry carrying a `confidence` label (`high`, `medium`, `low`, `unverified`).
+- **`verification-report.json`**: the full per-task verdict with evidence arrays and failure lists. Each task carries a `confidence` label from the one confidence vocabulary (`extracted`, `inferred`, `ambiguous`), defined once in `MERGEN_PRINCIPLES.md`. The deterministic harness (`scripts/verify_core.py`) additionally records a calibration on every task: `evidence_tier` (executed, corroborated, or none) and `evidence_strength` (the share of total lens weight that passed, in 0 to 1), with the summary counting `untested_passes`. Calibration ranks how strongly the passing evidence grounds a verdict. It is observability only and never changes a verdict.
+- **`tasks-state.json`**: a compact per-task state record (`id`, `status`, `files`, `test_task`, `last_verified_at`) mirroring the post-verification `[ ]` / `[X]` state. The confidence label lives on the verification report, not here.
 
 Schemas for both files live in `core/schemas/`. The JSON output is the input consumed by `eval/evidence_metric.py`.
 
-### The Governor (`/mergen.govern`)
+### The Governor (`/mergen-govern`)
 
-The Governor classifies an incoming task into one of four tiers (tiny, standard, spec, high-trust) and sets memory scope, workflow depth, evidence standard, and human-approval threshold for that tier. A deterministic high-trust floor is always enforced: it can be raised by explicit configuration but is never silently lowered. The Governor is the wisdom organ of the command suite. The `/mergen.go` complexity router then executes the chosen tier.
+The Governor classifies an incoming task into one of four tiers (tiny, standard, spec, high-trust) and sets memory scope, workflow depth, evidence standard, and human-approval threshold for that tier. A deterministic high-trust floor is always enforced: it can be raised by explicit configuration but is never silently lowered. The Governor is the wisdom organ of the command suite. The `/mergen-go` complexity router then executes the chosen tier.
 
 ### Eval evidence metric
 
@@ -76,15 +78,17 @@ The Governor classifies an incoming task into one of four tiers (tiny, standard,
 
 `eval/evidence_metric.py --gate` exits non-zero when a committed `verification-report.json` shows phantom or unverified work. `eval/ci/verify-gate.yml` is a drop-in GitHub Actions workflow that runs it, documented in `eval/ci/README.md`. This is the layer that refuses for a user project, the one that can block a merge. It reads the committed artifact, so a hand-edited report can still pass, and the deepest guarantee rests on the separate-context verifier that produced the report. Mergen's own CI continues to guard this repository (tests, the drift gate, the no-reference-text gate). It does not run verify against a downstream project, which is exactly what the drop-in gate is for.
 
+Two stronger drop-ins close the committed-report gap. `eval/ci/verify-gate-live.yml` does not read a committed report at all: it regenerates the report in CI by running `verify_core` against the files and tests present at the merge commit, then gates on the fresh report, so a hand-edited report is simply never consulted. The residual trust narrows from the verifier that produced a committed report to the `verify_core` lenses running in CI. `eval/ci/verify-attest.yml` adds a signed provenance attestation over the fresh report with GitHub's hosted `actions/attest-build-provenance` (OIDC-bound Sigstore signing), so `gh attestation verify` fails on any later edit. The signing key is unreachable by the build, so this is not self-signed provenance. Authoring both workflows is automatic. Enforcing them (protecting the default branch and requiring the attestation verification) is a one-time repository-admin setting, not something a workflow file can grant itself. Mergen's own CI dogfoods the live pattern: a `verify-gate-live` job regenerates the `examples/verify-demo/` report from the live tree and asserts the gate refuses its planted phantom.
+
 ### Mneme seam
 
-Mergen is the execution layer and pairs with mneme (the memory layer) across one seam. Mergen stores no memory of its own. `docs/MNEME-SEAM.md` documents the seam contract. `scripts/mneme_emit.py` is the emit hook that writes structured events across the seam. The full mneme writeback adapter is deferred.
+Mergen is the execution layer and pairs with mneme (the memory layer) across one seam. Mergen stores no memory of its own. `docs/MNEME-SEAM.md` documents the seam contract. `scripts/mneme_emit.py` is the emit hook that writes structured events across the seam, including a bounded write-to-vault direction (`--write DIR`, with a redaction preflight and duplicate detection). The full store integration, direct vault write versus the mneme MCP surface, is deferred.
 
 ### Native renderer
 
 **`dist/native/build_native.py`** with two subcommands:
 
-- `build` renders each `core/commands/<name>.md` to `~/.claude/skills/mergen-<name>/SKILL.md`. It adds frontmatter (`name: mergen.<name>`, `user-invocable: true`, `disable-model-invocation: false`) and prefixes the vendored scripts path to `.specify/scripts/`. Skills are invoked in Claude Code as `/mergen.<name>`. Supports `--skills-dir` and `--dry-run`.
+- `build` renders each `core/commands/<name>.md` to `~/.claude/skills/mergen-<name>/SKILL.md`. It adds frontmatter (`name: mergen-<name>`, `user-invocable: true`, `disable-model-invocation: false`) and prefixes the vendored scripts path to `.specify/scripts/`. Skills are invoked in Claude Code as `/mergen-<name>`. Supports `--skills-dir` and `--dry-run`.
 - `init [project]` bootstraps `<project>/.specify/` (copies scripts and templates, creates `memory/`). Supports `--dry-run`.
 
 Built on the Python standard library only.
@@ -114,7 +118,7 @@ Wires `hooks.after_implement -> speckit.mergen.verify` with `optional: false`, m
 
 ### Inherited-defect fixes
 
-- `install.sh` uses `bash` as its shebang interpreter. The prior `sh` shebang caused failures on systems where `sh` does not support bash constructs.
+- The root `install.sh` is POSIX `sh` (`#!/usr/bin/env sh`) so it stays portable. It invokes the bash-requiring child installer (`effort-mode/install.sh`, which is `#!/usr/bin/env bash`) explicitly with `bash`, so bash constructs run under bash regardless of what `/bin/sh` points to. The prior documentation wrongly described the root script's own shebang as `bash`.
 - Executable bits are set correctly on all installer scripts.
 - Both settings patchers (`effort-mode/scripts/patch_settings.py` and `dist/native/patch_settings_hooks.py`) are BOM-safe: they strip a UTF-8 BOM before parsing and write without BOM.
 - The "non-bypassable" language in prior documentation has been corrected. The non-bypassable guarantee is honestly scoped to the spec-kit `after_implement` hook contract plus CI, not an absolute in-session lock. A prompt protocol asks, a hook nudges, a CI gate refuses.
@@ -128,13 +132,13 @@ A static promo site for Mergen and the Agent Continuity Stack is published at ht
 ## 2. Known limits of v1.0.0
 
 **Spec-kit renderer is preset plus extension, not full feature parity.**
-The spec-kit half ships a preset that replaces 8 commands and an extension that adds 6 commands. Any Spec Kit behavior outside those 14 command surfaces, such as its interactive CLI scaffolding or its own project-bootstrap scripts, is not modified or replicated by this release.
+The spec-kit half ships a preset that replaces 8 commands and an extension that adds 6 commands. The agent-agnostic CLI now also covers the Spec Kit diagnostic surfaces that matter most: `mergen doctor` (install integrity, hook registration, and shipped-schema validity), `mergen status` (a `tasks-state.json` summary, the `specify status` analog), and `mergen issues` (issue stubs rendered from a `tasks.md`, the taskstoissues analog, which renders rather than creates). Other Spec Kit behavior outside the 14 command surfaces, such as its own project-bootstrap scripts, is still not replicated by this release.
 
 **`/effort max` requires a manual paste.**
 The `mergen_prompt_hook.py` hook injects a standing orchestration directive on each turn, but it cannot flip Claude Code's live effort value to `max`. The user must paste the `/effort max` line once after arming the mode. This is documented in `docs/HOW-IT-WORKS.md`.
 
 **Hooks are reinforcement nudges, not enforcement.**
-`verify_gate.py` reminds the user to run `/mergen.verify` when `[X]` is written, and `constitution_inject.py` surfaces constitution headings at prompt time. Neither hook can prevent Claude Code from proceeding. Enforcement lives in the `/implement` pipeline's adversarial verify stage: a separate-context verifier checks the filesystem and tests and re-queues any task it cannot confirm.
+`verify_gate.py` reminds the user to run `/mergen-verify` when `[X]` is written, and `constitution_inject.py` surfaces constitution headings at prompt time. Neither hook can prevent Claude Code from proceeding. Enforcement lives in the `/implement` pipeline's adversarial verify stage: a separate-context verifier checks the filesystem and tests and re-queues any task it cannot confirm.
 
 **Eval has methodology and a reproduce procedure, not yet measured numbers.**
 The `eval/` directory defines the evaluation methodology and how to run it. `eval/evidence_metric.py` provides a minimal honest metric derived from the verify JSON. No full benchmark numbers have been published yet. Any figures shown in supporting documents that are labeled SYNTHETIC or ILLUSTRATIVE are not real measurements and must not be cited as such.
@@ -142,8 +146,8 @@ The `eval/` directory defines the evaluation methodology and how to run it. `eva
 **Templates `verification-template.md` and `project-state-template.md` are self-described by their commands.**
 The `/verify` and `/rollup` commands reference these templates and explain their structure. The `build_native.py init` subcommand copies templates into a bootstrapped `.specify/` directory, so a project initialized with `init` will have them present. A project that adopts the spec-kit preset and extension but does not run `init` must copy or create these templates separately, as the spec-kit preset mechanism does not include an `init` equivalent.
 
-**Mneme writeback adapter is a stub.**
-`scripts/mneme_emit.py` and `docs/MNEME-SEAM.md` establish the seam contract and emit structured events. The full writeback adapter that persists those events into a mneme memory store is deferred.
+**Mneme writeback persists to a directory, not yet to a store.**
+`scripts/mneme_emit.py` and `docs/MNEME-SEAM.md` establish the seam contract, emit and read records, and a bounded `--write DIR` direction persists a record into a directory you name, with a redaction preflight and duplicate detection. The store integration that decides between a direct vault write and the mneme MCP surface is deferred.
 
 ---
 
@@ -158,17 +162,17 @@ A CI action that runs `scripts/check_sync.py` and posts a summary comment on pul
 **Clinical and security domain packs.**
 Preset overlays that add domain-specific constitution clauses, checklist items, and evidence standards for clinical and security contexts.
 
-**Dashboard.**
-A local web view over `verification-report.json` and `tasks-state.json` that shows task confidence, phantom-completion history, and over-build trends across runs.
+**Dashboard trends and history (cross-run view shipped).**
+A basic static dashboard shipped first (`scripts/dashboard.py`, `mergen dashboard <dir>`): a self-contained offline HTML snapshot, one row per report. The cross-run dimension now ships alongside it (`scripts/trends.py`, `mergen trends <dir>`): phantom-completion and work-done-rate history across the run corpus with an inline SVG sparkline, computed from each report's schema-required `tasks` array. A `--json` flag emits the same metrics as a machine-readable export, the honest observability seam, with no telemetry dependency and no network call in mergen core. The one remaining cross-run signal is the over-build trend, which needs lean data the verification report does not carry, so it is not shown yet.
 
-**Churn analytics.**
-Track which tasks are most frequently re-queued or reverted across eval runs to identify spec patterns that reliably produce verifier failures.
+**Churn analytics (shipped).**
+`mergen trends` ranks the tasks that most often flip verified status or return as phantoms across the run corpus, the per-task churn leaderboard that surfaces spec patterns reliably producing verifier failures. Two follow-ons now ship with it. Clustering by spec pattern rolls the same churn up per feature, so a whole spec that keeps fighting the verifier surfaces above its individual tasks, and because a feature is the natural namespace for a task, the rollup never pools a task id across two features. Aggregation across corpora reads several report directories at once and compares them side by side, each corpus analyzed independently so a task id is never pooled across two unrelated projects. The `--json` export carries the per-feature rollup and, in multi-corpus mode, a corpus comparison alongside each corpus in full.
 
 **Full benchmark suite.**
 Extend `eval/evidence_metric.py` into the complete four-metric benchmark with published reproducible results.
 
-**Full mneme writeback adapter.**
-A complete adapter that persists structured events from `scripts/mneme_emit.py` into a mneme memory store so that cross-session context is available without manual rollup.
+**Full mneme store integration.**
+`scripts/mneme_emit.py --write DIR` already persists records to a directory with a redaction preflight and duplicate detection. The remaining step is the store integration itself, persisting into a mneme memory store (a direct vault write or the mneme MCP surface) so cross-session context is available without a manual directory hand-off.
 
 **Broader spec-kit command coverage.**
 The v1.0.0 preset covers the 8 core workflow commands. Remaining Spec Kit command surfaces and any new commands Spec Kit ships after this release are candidates for inclusion in a future preset version.

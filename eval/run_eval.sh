@@ -30,8 +30,8 @@
 #   mergen-end.txt            one line: Unix epoch seconds
 #
 # OPTIONAL result files (used when present):
-#   mergen-tasks-dag.json     tasks-dag.json emitted by /mergen.tasks
-#   mergen-verify-report.md   verification-report.md from /mergen.verify
+#   mergen-tasks-dag.json     tasks-dag.json emitted by /mergen-tasks
+#   mergen-verify-report.md   verification-report.md from /mergen-verify
 #   speckit-tasks.md             tasks.md from the spec-kit run
 #   mergen-tasks.md           tasks.md from the mergen run
 #

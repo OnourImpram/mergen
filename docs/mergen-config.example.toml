@@ -1,0 +1,17 @@
+# Example mergen project config. Copy to .specify/mergen.toml in your project.
+#
+# This file raises the deterministic Governor floor for your project. It can only
+# RAISE the floor, never lower it. The reader and overlay live in
+# scripts/project_config.py and are applied by `governor_floor.py --config`.
+
+# Activate a domain overlay. In a clinical project, every change is treated as
+# content-bearing and floored to high-trust, so it cannot merge without a human
+# recording 'Governor-Ack: high-trust' in the pull-request body. Leave the value
+# empty or omit the key for no domain. Known domains: clinical.
+domain = "clinical"
+
+[governor]
+# Project-specific paths that force the high-trust floor, beyond the built-in
+# path triggers in governor_floor.py. A directory prefix ends with a slash; a
+# glob uses * and ?.
+extra_high_trust_paths = ["src/billing/", "*.env", "infra/secrets/"]

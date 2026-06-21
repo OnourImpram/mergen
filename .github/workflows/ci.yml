@@ -16,15 +16,19 @@ jobs:
         python-version: ["3.9", "3.11", "3.12"]
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
 
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: Install pytest
-        run: pip install pytest
+      - name: Install pytest and the dev-only schema validator
+        # jsonschema is dev-only: it validates the schemas' if/then invariants in
+        # CI. The shipped linter (verify_report_lint.py) enforces the same rules in
+        # pure stdlib, so the runtime never needs it. Without it here the schema
+        # tests skip instead of guarding.
+        run: pip install pytest jsonschema
 
       - name: Run tests
         run: python -m pytest tests/ -v
@@ -34,3 +38,182 @@ jobs:
 
       - name: Check no reference-prompt text is committed
         run: python scripts/check_no_reference_text.py
+
+      - name: Phantom-detection benchmark gate (verify harness regression)
+        run: python eval/benchmark.py --gate
+
+  test-windows:
+    # The repo ships a PowerShell installer and reads BOM-prefixed JSON (the form
+    # PowerShell writes). Run the suite on the platform that produces those BOMs so
+    # the BOM-tolerance and Windows path behavior are a CI guarantee, not a hope.
+    # Scoped to the test suite: check_sync is a byte-for-byte compare and is left to
+    # the Linux job to avoid autocrlf line-ending false positives on a Windows checkout.
+    # The benchmark gate is OS-agnostic (fixed fixtures) and stays on the Linux job.
+    name: "Windows (Python 3.12)"
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.12"
+      - name: Install pytest and the dev-only schema validator
+        run: pip install pytest jsonschema
+      - name: Run tests
+        run: python -m pytest tests/ -v
+
+  lint:
+    name: "ruff"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.12"
+      - name: Install ruff
+        run: pip install ruff
+      - name: Lint
+        run: ruff check .
+
+  typecheck:
+    name: "mypy --strict"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.12"
+      - name: Install mypy
+        run: pip install mypy
+      - name: Type check (strict, library modules from pyproject [tool.mypy])
+        run: mypy
+
+  coverage:
+    # Statement coverage of the Python source surface, with the fail-under floor
+    # from pyproject [tool.coverage.report]. One Linux job so the number is
+    # deterministic (the Windows job stays pytest-only). The floor is a starting
+    # point set below the measured value, meant to ratchet upward over time.
+    name: "coverage (fail-under floor)"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.12"
+      - name: Install the project and coverage tooling
+        # Editable install so coverage measures the deployed import state, not just
+        # files that happen to be importable from the repo root.
+        run: pip install -e . pytest pytest-cov jsonschema
+      - name: Run tests under coverage and enforce the floor
+        run: python -m pytest tests/ --cov --cov-report=term-missing
+
+  verify-live-demo:
+    # Dogfood the verify-gate-live pattern (eval/ci/verify-gate-live.yml): the
+    # shippable gate regenerates the report from the LIVE tree rather than reading
+    # a committed one, so a hand-edited report cannot pass. The worked example
+    # examples/verify-demo carries a planted phantom (T002 names src/teardown.py,
+    # which does not exist), so a fresh re-verify against the tree must refuse it.
+    # This proves the regenerate-then-gate pattern end to end in CI, complementing
+    # eval/benchmark.py (which proves the verify_core lenses in isolation).
+    name: "verify-gate-live dogfood (phantom refused)"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.12"
+      - name: Install pytest (the tests-pass lens runs the demo's test)
+        run: pip install pytest
+      - name: Regenerate the demo report from the live tree, assert the gate refuses the phantom
+        run: |
+          set +e
+          python scripts/verify_core.py \
+            --tasks-state examples/verify-demo/tasks-state.json \
+            --root examples/verify-demo \
+            --out fresh-demo-report.json
+          vc=$?
+          set -e
+          # Exit 2 means no report was produced (a harness error, not a verdict).
+          # Without this guard the gate would read an empty directory, exit 1, and
+          # the inversion below would wrongly print OK, masking a real crash.
+          if [ "$vc" -eq 2 ]; then
+            echo "FAIL: verify_core could not produce a report (exit 2), the gate proof is void"
+            exit 1
+          fi
+          set +e
+          python eval/evidence_metric.py fresh-demo-report.json --gate --min-claimed 1
+          gate=$?
+          set -e
+          echo "verify_core exit: $vc, gate exit: $gate"
+          if [ "$gate" -eq 0 ]; then
+            echo "FAIL: the live re-verify gate passed on a tree with a planted phantom (src/teardown.py is missing)"
+            exit 1
+          fi
+          echo "OK: the live re-verify regenerated the report from the tree and the gate refused the phantom"
+
+  shell-smoke:
+    name: "shell parse (bash + pwsh)"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
+      - name: Bash syntax check
+        run: |
+          shopt -s nullglob
+          fail=0
+          for f in core/scripts/bash/*.sh install.sh effort-mode/install.sh; do
+            [ -f "$f" ] || continue
+            if ! bash -n "$f"; then echo "syntax error in $f"; fail=1; fi
+          done
+          exit $fail
+      - name: PowerShell parse check
+        shell: pwsh
+        run: |
+          $fail = 0
+          $files = @(Get-ChildItem -Path core/scripts/powershell -Filter *.ps1 -ErrorAction SilentlyContinue)
+          $files += @(Get-Item install.ps1, effort-mode/install.ps1 -ErrorAction SilentlyContinue)
+          foreach ($f in $files) {
+            $tokens = $null; $errs = $null
+            [System.Management.Automation.Language.Parser]::ParseFile($f.FullName, [ref]$tokens, [ref]$errs) | Out-Null
+            if ($errs.Count -gt 0) { Write-Output "parse errors in $($f.FullName)"; $errs | ForEach-Object { Write-Output $_.Message }; $fail = 1 }
+          }
+          exit $fail
+
+  govern-diff:
+    name: "Governor floor (PR diff)"
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.12"
+      # Re-verify the REAL pull-request diff against the deterministic Governor
+      # floor. A high-trust change (auth, payment, secrets, privacy, clinical,
+      # migration, deploy, permission, release-artifact, or a matching diff
+      # keyword) fails the build unless a human records 'Governor-Ack: high-trust'
+      # in the PR body. The floor is non-downgradable: this gate refuses a silent
+      # merge of a high-trust change. See eval/ci/govern-gate.yml for the
+      # reusable drop-in version.
+      - name: Classify the real PR diff against the Governor floor
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          set -euo pipefail
+          git fetch --no-tags --depth=1 origin "$BASE_REF"
+          changed=$(git diff --name-only "origin/$BASE_REF...HEAD")
+          if [ -z "$changed" ]; then
+            echo "no changed files, nothing to classify."
+            exit 0
+          fi
+          echo "changed files:"; echo "$changed"
+          git diff "origin/$BASE_REF...HEAD" > pr.diff
+          ack=""
+          if printf '%s' "$PR_BODY" | grep -qiE '^[[:space:]]*Governor-Ack:[[:space:]]*high-trust'; then
+            ack="high-trust"
+          fi
+          python scripts/governor_floor.py \
+            --paths $changed \
+            --diff-file pr.diff \
+            --gate --ack "$ack"

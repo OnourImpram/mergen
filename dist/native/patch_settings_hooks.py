@@ -32,11 +32,12 @@ import argparse
 import json
 import sys
 from pathlib import Path
+from typing import Any
 
-# event -> matcher (None means no matcher field, applies to all)
-HOOKS = [
+# event -> matcher (empty string means no matcher field, applies to all)
+HOOKS: list[dict[str, str]] = [
     {"basename": "verify_gate.py", "event": "PostToolUse", "matcher": "Write|Edit|MultiEdit"},
-    {"basename": "constitution_inject.py", "event": "UserPromptSubmit", "matcher": None},
+    {"basename": "constitution_inject.py", "event": "UserPromptSubmit", "matcher": ""},
 ]
 
 
@@ -46,7 +47,7 @@ def hook_command(python_exe: str, basename: str) -> str:
     return f'"{py}" "{hk}"'
 
 
-def entry_has_basename(entry: dict, basename: str) -> bool:
+def entry_has_basename(entry: dict[str, Any], basename: str) -> bool:
     if not isinstance(entry, dict):
         return False
     for h in entry.get("hooks", []) or []:
@@ -55,7 +56,7 @@ def entry_has_basename(entry: dict, basename: str) -> bool:
     return False
 
 
-def _read_text_bom(path: Path):
+def _read_text_bom(path: Path) -> tuple[str, bool]:
     """Read text, tolerating and remembering a UTF-8 BOM (Claude Code on Windows
     sometimes writes one). Returns (text, had_bom)."""
     raw = path.read_bytes()
@@ -64,7 +65,7 @@ def _read_text_bom(path: Path):
     return raw.decode("utf-8"), False
 
 
-def load_settings(path: Path):
+def load_settings(path: Path) -> tuple[dict[str, Any] | None, bool, str]:
     """Return (data, had_bom, error_message). error_message is empty on success."""
     if not path.is_file():
         return {}, False, ""
@@ -80,7 +81,7 @@ def load_settings(path: Path):
 
 def status(path: Path) -> int:
     data, _had_bom, err = load_settings(path)
-    if err:
+    if err or data is None:
         print(f"absent (could not read settings: {err})")
         return 1
     hooks = data.get("hooks", {}) if isinstance(data.get("hooks"), dict) else {}
@@ -95,7 +96,7 @@ def status(path: Path) -> int:
     return 0 if all_present else 1
 
 
-def main(argv=None) -> int:
+def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--python", default="python3", help="python executable to run the hooks")
     ap.add_argument("--remove", action="store_true", help="remove the hooks instead of adding")
@@ -111,7 +112,7 @@ def main(argv=None) -> int:
         return status(settings_path)
 
     data, had_bom, err = load_settings(settings_path)
-    if err:
+    if err or data is None:
         print(f"ERROR: {err}. Aborting so your settings are not corrupted.", file=sys.stderr)
         return 1
 
@@ -129,10 +130,10 @@ def main(argv=None) -> int:
         # Drop prior entries for this hook (idempotent install, clean uninstall).
         lst[:] = [e for e in lst if not entry_has_basename(e, basename)]
         if not args.remove:
-            entry = {"hooks": [{"type": "command",
-                                "command": hook_command(args.python, basename),
-                                "timeout": 5}]}
-            if matcher is not None:
+            entry: dict[str, Any] = {"hooks": [{"type": "command",
+                                                "command": hook_command(args.python, basename),
+                                                "timeout": 5}]}
+            if matcher:
                 entry = {"matcher": matcher, **entry}
             lst.append(entry)
         if not lst:

@@ -1,0 +1,9 @@
+# Clinical domain pack for mergen.
+#
+# Activate it with `domain = "clinical"` in a project's .specify/mergen.toml. It
+# floors any content-bearing change to high-trust and carries a safety note the
+# Governor surfaces on the decision. The high-trust floor is non-downgradable.
+name = "clinical"
+floor_all_content_changes = true
+safety_note = "Clinical content. Crisis, diagnosis, medication, and self-harm-adjacent changes require a licensed reviewer before merge. The high-trust floor is non-downgradable."
+extra_high_trust_paths = ["**/crisis*", "**/diagnosis*", "**/medication*", "**/self-harm*"]

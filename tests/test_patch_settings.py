@@ -5,8 +5,6 @@ import json
 import sys
 from pathlib import Path
 
-import pytest
-
 
 def _run_patcher(home_dir: Path, args: list) -> int:
     """Run patch_settings.main() with the given CLI args. Returns exit code."""
@@ -128,3 +126,44 @@ def test_status_exits_1_when_not_installed(home_dir):
     """--status exits 1 when hook entry is absent."""
     rc = _run_patcher(home_dir, ["--status"])
     assert rc == 1
+
+
+def test_effort_patcher_is_bom_safe(home_dir):
+    """A UTF-8 BOM in settings.json is tolerated on read and preserved on write.
+
+    The effort-mode half of the inherited Wave-E defect fix; the native half is
+    in test_patch_settings_hooks.
+    """
+    import scripts.patch_settings as ps
+    importlib.reload(ps)
+    bom = b"\xef\xbb\xbf"
+    settings = _settings_path(home_dir)
+    settings.write_bytes(bom + b'{"hooks": {}}\n')
+    data, had_bom, err = ps._load_settings()
+    assert err == "" and had_bom is True
+    assert _run_patcher(home_dir, ["--python", "python"]) == 0
+    raw = settings.read_bytes()
+    assert raw.startswith(bom), "BOM was not preserved"
+    json.loads(raw.decode("utf-8-sig"))
+
+
+def test_effort_patcher_dry_run_makes_no_write(home_dir):
+    """--dry-run prints the result and writes nothing (parity with the native patcher)."""
+    settings = _settings_path(home_dir)
+    assert _run_patcher(home_dir, ["--python", "python", "--dry-run"]) == 0
+    assert not settings.is_file()
+
+
+def test_effort_patcher_settings_flag_writes_custom_path(tmp_path):
+    """--settings targets an explicit path (parity with the native patcher)."""
+    import scripts.patch_settings as ps
+    importlib.reload(ps)
+    target = tmp_path / "custom.json"
+    assert ps.main(["--python", "python", "--settings", str(target)]) == 0
+    data = json.loads(target.read_text())
+    commands = [
+        h.get("command", "")
+        for e in data["hooks"]["UserPromptSubmit"]
+        for h in e.get("hooks", [])
+    ]
+    assert any("mergen_prompt_hook.py" in c for c in commands)

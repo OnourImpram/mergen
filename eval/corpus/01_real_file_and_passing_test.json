@@ -1,0 +1,19 @@
+{
+  "name": "real_file_and_passing_test",
+  "truth": "real",
+  "expect_lens": null,
+  "create_files": {
+    "feature.py": "VALUE = 1\n"
+  },
+  "test_files": {
+    "test_feature.py": "def test_ok():\n    assert True\n"
+  },
+  "task": {
+    "id": "T001",
+    "status": "done",
+    "files": [
+      "feature.py"
+    ],
+    "test_task": "test_feature.py"
+  }
+}

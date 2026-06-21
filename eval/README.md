@@ -3,9 +3,13 @@
 This directory contains the evaluation methodology and reproduction procedure for comparing
 mergen against vanilla spec-kit on four concrete metrics.
 
-**Status: methodology only. No numbers have been measured yet.**
-All example figures appearing in the methodology document are explicitly labeled SYNTHETIC or
-ILLUSTRATIVE and must be replaced by real measurements before any public claim is made.
+**Status: the deterministic harness-detection benchmark reports real numbers; the live
+head-to-head is still methodology only.**
+`benchmark.py` (below) measures metric 1 (phantom-completion) and a deterministic slice of
+metric 3 (adversarial catch) with real, reproducible numbers and no LLM. The live spec-kit
+head-to-head for metric 2 (parallel speedup) and metric 4 (over-build) is still unmeasured: the
+figures for those in the methodology document remain explicitly labeled SYNTHETIC or ILLUSTRATIVE
+and must be replaced by real measurements before any public claim is made.
 
 ## What is being evaluated
 
@@ -29,11 +33,49 @@ Real enforcement comes from the implement pipeline's adversarial verify stage.
 
 spec-kit's own documentation reports three recurring failure modes: phantom completions (tasks
 marked done with no backing file or test), no task parallelism, and no verification gate. The
-three metrics below target those failure modes directly.
+four metrics below target those failure modes directly.
 
 ## Evidence metric
 
-`evidence_metric.py` in this directory is a minimal honest metric derived from the machine-readable verify output. It reports two values: work-done rate (fraction of tasks with verifier-confirmed evidence) and phantom-completion count (tasks marked `[X]` with no backing artifact). The metric abstains on minimal-change runs that lack lean data rather than reporting a misleading zero. It reads `verification-report.json` and `tasks-state.json` emitted by `/mergen.verify` (schemas in `core/schemas/`). The full benchmark suite is on the roadmap.
+`evidence_metric.py` in this directory is a minimal honest metric derived from the machine-readable verify output. It reports two values: work-done rate (fraction of tasks with verifier-confirmed evidence) and phantom-completion count (tasks marked `[X]` with no backing artifact). The metric abstains on minimal-change runs that lack lean data rather than reporting a misleading zero. It reads `verification-report.json` and `tasks-state.json` emitted by `/mergen-verify` (schemas in `core/schemas/`). It reads BOM-prefixed JSON (the form Windows PowerShell writes) without choking. The full benchmark suite is on the roadmap.
+
+Gate use, honest defaults. `python eval/evidence_metric.py <report> --gate` fails the build when a claimed-done task is not verifier-confirmed. With nothing claimed done it abstains and passes, because a gate cannot enforce work that was never claimed. That abstention also means an empty report would pass, so a CI step meant to prove work was done should require at least one claimed task. The recommended CI invocation is:
+
+```
+python eval/evidence_metric.py path/to/verification-report.json --gate --min-claimed 1
+```
+
+With `--min-claimed 1` an empty or under-claiming report fails instead of passing silently. The deeper guarantee still rests on the verifier that produced the report, not on this metric: the gate acts on a committed artifact, so a hand-edited report can pass. What it buys is that phantom, unverified, or empty work fails the build by default.
+
+## Deterministic phantom-detection benchmark
+
+`benchmark.py` is a runnable, reproducible benchmark that needs no LLM, no network, and no live
+spec-kit. It builds a corpus of task-completion scenarios with known ground truth inside throwaway
+git repos, runs the real shipped harness (`scripts/verify_core.py`) over each, and measures how
+many planted phantom completions the harness catches against how many genuine completions it
+wrongly fails.
+
+```
+$ python eval/benchmark.py
+  phantom catch rate (treatment): 1.00  (5/5 caught)
+  phantom catch rate (baseline):  0.00  (trust the [X] checkbox, re-checks nothing)
+  false-alarm rate (treatment):   0.00  (0/3 genuine wrongly failed)
+  caught by the expected lens:    1.00
+```
+
+The baseline arm is bare spec-kit behavior: trust the `[X]` checkbox, which re-checks nothing and
+so catches zero phantoms by construction. The treatment arm is verify_core's three mechanical
+lenses (file-exists, tests-pass, git-consistent). `python eval/benchmark.py --gate` exits non-zero
+if the harness ever misses a planted phantom or false-alarms a genuine completion, so a regression
+in verify_core fails the build.
+
+Scope and honesty: this measures the harness's mechanical detection on planted fixtures with known
+ground truth. It is not a code-quality comparison of two live toolchains, and it does not measure
+parallel speedup or over-build, which need a live model (metrics 2 and 4 in methodology.md, still
+on the roadmap). The benchmark's phantom set is a superset of methodology.md's strict definition
+(declared file missing, or declared test failing); it adds two adjacent cases the harness also
+refuses to confirm, a completion with no checkable evidence at all and a declared artifact the
+repository does not track. All five are cases the bare checkbox accepts and the harness rejects.
 
 ## Four metrics
 
@@ -42,7 +84,7 @@ three metrics below target those failure modes directly.
 | 1 | Phantom-completion rate | Fraction of `[X]` tasks whose named file or test does not exist at measurement time |
 | 2 | Parallel speedup | Ratio of serial wall-clock to wave-parallel wall-clock for independent task waves |
 | 3 | Adversarial catch | Count of real defects (spec gaps, missing files, failing tests) surfaced by the verify lanes before the human accepts the run |
-| 4 | Over-build rate | Fraction of added lines that `/mergen.lean` flags as removable (the minimalism layer, with correctness-critical lines never counted) |
+| 4 | Over-build rate | Fraction of added lines that `/mergen-lean` flags as removable (the minimalism layer, with correctness-critical lines never counted) |
 
 ## Measurement isolation
 

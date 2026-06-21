@@ -1,0 +1,15 @@
+{
+  "host": "agents",
+  "title": "Generic agents (AGENTS.md, Cursor, Windsurf, Cline, Copilot, Kiro)",
+  "note": "Ports the lazy-ladder minimalism discipline only, as a passive rule file. It does not port, and does not claim to port, the command suite, the verify gate, or the Workflow orchestration.",
+  "capabilities": {
+    "slash_commands": false,
+    "command_suite": false,
+    "lifecycle_hooks": false,
+    "settings_registration": false,
+    "project_bootstrap": false,
+    "workflow_orchestration": false,
+    "verify_gate": false,
+    "passive_rules": true
+  }
+}

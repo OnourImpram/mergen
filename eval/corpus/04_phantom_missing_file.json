@@ -1,0 +1,15 @@
+{
+  "name": "phantom_missing_file",
+  "truth": "phantom",
+  "expect_lens": "lens_file_exists",
+  "create_files": {},
+  "test_files": {},
+  "task": {
+    "id": "T101",
+    "status": "done",
+    "files": [
+      "never_written.py"
+    ],
+    "test_task": null
+  }
+}

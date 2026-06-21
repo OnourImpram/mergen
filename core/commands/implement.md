@@ -32,7 +32,7 @@ This command runs under the mergen substrate: maximum reasoning effort plus Work
 ## Wave plan (parallelism by construction)
 
 5. Determine the execution waves:
-   - If `FEATURE_DIR/tasks-dag.json` exists (emitted by `/mergen.tasks` / `/speckit.tasks`), use it directly. It is an array of waves; each wave is an array of task objects with `id`, `files`, `parallel` (the `[P]` flag, boolean), `depends_on` (task IDs), and `test_task` (the ID of the test sub-task that must exist and fail first, or `null`).
+   - If `FEATURE_DIR/tasks-dag.json` exists (emitted by `/mergen-tasks` / `/speckit.tasks`), use it directly. It is an array of waves; each wave is an array of task objects with `id`, `files`, `parallel` (the `[P]` flag, boolean), `depends_on` (task IDs), and `test_task` (the ID of the test sub-task that must exist and fail first, or `null`).
    - Otherwise derive waves from `tasks.md`: group by phase (Setup, Tests, Core, Integration, Polish), and within a phase treat `[P]`-marked tasks with disjoint file sets as one parallel wave; tasks touching the same file are serialized.
    - TDD ordering is enforced via each task's `test_task`: a task may not enter Stage A until its named test sub-task exists and fails first. When the DAG is absent, treat each task's test sub-task as its own dependency.
 
@@ -59,7 +59,7 @@ This command runs under the mergen substrate: maximum reasoning effort plus Work
 
 ## Verify gate (mandatory in pipeline, not an absolute lock)
 
-9. Before reporting completion, run a final verification pass equivalent to `/mergen.verify` (or `/speckit.mergen.verify`): independently re-check every `[X]` task against the filesystem and tests. If any `[X]` task fails this gate, revert it to `[ ]` and re-queue. "Marked complete" is never accepted as evidence of completion. Only verifier-confirmed filesystem and test state is.
+9. Before reporting completion, run a final verification pass equivalent to `/mergen-verify` (or `/speckit.mergen.verify`): independently re-check every `[X]` task against the filesystem and tests. If any `[X]` task fails this gate, revert it to `[ ]` and re-queue. "Marked complete" is never accepted as evidence of completion. Only verifier-confirmed filesystem and test state is. After the gate passes, emit the two machine-readable artifacts that the eval metric and CI verify-gate depend on: `verification-report.json` (per the schema at `core/schemas/verification-report.schema.json`) recording each task's `claimed_status`, `verified_status`, `files_checked`, `tests_run`, and `evidence`; and `tasks-state.json` (per `core/schemas/tasks-state.schema.json`) recording the final `[X]`/`[ ]` state of every task. Write both files into `FEATURE_DIR/` (alongside `tasks.md`). These are the same artifacts `/mergen-verify` produces, ensuring a bare implement run leaves the eval pipeline with real data.
 
 Honest scope: this pipeline does not mark a task `[X]` without the verifier, and in spec-kit mode the `after_implement` hook makes verify mandatory in that flow. In-session this is strong reinforcement, not an absolute lock, since a user can still edit `tasks.md` by hand. The layer that refuses for your own project is the drop-in CI gate `eval/ci/verify-gate.yml`, which fails the build when the committed verification report shows phantom or unverified work. It reads the committed artifact, so the deepest guarantee rests on the verifier that produced it. See `MERGEN.md`.
 

@@ -1,0 +1,20 @@
+{
+  "name": "phantom_gitignored_file",
+  "truth": "phantom",
+  "expect_lens": "lens_git_consistent",
+  "create_files": {
+    "build/output.bin": "binary\n"
+  },
+  "test_files": {},
+  "gitignore": [
+    "build/"
+  ],
+  "task": {
+    "id": "T105",
+    "status": "done",
+    "files": [
+      "build/output.bin"
+    ],
+    "test_task": null
+  }
+}

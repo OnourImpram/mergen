@@ -14,10 +14,12 @@ authority.
 
 One direction, Mergen to mneme. After a verified run, Mergen can turn its `verification-report.json` and its
 rollup into mneme-ingestable decision records. The record is plain Markdown with provenance and a confidence
-label, which is exactly mneme's vault format. `scripts/mneme_emit.py` is the stub that performs this
-conversion today. It reads a `verification-report.json` and writes a decision record to stdout. A future
-release may write directly into a configured vault path or call mneme's MCP surface, but the format is the
-contract and it does not change.
+label, which is exactly mneme's vault format. `scripts/mneme_emit.py` performs this conversion. It reads a
+`verification-report.json` and writes a decision record to stdout, or with `--write DIR` persists it into a
+directory you name. The write side runs a producer-side redaction preflight that fails closed on a secret
+pattern, and skips a substantively-equal existing record. The full store integration, whether to write
+directly into a configured vault path or call mneme's MCP surface, stays the operator's call and is not
+decided here. The record format is the contract and does not change either way.
 
 The other direction, mneme to Mergen, is a read. The Governor and the spec commands may pull relevant prior
 decisions as context. That read goes through mneme's public MCP surface (its `server.json`) or by reading
@@ -32,8 +34,9 @@ mneme publishes hard guarantees. The seam preserves all of them.
 - No network or LLM on the critical path. `mneme_emit.py` is pure stdlib and deterministic. It makes no
   network call and runs no model.
 - Redaction before any derived store. Mergen emits records it believes are already safe, and it never
-  bypasses mneme's redaction. Redaction at ingest remains mneme's responsibility, and Mergen does not assume
-  it can skip it.
+  bypasses mneme's redaction. The `--write` path adds a producer-side redaction preflight as defense in
+  depth, failing closed on a secret pattern, but redaction at ingest remains mneme's responsibility and
+  Mergen does not assume it can skip it.
 - Provenance on every record, a confidence label on every claim. Every emitted record names its source (the
   verification report) and carries a confidence label.
 
