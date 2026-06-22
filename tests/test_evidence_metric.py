@@ -102,10 +102,11 @@ def test_load_reports_tolerates_utf8_bom(tmp_path, capsys):
     # old utf-8 read the file was skipped and the metric reported none found.
     metric = _load("eval/evidence_metric.py")
     rc = metric.main([_write(tmp_path / "verification-report.json", _EMPTY_REPORT, bom=True)])
-    out = capsys.readouterr().out
+    captured = capsys.readouterr()
     assert rc == 0
-    assert "reports read: 1" in out
-    assert "skip" not in out
+    assert "reports read: 1" in captured.out
+    # The unreadable label now lands on stderr, so check both streams for a wrongful skip.
+    assert "unreadable" not in captured.out and "unreadable" not in captured.err
 
 
 _CLEAN_REPORT = {

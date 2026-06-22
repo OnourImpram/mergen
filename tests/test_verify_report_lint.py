@@ -137,12 +137,20 @@ def test_high_trust_with_recorded_approval_is_clean():
     assert _errors(findings) == []
 
 
-def test_high_trust_bare_approval_is_incomplete():
-    # A bare {status: approved} with no reviewer, approved_at, or evidence is not a real
+def test_high_trust_partial_approval_is_incomplete():
+    # A partial approval (a reviewer but no approved_at and no evidence) is not a real
     # sign-off. It must not pass as a signed high-trust report.
     findings = lint.lint_report(
         _report([_pass_task()], risk="high-trust", human_required=True,
                 human_review={"status": "approved", "reviewer": "onour"}), "x")
+    assert "INCOMPLETE_APPROVAL" in _codes(findings)
+
+
+def test_high_trust_truly_bare_approval_is_incomplete():
+    # The minimal case: only a status, no reviewer, approved_at, or evidence at all.
+    findings = lint.lint_report(
+        _report([_pass_task()], risk="high-trust", human_required=True,
+                human_review={"status": "approved"}), "x")
     assert "INCOMPLETE_APPROVAL" in _codes(findings)
 
 

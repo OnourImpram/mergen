@@ -180,6 +180,10 @@ def safe_repo_relative_path(raw: object, root: Path, *, kind: str) -> str:
         raise UnsafePathError(f"{kind}: a drive-qualified path is not allowed")
     if any(ch in value for ch in _GLOB_CHARS):
         raise UnsafePathError(f"{kind}: a glob metacharacter is not a concrete path")
+    if any(ord(ch) < 32 or ch == "\x7f" for ch in value):
+        # A NUL or other control character is never a real filename on any OS, and a NUL would
+        # otherwise reach the filesystem and raise deep in a lens. Refuse it here, cleanly.
+        raise UnsafePathError(f"{kind}: a control character is not allowed in a path")
     parts = value.replace("\\", "/").split("/")
     if ".." in parts:
         raise UnsafePathError(f"{kind}: '..' path traversal is not allowed")
@@ -770,8 +774,9 @@ def main(argv: list[str] | None = None) -> int:
         type=int,
         default=None,
         metavar="SECONDS",
-        help=f"Per-test_task pytest timeout in seconds (default {DEFAULT_TEST_TIMEOUT}, or "
-             "the MERGEN_TEST_TIMEOUT env var). A test that exceeds it fails, never passes.",
+        help=f"Per-test_task pytest timeout in seconds, a positive integer (default "
+             f"{DEFAULT_TEST_TIMEOUT}, or the MERGEN_TEST_TIMEOUT env var). A test that "
+             "exceeds it fails, never passes.",
     )
     parser.add_argument(
         "--strict",
@@ -783,10 +788,15 @@ def main(argv: list[str] | None = None) -> int:
 
     args = parser.parse_args(argv)
 
-    # Resolve the test timeout: explicit flag wins, then the environment, then the default.
-    # A non-integer or non-positive environment value falls back to the default rather than
+    # A non-positive --test-timeout is a usage error, not a silent fall-through: disabling the
+    # bound is exactly what the ceiling exists to prevent, so refuse it explicitly.
+    if args.test_timeout is not None and args.test_timeout <= 0:
+        parser.error(f"--test-timeout must be a positive integer (got {args.test_timeout})")
+
+    # Resolve the test timeout: the validated flag wins, then the environment, then the default.
+    # A malformed or non-positive environment value falls back to the default rather than
     # disabling the bound.
-    if args.test_timeout is not None and args.test_timeout > 0:
+    if args.test_timeout is not None:
         test_timeout = args.test_timeout
     else:
         env_timeout = os.environ.get("MERGEN_TEST_TIMEOUT", "")
