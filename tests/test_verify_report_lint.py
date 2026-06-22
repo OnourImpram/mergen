@@ -128,10 +128,29 @@ def test_high_trust_pending_review_is_still_unsigned():
 
 
 def test_high_trust_with_recorded_approval_is_clean():
+    # A real sign-off records who approved, when, and on what evidence.
+    findings = lint.lint_report(
+        _report([_pass_task()], risk="high-trust", human_required=True,
+                human_review={"status": "approved", "reviewer": "onour",
+                              "approved_at": "2026-06-20T00:00:00Z",
+                              "evidence": ["manual security review of the auth path"]}), "x")
+    assert _errors(findings) == []
+
+
+def test_high_trust_bare_approval_is_incomplete():
+    # A bare {status: approved} with no reviewer, approved_at, or evidence is not a real
+    # sign-off. It must not pass as a signed high-trust report.
     findings = lint.lint_report(
         _report([_pass_task()], risk="high-trust", human_required=True,
                 human_review={"status": "approved", "reviewer": "onour"}), "x")
-    assert _errors(findings) == []
+    assert "INCOMPLETE_APPROVAL" in _codes(findings)
+
+
+def test_empty_report_is_refused_unless_allowed():
+    # A report with no tasks proves nothing. It fails by default and passes only with the
+    # explicit allow_empty escape hatch for a genuine no-op run.
+    assert "EMPTY_REPORT" in _codes(lint.lint_report(_report([]), "x"))
+    assert "EMPTY_REPORT" not in _codes(lint.lint_report(_report([]), "x", allow_empty=True))
 
 
 def test_high_trust_with_review_required_false_is_the_contradiction_the_linter_catches():
