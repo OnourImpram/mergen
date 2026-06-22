@@ -54,10 +54,13 @@ jobs:
             echo "verify_core harness error (could not read tasks-state)"; exit 2
           fi
 
-      # Gate on the FRESH report, never a committed one. --min-claimed 1 refuses
-      # an empty report so an under-claiming tasks-state cannot pass in silence.
+      # Gate on the FRESH report, never a committed one. --strict runs the integrity lint
+      # alongside the work-done gate, so a proofless, ambiguous, conditional, or unsigned
+      # high-trust report fails here too. --min-claimed 1 refuses an empty report, and
+      # --require-provenance refuses a report with no recorded source commit (the fresh
+      # report always carries one, so this only ever fires on a malformed regeneration).
       - name: Fail the build on phantom or unverified work
         run: |
           python tools/evidence_metric.py \
             fresh-verification-report.json \
-            --gate --max-phantoms 0 --min-work-done 1.0 --min-claimed 1
+            --strict --max-phantoms 0 --min-work-done 1.0 --min-claimed 1 --require-provenance

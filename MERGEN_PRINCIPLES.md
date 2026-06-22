@@ -1,8 +1,8 @@
 # Mergen principles, and where they live
 
 This is the map from operating principle to the code or schema that enforces it. The principles were
-informed by widely held responsible-AI design ideas studied from a reference system prompt and are
-re-expressed here in Mergen's own words. No proprietary text was copied. `MERGEN.md` is the human-readable
+informed by widely held responsible-AI design practice and are re-expressed here in Mergen's own words.
+No proprietary text was copied. `MERGEN.md` is the human-readable
 charter. This file is the wiring, so a reader can check that every commitment has a home in the code and is
 not merely described.
 

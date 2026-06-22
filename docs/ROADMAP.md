@@ -82,7 +82,7 @@ Two stronger drop-ins close the committed-report gap. `eval/ci/verify-gate-live.
 
 ### Mneme seam
 
-Mergen is the execution layer and pairs with mneme (the memory layer) across one seam. Mergen stores no memory of its own. `docs/MNEME-SEAM.md` documents the seam contract. `scripts/mneme_emit.py` is the emit hook that writes structured events across the seam, including a bounded write-to-vault direction (`--write DIR`, with a redaction preflight and duplicate detection). The full store integration, direct vault write versus the mneme MCP surface, is deferred.
+Mergen is the execution layer and pairs with mneme (the memory layer) across one seam. Mergen keeps no durable memory authority of its own (no vault, index, or store) and writes only local execution and verification artifacts. `docs/MNEME-SEAM.md` documents the seam contract. `scripts/mneme_emit.py` is the emit hook that writes structured events across the seam, including a bounded write-to-vault direction (`--write DIR`, with a redaction preflight and duplicate detection). The full store integration, direct vault write versus the mneme MCP surface, is deferred.
 
 ### Native renderer
 
@@ -125,7 +125,7 @@ Wires `hooks.after_implement -> speckit.mergen.verify` with `optional: false`, m
 
 ### Promo website
 
-A static promo site for Mergen and the Agent Continuity Stack is published at https://thegoatpsy.github.io/mergen/ . It is served from the `gh-pages` branch, kept separate from the engine source on `main`. It presents the identity, the Governor, the verify gate, and the honest enforcement distinction, and it claims no benchmark numbers. The repository itself stays private for now.
+A static promo site for Mergen and the Agent Continuity Stack is published at https://thegoatpsy.github.io/mergen/ . It is served from the `gh-pages` branch, kept separate from the engine source on `main`. It presents the identity, the Governor, the verify gate, and the honest enforcement distinction, and it claims no benchmark numbers. A public launch of the repository is gated on a full git-history secret sweep and the operator's final sign-off; until then the repository's visibility is the operator's call.
 
 ---
 

@@ -31,15 +31,21 @@ from typing import Any
 
 
 def load_reports(path_str: str):
+    """Return (loadable reports, unreadable paths). The unreadable list is surfaced, not
+    silently dropped: under a gate a report that cannot be parsed is a hard failure, since
+    a corrupt file in a scanned directory would otherwise just shrink the evidence the gate
+    acts on and pass in silence.
+    """
     path = Path(path_str)
     files = sorted(path.glob("**/verification-report.json")) if path.is_dir() else [path]
     reports = []
+    unreadable: list[tuple[Path, str]] = []
     for f in files:
         try:
             reports.append((f, json.loads(f.read_text(encoding="utf-8-sig"))))
-        except Exception as exc:  # noqa: BLE001 - report and skip, do not crash the metric
-            print(f"skip {f}: {exc}", file=sys.stderr)
-    return reports
+        except Exception as exc:  # noqa: BLE001 - collect and surface, do not crash the metric
+            unreadable.append((f, str(exc)))
+    return reports, unreadable
 
 
 def work_done(reports):
@@ -88,14 +94,16 @@ def _load_linter() -> Any:
     return mod
 
 
-def strict_lint(reports, allow_conditional: bool, require_provenance: bool = False) -> int:
+def strict_lint(reports, allow_conditional: bool, require_provenance: bool = False,
+                allow_empty: bool = False) -> int:
     """Lint every report for integrity. Return 1 if any report fails, else 0."""
     linter = _load_linter()
     errors = 0
     print("strict report lint (evidence integrity)")
     for path, report in reports:
         findings = linter.lint_report(report, str(path), allow_conditional=allow_conditional,
-                                      require_provenance=require_provenance)
+                                      require_provenance=require_provenance,
+                                      allow_empty=allow_empty)
         for f in findings:
             print(str(f))
         errors += sum(1 for f in findings if f.level == "error")
@@ -153,6 +161,9 @@ def main(argv=None) -> int:
                          "high-trust). Refuses an empty report unless --allow-empty.")
     ap.add_argument("--allow-empty", action="store_true",
                     help="under --strict, do not fail a report with nothing claimed done")
+    ap.add_argument("--allow-unreadable", action="store_true",
+                    help="under --gate or --strict, skip an unreadable report instead of "
+                         "failing the gate on it (by default a corrupt report fails)")
     ap.add_argument("--allow-conditional", action="store_true",
                     help="under --strict, accept a conditional_pass verdict")
     ap.add_argument("--require-provenance", action="store_true",
@@ -167,9 +178,20 @@ def main(argv=None) -> int:
                          "should set 1 so an empty report fails instead of passing silently.")
     args = ap.parse_args(argv)
 
-    reports = load_reports(args.report)
-    if not reports:
+    reports, unreadable = load_reports(args.report)
+    if not reports and not unreadable:
         print("no verification-report.json found", file=sys.stderr)
+        return 1
+
+    # An unreadable report under a gate is a hard failure unless explicitly allowed: a file
+    # the metric could not parse is not one it may quietly ignore.
+    gate_active = args.gate or args.strict
+    unreadable_fails_gate = bool(unreadable) and gate_active and not args.allow_unreadable
+    for f, exc in unreadable:
+        label = "error: unreadable" if unreadable_fails_gate else "skip: unreadable"
+        print(f"{label} {f}: {exc}", file=sys.stderr)
+    if not reports:
+        print("no readable verification-report.json found", file=sys.stderr)
         return 1
 
     claimed, verified, with_evidence = work_done(reports)
@@ -198,15 +220,17 @@ def main(argv=None) -> int:
         # Strict combines the work-done gate with the integrity lint. An empty
         # report fails by default (min_claimed at least 1) because a report that
         # proves nothing is not a strict pass.
-        rc_lint = strict_lint(reports, args.allow_conditional, args.require_provenance)
+        rc_lint = strict_lint(reports, args.allow_conditional, args.require_provenance,
+                              allow_empty=args.allow_empty)
         min_claimed = args.min_claimed if args.allow_empty else max(args.min_claimed, 1)
         rc_gate = run_gate(claimed, verified, with_evidence, args.max_phantoms,
                            args.min_work_done, min_claimed)
-        return 1 if (rc_lint or rc_gate) else 0
+        return 1 if (rc_lint or rc_gate or unreadable_fails_gate) else 0
 
     if args.gate:
-        return run_gate(claimed, verified, with_evidence, args.max_phantoms,
-                        args.min_work_done, args.min_claimed)
+        rc_gate = run_gate(claimed, verified, with_evidence, args.max_phantoms,
+                           args.min_work_done, args.min_claimed)
+        return 1 if (rc_gate or unreadable_fails_gate) else 0
     return 0
 
 

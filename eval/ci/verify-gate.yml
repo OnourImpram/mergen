@@ -36,8 +36,15 @@ jobs:
 
       # Replace path/to/verification-report.json with your committed report path.
       # If you vendored the metric somewhere other than tools/, update that path too.
+      #
+      # --strict is the real gate: it runs the work-done check AND the integrity lint, so
+      # a proofless pass, an ambiguous pass, a conditional_pass, or an unsigned high-trust
+      # report fails here, not only a phantom. --min-claimed is forced to at least 1 under
+      # --strict, so an empty report cannot pass in silence. --require-provenance refuses a
+      # report with no recorded source commit. A committed report can still be hand-edited;
+      # for a tamper-resistant gate, regenerate the report in CI (see verify-gate-live.yml).
       - name: Fail the build on phantom or unverified work
         run: |
           python tools/evidence_metric.py \
             path/to/verification-report.json \
-            --gate --max-phantoms 0 --min-work-done 1.0
+            --strict --max-phantoms 0 --min-work-done 1.0 --min-claimed 1 --require-provenance
