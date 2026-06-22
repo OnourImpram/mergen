@@ -24,7 +24,8 @@ The forward path, named not built: a fuller version would run the impacted-slice
 is heavier and can shell a test suite, which is why it stays opt-in and is not the default even
 when this hook is enabled.
 
-Registered as a Stop hook. Fail-soft: any error exits 0 with no output.
+Intended as an opt-in Stop hook (default OFF; the installer does not auto-register it, it only
+registers verify_gate and constitution_inject). Fail-soft: any error exits 0 with no output.
 
 Tier 0: pure standard library, deterministic, no network, no model.
 """

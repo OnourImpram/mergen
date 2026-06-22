@@ -10,7 +10,7 @@ it verified and the commit it sat at, without re-reading any artifact. Read
 direction (weighted equally): parse those same records back from a mneme vault
 directory, so a new decision can be informed by prior ones, optionally with each
 record's proof chain attached (proof_chain_for_record). This is the only bridge
-between the two systems. Mergen stores no memory of its own. It
+between the two systems. Mergen keeps no durable memory authority of its own. It
 emits an already-safe, provenance-bearing, confidence-labeled record and hands
 it to mneme, and reads records back in that same documented shape.
 
