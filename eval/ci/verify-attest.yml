@@ -56,11 +56,14 @@ jobs:
             echo "verify_core harness error (could not read tasks-state)"; exit 2
           fi
 
+      # --strict runs the integrity lint with the work-done gate, and --require-provenance
+      # refuses a report with no recorded source commit. An attestation proves the report's
+      # lineage; the gate proves its content, so both run before the report is signed.
       - name: Fail the build on phantom or unverified work
         run: |
           python tools/evidence_metric.py \
             fresh-verification-report.json \
-            --gate --max-phantoms 0 --min-work-done 1.0 --min-claimed 1
+            --strict --max-phantoms 0 --min-work-done 1.0 --min-claimed 1 --require-provenance
 
       # Sign the CI-regenerated report. The subject is the fresh report, never a
       # committed one. This step only runs after the gate above has passed.
