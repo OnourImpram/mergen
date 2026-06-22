@@ -10,7 +10,7 @@
 <!-- How you know it works. The verification report, the tests you ran, the
      output you checked. A claim without evidence is a claim, not a result. -->
 
-- [ ] Tests pass on 3.9 and 3.11 (`python -m pytest tests/ -q`)
+- [ ] Tests pass on 3.9, 3.11, and 3.12 (Linux), and 3.12 (Windows) (`python -m pytest tests/ -q`)
 - [ ] `ruff check .`, `mypy`, `python scripts/check_sync.py`, and `python scripts/check_no_reference_text.py` are green
 - [ ] Docs and CHANGELOG updated where user-facing behavior changed
 

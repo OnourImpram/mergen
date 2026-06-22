@@ -5,10 +5,10 @@ document defines that seam so the boundary stays honest and neither system reach
 
 ## The rule
 
-Mergen stores no memory of its own. It does not run a vault, an index, or a database. When a piece of work
-produces something worth remembering, a decision, a rationale, a failure pattern, Mergen emits it as a
-record that mneme can ingest through mneme's own public interface. mneme remains the single memory
-authority.
+Mergen keeps no durable memory authority of its own. It does not run a vault, an index, or a database, and
+writes only local execution and verification artifacts. When a piece of work produces something worth
+remembering, a decision, a rationale, a failure pattern, Mergen emits it as a record that mneme can ingest
+through mneme's own public interface. mneme remains the single durable memory authority.
 
 ## What crosses the seam
 

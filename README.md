@@ -22,7 +22,8 @@ the Governor. The accuracy is the verify gate.
 Mergen is the execution half of a two-part whole. [mneme](https://github.com/TheGoatPsy/mneme) is the memory
 half. mneme remembers why a project is the way it is, with provenance visible and nothing fabricated. Mergen
 decides what a task needs and proves it was hit. Together they form the Agent Continuity Stack, joined by one
-seam and nothing more. Mergen stores no memory of its own.
+seam and nothing more. Mergen keeps no durable memory of its own, no vault or index. It writes local execution
+and verification artifacts, and leaves the durable memory to mneme.
 
 > Status: v1.0.0, beta. Built entirely from public Claude Code extension points (slash commands,
 > hooks, `settings.json`). Does not patch or modify the Claude Code binary.
@@ -283,7 +284,7 @@ LICENSE / NOTICE / ATTRIBUTION.md Apache-2.0 and third-party attribution
 
 ## Status
 
-v1.0.0, beta.
+v1.0.0, beta. A source version, not yet a tagged release (see `CHANGELOG.md`).
 
 - Native shell: 14 `/mergen-*` commands installed as Claude Code skills, plus the effort-mode hook and command.
 - Spec Kit shell: a preset overriding 8 commands plus an extension adding 6 (`verify`, `rollup`, `go`, `lean`,
@@ -293,8 +294,10 @@ v1.0.0, beta.
 - The mneme seam is bidirectional and network-free. `scripts/mneme_emit.py` emits and reads decision records,
   and `--write DIR` persists one into a directory you name, with a redaction preflight (fails closed on a secret)
   and duplicate detection. The full store integration (direct vault write versus MCP) is intentionally left open.
-- The verify-gate ships as a drop-in CI workflow (`eval/ci/verify-gate.yml`) plus a `--gate` mode, so your project
-  can fail the build on phantom or unverified work. It checks the committed report, not your live filesystem.
+- The verify-gate ships as a drop-in CI workflow (`eval/ci/verify-gate.yml`) with a `--strict` gate (the merge
+  gate: work-done check plus the integrity lint), so your project can fail the build on phantom, unverified,
+  ambiguous, empty, or unsigned high-trust work. The committed-report workflow checks a committed report, while
+  `eval/ci/verify-gate-live.yml` regenerates the report from the live tree first for a tamper-resistant gate.
 - The verify harness is agent agnostic. `scripts/verify_core.py` is pure standard library and runs anywhere
   Python 3.9 or newer runs, with no Claude Code, no network, and no model. Run it directly or as `mergen verify`.
   A worked end-to-end run is in [`examples/verify-demo/`](examples/verify-demo/README.md), and which features need
@@ -305,7 +308,8 @@ v1.0.0, beta.
 - A static, offline dashboard. `mergen dashboard <dir>` (or `python scripts/dashboard.py <dir>`) renders one
   self-contained HTML page over a directory of reports, showing each verdict, phantom count, and provenance,
   with every value HTML-escaped. No network, no JavaScript.
-- No benchmark numbers are claimed. The methodology and a reproduction procedure are in `eval/`.
+- No live-model benchmark numbers are claimed. A deterministic phantom-detection harness does ship under
+  `eval/` (`eval/benchmark.py --gate`), with its methodology and a reproduction procedure.
 - `/effort max` requires one manual paste per session. The binary does not expose that control to hooks.
 - Hooks are reinforcement nudges. Enforcement is the implement pipeline's adversarial verify stage, made a
   true gate by CI.
