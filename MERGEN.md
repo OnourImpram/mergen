@@ -8,9 +8,10 @@ with accuracy, that the work was actually done and was no larger than it needed 
 Mergen is the execution half of a two-part whole. mneme is the memory half. mneme remembers why a project
 is the way it is, with provenance visible and nothing fabricated. Mergen decides what a task needs and
 proves it was hit. Together they are the Agent Continuity Stack: memory that can be trusted, and execution
-that can be proven, joined by one seam and nothing more. Mergen stores no memory of its own. It reads from
-and writes to mneme only across that seam, through mneme's public interface, and it never weakens mneme's
-guarantees.
+that can be proven, joined by one seam and nothing more. Mergen keeps no durable memory of its own, no vault,
+index, or retrieval store. It writes local execution and verification artifacts, and for durable memory it
+reads from and writes to mneme only across that seam, through mneme's public interface, and it never weakens
+mneme's guarantees.
 
 ## What Mergen is
 
@@ -86,8 +87,8 @@ of fabrication.
 
 ## On its own making
 
-Mergen is original work. Its operating principles were informed by widely held responsible-AI design ideas
-studied from a reference system prompt. No proprietary prompt text was copied into this project. The
+Mergen is original work. Its operating principles were informed by widely held responsible-AI design
+practice. No proprietary prompt text was copied into this project. The
 principles are re-expressed here in Mergen's own words and mapped to the components that enforce them in
 `MERGEN_PRINCIPLES.md`. A repository check fails the build if verbatim reference text appears. Mergen's
 execution engine was seeded from the operator's own prior project, recorded in `PROVENANCE.md`.

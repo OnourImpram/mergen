@@ -52,7 +52,20 @@ $Here = Split-Path -Parent $MyInvocation.MyCommand.Path
 $Py = (Get-Command python3 -ErrorAction SilentlyContinue).Source
 if (-not $Py) { $Py = (Get-Command python -ErrorAction SilentlyContinue).Source }
 if (-not $Py) {
-  Write-Host "ERROR: python3 (or python) was not found on PATH. Install Python 3.8+ and retry." -ForegroundColor Red
+  Write-Host "ERROR: python3 (or python) was not found on PATH. Install Python 3.9+ and retry." -ForegroundColor Red
+  exit 1
+}
+
+# Require Python 3.9+, the floor declared in pyproject.toml. A presence check is not enough:
+# an older interpreter on PATH would fail later with a confusing error, so check the version now.
+$PyVer = & $Py -c "import sys; print('%d.%d' % sys.version_info[:2])"
+if (-not ($PyVer -match '^\d+\.\d+$')) {
+  Write-Host "ERROR: could not determine the Python version from '$Py'." -ForegroundColor Red
+  exit 1
+}
+$PyParts = $PyVer.Split('.')
+if ([int]$PyParts[0] -lt 3 -or ([int]$PyParts[0] -eq 3 -and [int]$PyParts[1] -lt 9)) {
+  Write-Host "ERROR: found Python $PyVer, but mergen needs Python 3.9+. Install a newer Python and retry." -ForegroundColor Red
   exit 1
 }
 
