@@ -11,7 +11,9 @@ import importlib.util
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
-_TEST_KEY = "test-key-not-a-real-secret"
+# A throwaway test literal, never a real secret, but long and varied enough to clear the
+# signer's key floor (>= 32 chars, more than a handful of distinct characters).
+_TEST_KEY = "throwaway-test-signing-key-not-a-secret"
 
 
 def _load():
@@ -45,7 +47,7 @@ def test_a_token_does_not_authorize_a_different_artifact():
 def test_a_token_does_not_verify_under_a_different_key():
     h = ps.artifact_hash(b"diff\n")
     token = ps.sign(h, _TEST_KEY)
-    assert ps.verify(h, token, "a-different-key") is False
+    assert ps.verify(h, token, "another-throwaway-key-also-long-enough-x") is False
 
 
 def test_the_token_never_contains_the_key():
@@ -67,6 +69,39 @@ def test_an_empty_key_is_rejected_at_the_library_boundary():
         ps.sign(h, "")
     with pytest.raises(ValueError):
         ps.verify(h, "any-token", "")
+
+
+def test_a_short_key_is_rejected():
+    # A short key is brute-forceable offline. The floor holds at the library boundary.
+    import pytest
+    h = ps.artifact_hash(b"diff\n")
+    with pytest.raises(ValueError):
+        ps.sign(h, "short")
+    with pytest.raises(ValueError):
+        ps.sign(h, "x" * (ps._MIN_KEY_LEN - 1))  # one character under the floor
+
+
+def test_a_guessable_key_is_rejected():
+    import pytest
+    h = ps.artifact_hash(b"diff\n")
+    for weak in ("password", "changeme", "mergen", "secret", "X", "Default"):
+        with pytest.raises(ValueError):
+            ps.sign(h, weak)
+
+
+def test_a_low_variety_key_is_rejected():
+    # Long enough but only one distinct character, which is not a real secret.
+    import pytest
+    h = ps.artifact_hash(b"diff\n")
+    with pytest.raises(ValueError):
+        ps.sign(h, "a" * 40)
+
+
+def test_a_strong_random_key_is_accepted():
+    import secrets
+    h = ps.artifact_hash(b"diff\n")
+    key = secrets.token_hex(32)  # 64 hex chars
+    assert ps.verify(h, ps.sign(h, key), key) is True
 
 
 def test_verify_tolerates_surrounding_whitespace_on_the_token():
@@ -119,6 +154,16 @@ def test_cli_without_key_env_returns_2(tmp_path, monkeypatch):
     assert ps.main(["sign", "--artifact", str(art)]) == 2
     # The verify path is guarded the same way, not only sign.
     assert ps.main(["verify", "--artifact", str(art), "--token", "deadbeef"]) == 2
+
+
+def test_cli_weak_key_returns_2_not_a_traceback(tmp_path, capsys, monkeypatch):
+    # A present but weak key is a usage error (exit 2), surfaced cleanly, never a token.
+    monkeypatch.setenv("MERGEN_SIGNING_KEY", "password")
+    art = _artifact(tmp_path)
+    assert ps.main(["sign", "--artifact", str(art)]) == 2
+    err = capsys.readouterr().err
+    assert "guessable" in err
+    assert "mergen-ack-token" not in err
 
 
 def test_cli_missing_artifact_returns_2(tmp_path, monkeypatch):
