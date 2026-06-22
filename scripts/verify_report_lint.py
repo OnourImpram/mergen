@@ -11,6 +11,8 @@ contract a plain Python install can run.
 
 What it refuses (each an error that fails the lint):
   - a report missing the keys a report must have (schema shape invalid)
+  - an empty report: no tasks at all, so it proves nothing, unless --allow-empty
+    says a genuine no-op run is intended
   - a proofless pass: a task verified pass with no file, no test, and no recorded
     output. A verdict without evidence is a fail, never an inferred pass.
   - an ambiguous pass: a pass labelled with the ambiguous confidence. The report
@@ -19,6 +21,8 @@ What it refuses (each an error that fails the lint):
   - a conditional_pass, unless --allow-conditional says the caller owns the caveat
   - an unsigned high-trust report: high-trust with human review required but no
     recorded approval is not a pass until a human signs it
+  - an incomplete high-trust approval: a status of approved that records no
+    reviewer, no approved_at, or no evidence is not a real sign-off
 
 What it warns on (reported, non-fatal unless promoted):
   - a report with no provenance block. Older reports predate it. --require-provenance
@@ -69,8 +73,25 @@ def _has_evidence(task: dict[str, Any]) -> bool:
     return False
 
 
+def _approval_complete(review: dict[str, Any]) -> bool:
+    """True when an approved human_review records who approved, when, and on what.
+
+    Mirrors the schema's if/then for an approved status: a bare {"status": "approved"}
+    is not a sign-off. reviewer and approved_at must be non-empty strings and evidence a
+    non-empty list, so an approval names a responsible human and the basis for it.
+    """
+    reviewer = review.get("reviewer")
+    approved_at = review.get("approved_at")
+    evidence = review.get("evidence")
+    return (
+        isinstance(reviewer, str) and reviewer.strip() != ""
+        and isinstance(approved_at, str) and approved_at.strip() != ""
+        and isinstance(evidence, list) and len(evidence) > 0
+    )
+
+
 def lint_report(report: Any, source: str, *, allow_conditional: bool = False,
-                require_provenance: bool = False) -> list[Finding]:
+                require_provenance: bool = False, allow_empty: bool = False) -> list[Finding]:
     """Return every lint finding for one report. Pure, so it is trivially testable."""
     if not isinstance(report, dict):
         return [Finding("error", "SCHEMA_INVALID", source, "report is not a JSON object")]
@@ -103,15 +124,25 @@ def lint_report(report: Any, source: str, *, allow_conditional: bool = False,
     # short-circuited on that case and let it through, the exact downgrade the floor must refuse).
     if summary.get("risk_level") == "high-trust":
         review = summary.get("human_review")
-        status = review.get("status") if isinstance(review, dict) else None
+        review = review if isinstance(review, dict) else {}
+        status = review.get("status")
         if not bool(summary.get("human_review_required")) or status != "approved":
             findings.append(Finding(
                 "error", "UNSIGNED_HIGH_TRUST", source,
                 "high-trust report is not signed off: it must set human_review_required and record "
                 f"human_review.status approved (human_review_required="
                 f"{summary.get('human_review_required')!r}, status={status!r})"))
+        elif not _approval_complete(review):
+            findings.append(Finding(
+                "error", "INCOMPLETE_APPROVAL", source,
+                "high-trust approval records no reviewer, approved_at, or evidence; a bare "
+                "approved status is not a real sign-off"))
 
     tasks = report.get("tasks")
+    if isinstance(tasks, list) and not tasks and not allow_empty:
+        findings.append(Finding("error", "EMPTY_REPORT", source,
+                                "report has no tasks, it proves nothing "
+                                "(pass --allow-empty for a genuine no-op run)"))
     if isinstance(tasks, list):
         for task in tasks:
             if not isinstance(task, dict):
@@ -156,6 +187,8 @@ def main(argv: list[str] | None = None) -> int:
                     help="accept a conditional_pass verdict (the caller owns the caveat)")
     ap.add_argument("--require-provenance", action="store_true",
                     help="treat a missing provenance block as an error, not a warning")
+    ap.add_argument("--allow-empty", action="store_true",
+                    help="accept a report with no tasks (a genuine no-op run)")
     args = ap.parse_args(argv)
 
     files = _discover(Path(args.report))
@@ -174,7 +207,8 @@ def main(argv: list[str] | None = None) -> int:
             continue
         findings.extend(lint_report(report, str(f),
                                     allow_conditional=args.allow_conditional,
-                                    require_provenance=args.require_provenance))
+                                    require_provenance=args.require_provenance,
+                                    allow_empty=args.allow_empty))
 
     errors = [x for x in findings if x.level == "error"]
     warns = [x for x in findings if x.level == "warn"]
