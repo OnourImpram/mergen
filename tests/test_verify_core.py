@@ -581,7 +581,8 @@ def test_safe_repo_relative_path_accepts_and_normalizes(tmp_path: Path) -> None:
 def test_safe_repo_relative_path_rejects_options_and_escapes(tmp_path: Path) -> None:
     root = tmp_path
     for bad in ("--version", "-k name", "../outside/test.py", "sub/../x.py",
-                "/abs/test.py", "C:\\tmp\\t.py", "a*b.py", "q[0].py", "", "  "):
+                "/abs/test.py", "C:\\tmp\\t.py", "a*b.py", "q[0].py", "", "  ",
+                "tests/\x00.py", "bad\x01name.py"):
         try:
             verify_core.safe_repo_relative_path(bad, root, kind="test_task")
         except verify_core.UnsafePathError:
@@ -711,6 +712,30 @@ def test_schema_pattern_matches_validator(tmp_path: Path) -> None:
 # --strict exit semantics: the exit code becomes a merge gate. The default exit
 # stays back-compatible (mechanical failure only), so existing callers are unaffected.
 # ---------------------------------------------------------------------------
+
+
+def test_default_exit_is_one_on_a_mechanical_failure(tmp_path: Path) -> None:
+    # The default exit (no --strict) must still return 1 on a real mechanical failure: this
+    # proves the new --strict branch did not subsume the default return path.
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    init_git_repo(repo)
+    tasks_file = write_tasks_state(
+        tmp_path / "ts.json", [{"id": "T1", "status": "done", "files": ["does/not/exist.py"]}]
+    )
+    assert verify_core.main(["--tasks-state", str(tasks_file), "--root", str(repo)]) == 1
+
+
+def test_non_positive_test_timeout_is_a_usage_error(tmp_path: Path) -> None:
+    import pytest
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    init_git_repo(repo)
+    tasks_file = write_tasks_state(tmp_path / "ts.json", [{"id": "T1", "status": "done"}])
+    with pytest.raises(SystemExit):
+        verify_core.main(
+            ["--tasks-state", str(tasks_file), "--root", str(repo), "--test-timeout", "0"]
+        )
 
 
 def test_strict_exit_zero_on_clean_pass(tmp_path: Path) -> None:
