@@ -102,10 +102,11 @@ def test_load_reports_tolerates_utf8_bom(tmp_path, capsys):
     # old utf-8 read the file was skipped and the metric reported none found.
     metric = _load("eval/evidence_metric.py")
     rc = metric.main([_write(tmp_path / "verification-report.json", _EMPTY_REPORT, bom=True)])
-    out = capsys.readouterr().out
+    captured = capsys.readouterr()
     assert rc == 0
-    assert "reports read: 1" in out
-    assert "skip" not in out
+    assert "reports read: 1" in captured.out
+    # The unreadable label now lands on stderr, so check both streams for a wrongful skip.
+    assert "unreadable" not in captured.out and "unreadable" not in captured.err
 
 
 _CLEAN_REPORT = {
@@ -164,3 +165,24 @@ def test_strict_conditional_needs_allow_conditional(tmp_path, capsys):
     assert metric.main([p, "--strict"]) == 1
     capsys.readouterr()
     assert metric.main([p, "--strict", "--allow-conditional"]) == 0
+
+
+def test_gate_fails_on_unreadable_report_in_directory(tmp_path):
+    # A corrupt report in a scanned directory must fail the gate, not be silently dropped:
+    # otherwise it just shrinks the evidence the gate acts on and the gate passes in silence.
+    metric = _load("eval/evidence_metric.py")
+    _write(tmp_path / "verification-report.json", _CLEAN_REPORT)
+    bad = tmp_path / "sub"
+    bad.mkdir()
+    (bad / "verification-report.json").write_text("{ not json", encoding="utf-8")
+    assert metric.main([str(tmp_path), "--strict", "--min-claimed", "1"]) == 1
+
+
+def test_allow_unreadable_gates_only_the_readable_report(tmp_path):
+    metric = _load("eval/evidence_metric.py")
+    _write(tmp_path / "verification-report.json", _CLEAN_REPORT)
+    bad = tmp_path / "sub"
+    bad.mkdir()
+    (bad / "verification-report.json").write_text("{ not json", encoding="utf-8")
+    # With the corrupt report explicitly skipped, the clean report still gates and passes.
+    assert metric.main([str(tmp_path), "--strict", "--min-claimed", "1", "--allow-unreadable"]) == 0

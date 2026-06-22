@@ -78,7 +78,9 @@ def test_unsigned_high_trust_fails():
 def test_signed_high_trust_passes():
     md, rc = guard.summarize(
         _report([_pass()], risk="high-trust", human_required=True,
-                human_review={"status": "approved"}), "x")
+                human_review={"status": "approved", "reviewer": "onour",
+                              "approved_at": "2026-06-20T00:00:00Z",
+                              "evidence": ["manual review"]}), "x")
     assert rc == 0
     assert "human sign-off: `approved`" in md
 

@@ -2,9 +2,18 @@
 
 Runs three filesystem and subprocess lenses against every done task and
 emits a verification-report.json that validates against the schema at
-core/schemas/verification-report.schema.json. Exit code 0 means every
-applicable mechanical lens passed. Exit code 1 means at least one done
-task failed a mechanical check.
+core/schemas/verification-report.schema.json.
+
+Exit codes. By default, 0 means no done task failed a mechanical lens and 1
+means at least one did; an ambiguous or high-trust-pending report still exits 0
+because the report, not this code, carries that nuance, and the CI gate
+(evidence_metric --strict, pr_guardian) is the enforcement. With --strict the
+exit code itself becomes a merge gate: 0 only when the verdict is a clean pass
+with no human review outstanding, 1 on any mechanical fail, conditional_pass, or
+high-trust-pending verdict. Either way, exit 2 means no report could be produced
+(a bad tasks-state or a harness crash), kept distinct so a gate can tell "could
+not check" from "checked and failed". Do not treat the default exit code as a
+merge gate: use --strict, or gate on the report with evidence_metric --strict.
 """
 
 from __future__ import annotations
@@ -13,6 +22,7 @@ import argparse
 import datetime
 import hashlib
 import importlib.util
+import os
 import subprocess
 import sys
 import json
@@ -25,6 +35,17 @@ from typing import Any
 #: evidence_tier) and the summary untested_passes count. The report still
 #: conforms to schema_version 1.0 because those fields are additive and optional.
 VERIFIER_VERSION = "1.1"
+
+#: Wall-clock ceiling, in seconds, for a single test_task pytest run. A user's test
+#: suite can hang (a deadlock, a prompt on stdin, an infinite loop), and an unbounded
+#: subprocess would hang the whole verifier with it. The default is overridable per run
+#: with --test-timeout or the MERGEN_TEST_TIMEOUT environment variable. A timeout is a
+#: fail, never a silent pass: an unprovable test does not earn a done verdict.
+DEFAULT_TEST_TIMEOUT = 120
+
+#: Wall-clock ceiling for the small git queries the lenses run. Generous, since these
+#: are local and fast, but bounded so a wedged git process cannot hang the harness.
+_GIT_TIMEOUT = 30
 
 
 # ---------------------------------------------------------------------------
@@ -117,6 +138,84 @@ def calibrate(lens_results: dict[str, str]) -> tuple[float, str]:
 
 
 # ---------------------------------------------------------------------------
+# Path safety: the one chokepoint every declared path passes through
+#
+# A tasks-state file is untrusted input. Its test_task is handed to pytest and its
+# files are read from disk, so a hostile or careless value must never become a pytest
+# option (--version, -k expr), an absolute path, or a traversal out of the repository.
+# Every lens validates the paths it is about to use through safe_repo_relative_path, and
+# the report only ever records the normalized repo-relative form, so a machine-local
+# absolute path cannot leak into an artifact either. This is defense in depth: each lens
+# guards its own use of a path because each one is a real boundary (a subprocess, a
+# filesystem read, a git query), not only the report assembly above them.
+# ---------------------------------------------------------------------------
+
+
+class UnsafePathError(ValueError):
+    """A declared path is not a concrete file inside the repository root."""
+
+
+#: Path metacharacters a tasks-state entry names one concrete file, never a pattern.
+_GLOB_CHARS = ("*", "?", "[", "]")
+
+
+def safe_repo_relative_path(raw: object, root: Path, *, kind: str) -> str:
+    """Return raw normalized to a POSIX repo-relative path, or raise UnsafePathError.
+
+    Rejects, never returns: a non-string or blank value; a value starting with "-" (a
+    command option such as --version or -k, not a path); a leading path separator; an
+    absolute path or a Windows drive (C:\\...); any ".." segment; a glob metacharacter;
+    and any path that resolves outside root. kind ("test_task" or "files") names the field
+    in the error message, which never echoes the raw value, so a rejected absolute path is
+    not leaked through the message either.
+    """
+    if not isinstance(raw, str) or not raw.strip():
+        raise UnsafePathError(f"{kind}: empty or non-string path")
+    value = raw.strip()
+    if value[0] == "-":
+        raise UnsafePathError(f"{kind}: a leading '-' is a command option, not a path")
+    if value[0] in ("/", "\\"):
+        raise UnsafePathError(f"{kind}: a leading path separator is not allowed")
+    if len(value) >= 2 and value[1] == ":":
+        raise UnsafePathError(f"{kind}: a drive-qualified path is not allowed")
+    if any(ch in value for ch in _GLOB_CHARS):
+        raise UnsafePathError(f"{kind}: a glob metacharacter is not a concrete path")
+    if any(ord(ch) < 32 or ch == "\x7f" for ch in value):
+        # A NUL or other control character is never a real filename on any OS, and a NUL would
+        # otherwise reach the filesystem and raise deep in a lens. Refuse it here, cleanly.
+        raise UnsafePathError(f"{kind}: a control character is not allowed in a path")
+    parts = value.replace("\\", "/").split("/")
+    if ".." in parts:
+        raise UnsafePathError(f"{kind}: '..' path traversal is not allowed")
+    candidate = Path(value)
+    if candidate.is_absolute():
+        raise UnsafePathError(f"{kind}: an absolute path is not allowed")
+    resolved = (root / candidate).resolve()
+    try:
+        resolved.relative_to(root.resolve())
+    except ValueError:
+        raise UnsafePathError(f"{kind}: path resolves outside the repository root") from None
+    normalized = "/".join(p for p in parts if p not in ("", "."))
+    if not normalized:
+        raise UnsafePathError(f"{kind}: path is empty after normalization")
+    return normalized
+
+
+def _display_path(raw: object, root: Path, kind: str) -> str:
+    """The normalized repo-relative form for a report field, or a redacted marker.
+
+    files_checked and tests_run echo the declared paths back into the report. Normalizing
+    them here keeps a rejected or machine-local path out of the artifact: a valid path
+    becomes its POSIX repo-relative form, a rejected one becomes a fixed marker that names
+    no real path.
+    """
+    try:
+        return safe_repo_relative_path(raw, root, kind=kind)
+    except UnsafePathError:
+        return f"<rejected {kind}>"
+
+
+# ---------------------------------------------------------------------------
 # Lens implementations
 # ---------------------------------------------------------------------------
 
@@ -132,9 +231,15 @@ def lens_file_exists(files: list[str], root: Path) -> tuple[str, list[str], list
 
     evidence: list[str] = []
     failures: list[str] = []
-    for rel in files:
-        target = root / rel
-        if target.exists():
+    for raw in files:
+        try:
+            rel = safe_repo_relative_path(raw, root, kind="files")
+        except UnsafePathError as exc:
+            # A rejected path is a fail, never a silently skipped file: it must not let a
+            # task pass by naming an unreachable target. The message carries no raw value.
+            failures.append(f"unsafe path: {exc}")
+            continue
+        if (root / rel).exists():
             evidence.append(f"exists: {rel}")
         else:
             failures.append(f"missing: {rel}")
@@ -144,16 +249,27 @@ def lens_file_exists(files: list[str], root: Path) -> tuple[str, list[str], list
 
 
 def lens_tests_pass(
-    test_task: str | None, root: Path
+    test_task: str | None, root: Path, *, timeout_s: int = DEFAULT_TEST_TIMEOUT
 ) -> tuple[str, list[str], list[str]]:
     """Run pytest against test_task from root, capturing real exit code.
+
+    test_task is validated to a repo-relative path before it touches the command line, so
+    it can never be a pytest option (--version, -k expr) or a path outside the repo, the
+    exact bypass that would let a crafted tasks-state earn a pass with no real test. The
+    "--" then terminates option parsing as a second guard. The run is bounded by timeout_s;
+    a timeout is a fail, since an unprovable test is not a done verdict.
 
     Returns a triple of (result, evidence, failures).
     """
     if not test_task:
         return "na", [], []
 
-    cmd = [sys.executable, "-m", "pytest", test_task, "-q"]
+    try:
+        rel = safe_repo_relative_path(test_task, root, kind="test_task")
+    except UnsafePathError as exc:
+        return "fail", [], [f"unsafe test_task: {exc}"]
+
+    cmd = [sys.executable, "-m", "pytest", "-q", "--", rel]
     try:
         proc = subprocess.run(
             cmd,
@@ -162,17 +278,20 @@ def lens_tests_pass(
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
+            timeout=timeout_s,
         )
+    except subprocess.TimeoutExpired:
+        return "fail", [], [f"pytest timed out after {timeout_s}s for {rel}"]
     except Exception as exc:
         return "fail", [], [f"pytest launch error: {exc}"]
 
     if proc.returncode == 0:
-        evidence = [f"pytest exit 0 for {test_task}"]
+        evidence = [f"pytest exit 0 for {rel}"]
         return "pass", evidence, []
     else:
         out = (proc.stdout or "").strip()
         err = (proc.stderr or "").strip()
-        failures = [f"pytest exit {proc.returncode} for {test_task}"]
+        failures = [f"pytest exit {proc.returncode} for {rel}"]
         if out:
             failures.append(out[-400:])
         if err:
@@ -202,6 +321,7 @@ def lens_git_consistent(
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
+            timeout=_GIT_TIMEOUT,
         )
         porcelain_output = porcelain.stdout if porcelain.returncode == 0 else ""
     except Exception:
@@ -220,10 +340,14 @@ def lens_git_consistent(
     evidence: list[str] = []
     failures: list[str] = []
 
-    for rel in files:
-        # Normalize separators to forward slashes for git.
-        norm = rel.replace("\\", "/")
-        if norm in porcelain_paths or rel in porcelain_paths:
+    for raw in files:
+        try:
+            rel = safe_repo_relative_path(raw, root, kind="files")
+        except UnsafePathError as exc:
+            failures.append(f"unsafe path: {exc}")
+            continue
+        # rel is already normalized to forward slashes, the form git emits.
+        if rel in porcelain_paths:
             evidence.append(f"git-porcelain: {rel}")
             continue
 
@@ -235,6 +359,7 @@ def lens_git_consistent(
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 text=True,
+                timeout=_GIT_TIMEOUT,
             )
             if ls.returncode == 0:
                 evidence.append(f"git-tracked: {rel}")
@@ -253,7 +378,9 @@ def lens_git_consistent(
 # ---------------------------------------------------------------------------
 
 
-def verify_task(task: dict[str, Any], root: Path) -> dict[str, Any]:
+def verify_task(
+    task: dict[str, Any], root: Path, *, test_timeout: int = DEFAULT_TEST_TIMEOUT
+) -> dict[str, Any]:
     """Run the three mechanical lenses against one done task.
 
     Returns a dict that is a valid verification-report tasks item.
@@ -263,7 +390,7 @@ def verify_task(task: dict[str, Any], root: Path) -> dict[str, Any]:
     test_task: str | None = task.get("test_task") or None
 
     fe_result, fe_evidence, fe_failures = lens_file_exists(files, root)
-    tp_result, tp_evidence, tp_failures = lens_tests_pass(test_task, root)
+    tp_result, tp_evidence, tp_failures = lens_tests_pass(test_task, root, timeout_s=test_timeout)
     gc_result, gc_evidence, gc_failures = lens_git_consistent(files, root)
 
     all_results = [fe_result, tp_result, gc_result]
@@ -305,8 +432,10 @@ def verify_task(task: dict[str, Any], root: Path) -> dict[str, Any]:
         "lens_tests_pass": tp_result,
         "lens_git_consistent": gc_result,
         "lens_spec_match": "deferred-to-LLM",
-        "files_checked": list(files),
-        "tests_run": [test_task] if test_task else [],
+        # Echo only the normalized repo-relative form into the report, never the raw
+        # declared value, so a rejected or machine-local absolute path cannot leak here.
+        "files_checked": [_display_path(f, root, "files") for f in files],
+        "tests_run": [_display_path(test_task, root, "test_task")] if test_task else [],
         "evidence": all_evidence,
         "failures": all_failures,
     }
@@ -342,6 +471,8 @@ def _governor_floor() -> Any:
 def build_report(
     tasks_state: dict[str, Any],
     root: Path,
+    *,
+    test_timeout: int = DEFAULT_TEST_TIMEOUT,
 ) -> tuple[dict[str, Any], bool]:
     """Verify all done tasks and assemble the report dict.
 
@@ -361,7 +492,7 @@ def build_report(
     verified_items: list[dict[str, Any]] = []
 
     for task in done_tasks:
-        item = verify_task(task, root)
+        item = verify_task(task, root, test_timeout=test_timeout)
         verified_items.append(item)
 
     # Pass through pending tasks as unverified entries. They are not counted
@@ -638,8 +769,39 @@ def main(argv: list[str] | None = None) -> int:
         help="With --check-manifest, also fail when the report's source_commit "
              "does not match the current HEAD of --root (stale report).",
     )
+    parser.add_argument(
+        "--test-timeout",
+        type=int,
+        default=None,
+        metavar="SECONDS",
+        help=f"Per-test_task pytest timeout in seconds, a positive integer (default "
+             f"{DEFAULT_TEST_TIMEOUT}, or the MERGEN_TEST_TIMEOUT env var). A test that "
+             "exceeds it fails, never passes.",
+    )
+    parser.add_argument(
+        "--strict",
+        action="store_true",
+        help="Make the exit code a merge gate: 0 only for a clean pass with no human "
+             "review outstanding, 1 on any fail, conditional_pass, or high-trust-pending "
+             "verdict. Without it the exit code reports mechanical failure only.",
+    )
 
     args = parser.parse_args(argv)
+
+    # A non-positive --test-timeout is a usage error, not a silent fall-through: disabling the
+    # bound is exactly what the ceiling exists to prevent, so refuse it explicitly.
+    if args.test_timeout is not None and args.test_timeout <= 0:
+        parser.error(f"--test-timeout must be a positive integer (got {args.test_timeout})")
+
+    # Resolve the test timeout: the validated flag wins, then the environment, then the default.
+    # A malformed or non-positive environment value falls back to the default rather than
+    # disabling the bound.
+    if args.test_timeout is not None:
+        test_timeout = args.test_timeout
+    else:
+        env_timeout = os.environ.get("MERGEN_TEST_TIMEOUT", "")
+        test_timeout = int(env_timeout) if env_timeout.isdigit() and int(env_timeout) > 0 \
+            else DEFAULT_TEST_TIMEOUT
 
     root = Path(args.root).resolve()
 
@@ -678,7 +840,7 @@ def main(argv: list[str] | None = None) -> int:
     # also exits 2. A phantom is never a crash: it is a normal fail verdict with
     # the report written (exit 1), so this never hides incomplete work.
     try:
-        report, overall_pass = build_report(tasks_state, root)
+        report, overall_pass = build_report(tasks_state, root, test_timeout=test_timeout)
     except Exception as exc:  # noqa: BLE001 - a harness crash is a no-report error
         print(f"error: verify harness failed to build the report: {exc}", file=sys.stderr)
         return 2
@@ -702,6 +864,17 @@ def main(argv: list[str] | None = None) -> int:
     else:
         print(report_json)
 
+    # Default exit reports mechanical failure only. --strict turns the exit code into a
+    # merge gate: a conditional_pass (an ambiguous done task) or an outstanding human
+    # review (a high-trust report) is not a clean pass and must exit non-zero, so an
+    # automation that reads this exit code cannot mistake either for success.
+    if args.strict:
+        summary = report.get("summary", {})
+        strict_pass = (
+            summary.get("verdict") == "pass"
+            and not summary.get("human_review_required")
+        )
+        return 0 if strict_pass else 1
     return 0 if overall_pass else 1
 
 

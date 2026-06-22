@@ -562,3 +562,221 @@ def test_check_manifest_missing_sidecar_returns_2(tmp_path: Path) -> None:
 def test_check_manifest_missing_report_returns_2(tmp_path: Path) -> None:
     # The other exit-2 path: the report file itself does not exist.
     assert verify_core.main(["--check-manifest", str(tmp_path / "nope.json")]) == 2
+
+
+# ---------------------------------------------------------------------------
+# Path safety: the test_task / files injection that bypassed the verify chain.
+# Each of these earned a pass before the fence existed.
+# ---------------------------------------------------------------------------
+
+
+def test_safe_repo_relative_path_accepts_and_normalizes(tmp_path: Path) -> None:
+    root = tmp_path
+    assert verify_core.safe_repo_relative_path("tests/test_x.py", root, kind="t") == "tests/test_x.py"
+    # Backslashes normalize to POSIX; a dotted filename is not a traversal.
+    assert verify_core.safe_repo_relative_path("src\\m.py", root, kind="t") == "src/m.py"
+    assert verify_core.safe_repo_relative_path("foo..bar.py", root, kind="t") == "foo..bar.py"
+
+
+def test_safe_repo_relative_path_rejects_options_and_escapes(tmp_path: Path) -> None:
+    root = tmp_path
+    for bad in ("--version", "-k name", "../outside/test.py", "sub/../x.py",
+                "/abs/test.py", "C:\\tmp\\t.py", "a*b.py", "q[0].py", "", "  ",
+                "tests/\x00.py", "bad\x01name.py"):
+        try:
+            verify_core.safe_repo_relative_path(bad, root, kind="test_task")
+        except verify_core.UnsafePathError:
+            continue
+        raise AssertionError(f"expected UnsafePathError for {bad!r}")
+    # The error never echoes the raw value, so a rejected absolute path cannot leak.
+    try:
+        verify_core.safe_repo_relative_path("/etc/secret", root, kind="files")
+    except verify_core.UnsafePathError as exc:
+        assert "/etc/secret" not in str(exc)
+
+
+def test_test_task_option_injection_cannot_pass(tmp_path: Path) -> None:
+    # "--version" makes a raw `pytest --version` exit 0. Before the fence that earned a
+    # done verdict with no test ever running. It must now fail.
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    init_git_repo(repo)
+    tasks_file = tmp_path / "tasks-state.json"
+    write_tasks_state(tasks_file, [{"id": "T1", "status": "done", "test_task": "--version"}])
+
+    report, overall_pass = verify_core.build_report(
+        json.loads(tasks_file.read_text(encoding="utf-8")), repo
+    )
+    assert overall_pass is False
+    item = [i for i in report["tasks"] if i["claimed_status"] == "done"][0]
+    assert item["verified_status"] == "fail"
+    assert item["lens_tests_pass"] == "fail"
+    assert any("unsafe test_task" in f for f in item["failures"])
+    # The report records the redacted marker, never the raw option.
+    assert item["tests_run"] == ["<rejected test_task>"]
+
+
+def test_test_task_outside_repo_cannot_pass_and_does_not_leak(tmp_path: Path) -> None:
+    # A real passing test sitting outside the repo, referenced by traversal. The bypass
+    # would run it and pass; the fence rejects the path and leaks no machine-local path.
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    (outside / "test_ok.py").write_text("def test_ok():\n    assert True\n", encoding="utf-8")
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    init_git_repo(repo)
+    tasks_file = tmp_path / "tasks-state.json"
+    write_tasks_state(
+        tasks_file, [{"id": "T1", "status": "done", "test_task": "../outside/test_ok.py"}]
+    )
+
+    report, overall_pass = verify_core.build_report(
+        json.loads(tasks_file.read_text(encoding="utf-8")), repo
+    )
+    assert overall_pass is False
+    blob = json.dumps(report)
+    assert "../outside" not in blob
+    assert str(tmp_path) not in blob
+
+
+def test_files_traversal_fails_and_does_not_leak(tmp_path: Path) -> None:
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    (outside / "secret.txt").write_text("top secret\n", encoding="utf-8")
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    init_git_repo(repo)
+    tasks_file = tmp_path / "tasks-state.json"
+    write_tasks_state(
+        tasks_file, [{"id": "T1", "status": "done", "files": ["../outside/secret.txt"]}]
+    )
+
+    report, overall_pass = verify_core.build_report(
+        json.loads(tasks_file.read_text(encoding="utf-8")), repo
+    )
+    assert overall_pass is False
+    item = [i for i in report["tasks"] if i["claimed_status"] == "done"][0]
+    assert item["lens_file_exists"] == "fail"
+    assert item["files_checked"] == ["<rejected files>"]
+    blob = json.dumps(report)
+    assert "../outside" not in blob
+    assert str(tmp_path) not in blob
+
+
+def test_test_task_timeout_is_a_fail(tmp_path: Path) -> None:
+    # A hanging test must fail on the timeout, never hang the harness or pass.
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    init_git_repo(repo)
+    write_and_stage(repo, "tests/test_slow.py",
+                    "import time\n\n\ndef test_slow():\n    time.sleep(60)\n")
+    commit_all(repo, "add slow test")
+    tasks_file = tmp_path / "tasks-state.json"
+    write_tasks_state(
+        tasks_file, [{"id": "T1", "status": "done", "test_task": "tests/test_slow.py"}]
+    )
+
+    report, overall_pass = verify_core.build_report(
+        json.loads(tasks_file.read_text(encoding="utf-8")), repo, test_timeout=2
+    )
+    assert overall_pass is False
+    item = [i for i in report["tasks"] if i["claimed_status"] == "done"][0]
+    assert item["lens_tests_pass"] == "fail"
+    assert any("timed out" in f for f in item["failures"])
+
+
+def test_schema_pattern_matches_validator(tmp_path: Path) -> None:
+    # The schema pattern is the declarative mirror of safe_repo_relative_path. They must
+    # agree on every case, so a generic schema validator and the Python enforcement reject
+    # the same paths (no drift).
+    import re
+
+    schema_path = Path(__file__).parent.parent / "core" / "schemas" / "tasks-state.schema.json"
+    schema = json.loads(schema_path.read_text(encoding="utf-8"))
+    pattern = schema["properties"]["tasks"]["items"]["properties"]["test_task"]["pattern"]
+    rx = re.compile(pattern)
+    cases = ["tests/test_x.py", "src/auth.py", "foo..bar.py",
+             "--version", "-k name", "../outside/test.py", "sub/../x.py",
+             "/abs/t.py", "C:\\tmp\\t.py", "a*b.py", "q[0].py"]
+    for c in cases:
+        schema_ok = bool(rx.match(c))
+        try:
+            verify_core.safe_repo_relative_path(c, tmp_path, kind="files")
+            validator_ok = True
+        except verify_core.UnsafePathError:
+            validator_ok = False
+        assert schema_ok == validator_ok, f"drift on {c!r}: schema={schema_ok} validator={validator_ok}"
+
+
+# ---------------------------------------------------------------------------
+# --strict exit semantics: the exit code becomes a merge gate. The default exit
+# stays back-compatible (mechanical failure only), so existing callers are unaffected.
+# ---------------------------------------------------------------------------
+
+
+def test_default_exit_is_one_on_a_mechanical_failure(tmp_path: Path) -> None:
+    # The default exit (no --strict) must still return 1 on a real mechanical failure: this
+    # proves the new --strict branch did not subsume the default return path.
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    init_git_repo(repo)
+    tasks_file = write_tasks_state(
+        tmp_path / "ts.json", [{"id": "T1", "status": "done", "files": ["does/not/exist.py"]}]
+    )
+    assert verify_core.main(["--tasks-state", str(tasks_file), "--root", str(repo)]) == 1
+
+
+def test_non_positive_test_timeout_is_a_usage_error(tmp_path: Path) -> None:
+    import pytest
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    init_git_repo(repo)
+    tasks_file = write_tasks_state(tmp_path / "ts.json", [{"id": "T1", "status": "done"}])
+    with pytest.raises(SystemExit):
+        verify_core.main(
+            ["--tasks-state", str(tasks_file), "--root", str(repo), "--test-timeout", "0"]
+        )
+
+
+def test_strict_exit_zero_on_clean_pass(tmp_path: Path) -> None:
+    repo, tasks_file = _repo_with_done_task(tmp_path)
+    rc = verify_core.main(
+        ["--tasks-state", str(tasks_file), "--root", str(repo), "--strict"]
+    )
+    assert rc == 0
+
+
+def test_strict_exit_nonzero_on_ambiguous_but_default_is_zero(tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    init_git_repo(repo)
+    tasks_file = write_tasks_state(tmp_path / "ts.json", [{"id": "T1", "status": "done"}])
+    # Default exit is unchanged: an ambiguous done task is not a mechanical failure.
+    assert verify_core.main(["--tasks-state", str(tasks_file), "--root", str(repo)]) == 0
+    # Under --strict a conditional_pass (human review required) is not a clean pass.
+    assert verify_core.main(
+        ["--tasks-state", str(tasks_file), "--root", str(repo), "--strict"]
+    ) == 1
+
+
+def test_strict_exit_nonzero_on_high_trust_pending(tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    init_git_repo(repo)
+    # An auth-path change trips the Governor high-trust floor: the task mechanically
+    # passes, but the report flags that a human sign-off is still outstanding.
+    write_and_stage(repo, "src/auth.py", "def login():\n    return True\n")
+    commit_all(repo)
+    tasks_file = write_tasks_state(
+        tmp_path / "ts.json", [{"id": "T1", "status": "done", "files": ["src/auth.py"]}]
+    )
+    report, _ = verify_core.build_report(
+        json.loads(tasks_file.read_text(encoding="utf-8")), repo
+    )
+    assert report["summary"]["risk_level"] == "high-trust"
+    assert report["summary"]["human_review_required"] is True
+    # Default exit is 0 (no mechanical failure); --strict refuses the unsigned high-trust.
+    assert verify_core.main(["--tasks-state", str(tasks_file), "--root", str(repo)]) == 0
+    assert verify_core.main(
+        ["--tasks-state", str(tasks_file), "--root", str(repo), "--strict"]
+    ) == 1

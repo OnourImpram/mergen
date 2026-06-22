@@ -39,13 +39,13 @@ four metrics below target those failure modes directly.
 
 `evidence_metric.py` in this directory is a minimal honest metric derived from the machine-readable verify output. It reports two values: work-done rate (fraction of tasks with verifier-confirmed evidence) and phantom-completion count (tasks marked `[X]` with no backing artifact). The metric abstains on minimal-change runs that lack lean data rather than reporting a misleading zero. It reads `verification-report.json` and `tasks-state.json` emitted by `/mergen-verify` (schemas in `core/schemas/`). It reads BOM-prefixed JSON (the form Windows PowerShell writes) without choking. The full benchmark suite is on the roadmap.
 
-Gate use, honest defaults. `python eval/evidence_metric.py <report> --gate` fails the build when a claimed-done task is not verifier-confirmed. With nothing claimed done it abstains and passes, because a gate cannot enforce work that was never claimed. That abstention also means an empty report would pass, so a CI step meant to prove work was done should require at least one claimed task. The recommended CI invocation is:
+Gate use. `--strict` is the merge gate. `--gate` is the weaker legacy path: it checks the work-done rate and the phantom count, but it runs no integrity lint, so a proofless pass, an ambiguous pass, a `conditional_pass`, or an unsigned high-trust report slips through it. `--strict` runs that same work-done gate AND the `verify_report_lint` integrity check, and it forces `--min-claimed` to at least 1 so an empty report cannot pass in silence. The recommended CI invocation is:
 
 ```
-python eval/evidence_metric.py path/to/verification-report.json --gate --min-claimed 1
+python eval/evidence_metric.py path/to/verification-report.json --strict --min-claimed 1 --require-provenance
 ```
 
-With `--min-claimed 1` an empty or under-claiming report fails instead of passing silently. The deeper guarantee still rests on the verifier that produced the report, not on this metric: the gate acts on a committed artifact, so a hand-edited report can pass. What it buys is that phantom, unverified, or empty work fails the build by default.
+`--require-provenance` refuses a report with no recorded source commit. The deeper guarantee still rests on the verifier that produced the report, not on this metric: a committed report can be hand-edited, so the strongest pattern regenerates the report in CI from the live tree before gating (see `eval/ci/verify-gate-live.yml`). What `--strict` buys over `--gate` is that phantom, unverified, ambiguous, empty, and unsigned high-trust work all fail the build by default.
 
 ## Deterministic phantom-detection benchmark
 

@@ -193,6 +193,24 @@ def test_verification_report_high_trust_must_flag_review_required():
     assert v.is_valid(ok)
 
 
+def test_verification_report_approved_review_must_be_complete():
+    # A bare {status: approved} is not a sign-off: an approval must record who approved,
+    # when, and on what evidence. The linter mirrors this with INCOMPLETE_APPROVAL.
+    v = _validator("verification-report")
+    bare = {**_VER_BASE, "tasks": [_task(files_checked=["a.py"])],
+            "summary": {"verdict": "pass", "risk_level": "high-trust",
+                        "human_review_required": True,
+                        "human_review": {"status": "approved"}}}
+    assert not v.is_valid(bare)
+    full = {**_VER_BASE, "tasks": [_task(files_checked=["a.py"])],
+            "summary": {"verdict": "pass", "risk_level": "high-trust",
+                        "human_review_required": True,
+                        "human_review": {"status": "approved", "reviewer": "onour",
+                                         "approved_at": "2026-06-20T00:00:00Z",
+                                         "evidence": ["manual review of the auth path"]}}}
+    assert v.is_valid(full)
+
+
 def test_verification_report_accepts_the_committed_sample():
     v = _validator("verification-report")
     sample = json.loads(

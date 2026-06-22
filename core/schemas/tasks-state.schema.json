@@ -20,8 +20,18 @@
             "enum": ["pending", "done", "blocked", "conditional"],
             "description": "done corresponds to a verifier-confirmed [X], pending to [ ]. blocked is a task an unmet dependency or external wait holds back. conditional is a verified pass under a stated caveat the human still owns, the tasks-state mirror of the report's conditional_pass verdict."
           },
-          "test_task": { "type": ["string", "null"] },
-          "files": { "type": "array", "items": { "type": "string" } },
+          "test_task": {
+            "type": ["string", "null"],
+            "pattern": "^(?!-)(?![/\\\\])(?![A-Za-z]:)(?!.*(?:^|[\\\\/])\\.\\.(?:[\\\\/]|$))[^*?\\[\\]]+$",
+            "description": "A concrete repo-relative test path. The pattern is the declarative mirror of verify_core.safe_repo_relative_path: it rejects a leading '-' (a pytest option), a leading separator, a drive (C:\\...), a '..' traversal segment, and glob metacharacters. The Python validator is the enforcement; this pattern documents it for a generic schema validator."
+          },
+          "files": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^(?!-)(?![/\\\\])(?![A-Za-z]:)(?!.*(?:^|[\\\\/])\\.\\.(?:[\\\\/]|$))[^*?\\[\\]]+$"
+            }
+          },
           "last_verified_at": { "type": ["string", "null"] }
         }
       }
