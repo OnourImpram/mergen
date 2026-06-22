@@ -705,3 +705,53 @@ def test_schema_pattern_matches_validator(tmp_path: Path) -> None:
         except verify_core.UnsafePathError:
             validator_ok = False
         assert schema_ok == validator_ok, f"drift on {c!r}: schema={schema_ok} validator={validator_ok}"
+
+
+# ---------------------------------------------------------------------------
+# --strict exit semantics: the exit code becomes a merge gate. The default exit
+# stays back-compatible (mechanical failure only), so existing callers are unaffected.
+# ---------------------------------------------------------------------------
+
+
+def test_strict_exit_zero_on_clean_pass(tmp_path: Path) -> None:
+    repo, tasks_file = _repo_with_done_task(tmp_path)
+    rc = verify_core.main(
+        ["--tasks-state", str(tasks_file), "--root", str(repo), "--strict"]
+    )
+    assert rc == 0
+
+
+def test_strict_exit_nonzero_on_ambiguous_but_default_is_zero(tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    init_git_repo(repo)
+    tasks_file = write_tasks_state(tmp_path / "ts.json", [{"id": "T1", "status": "done"}])
+    # Default exit is unchanged: an ambiguous done task is not a mechanical failure.
+    assert verify_core.main(["--tasks-state", str(tasks_file), "--root", str(repo)]) == 0
+    # Under --strict a conditional_pass (human review required) is not a clean pass.
+    assert verify_core.main(
+        ["--tasks-state", str(tasks_file), "--root", str(repo), "--strict"]
+    ) == 1
+
+
+def test_strict_exit_nonzero_on_high_trust_pending(tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    init_git_repo(repo)
+    # An auth-path change trips the Governor high-trust floor: the task mechanically
+    # passes, but the report flags that a human sign-off is still outstanding.
+    write_and_stage(repo, "src/auth.py", "def login():\n    return True\n")
+    commit_all(repo)
+    tasks_file = write_tasks_state(
+        tmp_path / "ts.json", [{"id": "T1", "status": "done", "files": ["src/auth.py"]}]
+    )
+    report, _ = verify_core.build_report(
+        json.loads(tasks_file.read_text(encoding="utf-8")), repo
+    )
+    assert report["summary"]["risk_level"] == "high-trust"
+    assert report["summary"]["human_review_required"] is True
+    # Default exit is 0 (no mechanical failure); --strict refuses the unsigned high-trust.
+    assert verify_core.main(["--tasks-state", str(tasks_file), "--root", str(repo)]) == 0
+    assert verify_core.main(
+        ["--tasks-state", str(tasks_file), "--root", str(repo), "--strict"]
+    ) == 1

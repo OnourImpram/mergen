@@ -2,9 +2,18 @@
 
 Runs three filesystem and subprocess lenses against every done task and
 emits a verification-report.json that validates against the schema at
-core/schemas/verification-report.schema.json. Exit code 0 means every
-applicable mechanical lens passed. Exit code 1 means at least one done
-task failed a mechanical check.
+core/schemas/verification-report.schema.json.
+
+Exit codes. By default, 0 means no done task failed a mechanical lens and 1
+means at least one did; an ambiguous or high-trust-pending report still exits 0
+because the report, not this code, carries that nuance, and the CI gate
+(evidence_metric --strict, pr_guardian) is the enforcement. With --strict the
+exit code itself becomes a merge gate: 0 only when the verdict is a clean pass
+with no human review outstanding, 1 on any mechanical fail, conditional_pass, or
+high-trust-pending verdict. Either way, exit 2 means no report could be produced
+(a bad tasks-state or a harness crash), kept distinct so a gate can tell "could
+not check" from "checked and failed". Do not treat the default exit code as a
+merge gate: use --strict, or gate on the report with evidence_metric --strict.
 """
 
 from __future__ import annotations
@@ -764,6 +773,13 @@ def main(argv: list[str] | None = None) -> int:
         help=f"Per-test_task pytest timeout in seconds (default {DEFAULT_TEST_TIMEOUT}, or "
              "the MERGEN_TEST_TIMEOUT env var). A test that exceeds it fails, never passes.",
     )
+    parser.add_argument(
+        "--strict",
+        action="store_true",
+        help="Make the exit code a merge gate: 0 only for a clean pass with no human "
+             "review outstanding, 1 on any fail, conditional_pass, or high-trust-pending "
+             "verdict. Without it the exit code reports mechanical failure only.",
+    )
 
     args = parser.parse_args(argv)
 
@@ -838,6 +854,17 @@ def main(argv: list[str] | None = None) -> int:
     else:
         print(report_json)
 
+    # Default exit reports mechanical failure only. --strict turns the exit code into a
+    # merge gate: a conditional_pass (an ambiguous done task) or an outstanding human
+    # review (a high-trust report) is not a clean pass and must exit non-zero, so an
+    # automation that reads this exit code cannot mistake either for success.
+    if args.strict:
+        summary = report.get("summary", {})
+        strict_pass = (
+            summary.get("verdict") == "pass"
+            and not summary.get("human_review_required")
+        )
+        return 0 if strict_pass else 1
     return 0 if overall_pass else 1
 
 

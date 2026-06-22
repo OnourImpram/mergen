@@ -140,7 +140,9 @@ jobs:
             exit 1
           fi
           set +e
-          python eval/evidence_metric.py fresh-demo-report.json --gate --min-claimed 1
+          # --strict is the shipped merge gate (work-done check + integrity lint), so the
+          # demo dogfoods exactly what users run. The planted phantom still makes it refuse.
+          python eval/evidence_metric.py fresh-demo-report.json --strict --min-claimed 1 --require-provenance
           gate=$?
           set -e
           echo "verify_core exit: $vc, gate exit: $gate"
