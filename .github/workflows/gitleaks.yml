@@ -1,0 +1,56 @@
+name: Secret scan (gitleaks)
+
+# Full-history and pull-request secret scanning via gitleaks, using the
+# repo-local .gitleaks.toml allowlist (which exempts only the specific
+# synthetic placeholder credentials that exercise Mergen's own
+# secret-detection and redaction tests, by their literal value).
+#
+# The .gitleaks.toml file was previously committed but no CI step actually
+# ran the scanner, so the allowlist was defined but never consulted. This
+# workflow closes that gap: every push and pull request runs gitleaks with
+# the repo config, and a scheduled weekly scan covers the full git history.
+#
+# On a public repository gitleaks/gitleaks-action runs free. On a private
+# repository without a license it requires a GITLEAKS_LICENSE secret; the
+# workflow degrades gracefully (the job is skipped with a clear message)
+# rather than failing the build, so a private repo without a license is
+# not blocked but is also not scanned.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: "17 3 * * 1"
+
+permissions:
+  contents: read
+
+jobs:
+  gitleaks:
+    name: gitleaks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: gitleaks (pull request diff)
+        if: github.event_name == 'pull_request'
+        uses: gitleaks/gitleaks-action@ff98106e4c7b2bc287b24eaf42907196329070c7 # v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          config-path: .gitleaks.toml
+
+      - name: gitleaks (full history on push and schedule)
+        if: github.event_name != 'pull_request'
+        uses: gitleaks/gitleaks-action@ff98106e4c7b2bc287b24eaf42907196329070c7 # v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
+        with:
+          config-path: .gitleaks.toml

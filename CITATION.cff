@@ -1,0 +1,29 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+title: "Mergen: The execution backbone for AI coding agents"
+abstract: >-
+  Mergen is the execution half of the Agent Continuity Stack. It judges, with
+  wisdom, how much care a task deserves (the Governor), and it proves, with
+  accuracy, that the work was actually done and was no larger than it needed
+  to be (the verify gate). Built entirely from public Claude Code extension
+  points, with a deterministic, agent-agnostic core that runs anywhere Python
+  3.9 or newer runs. Pure standard library, no network, no model.
+type: software
+authors:
+  - family-names: Impram
+    given-names: Onour
+    orcid: "https://orcid.org/0000-0003-1076-3928"
+repository-code: "https://github.com/TheGoatPsy/mergen"
+url: "https://github.com/TheGoatPsy/mergen"
+license: Apache-2.0
+version: "2.0.0"
+date-released: "2026-06-28"
+keywords:
+  - ai-agents
+  - spec-driven-development
+  - verification
+  - governance
+  - claude-code
+  - sdd
+  - adversarial-verification
+  - deterministic

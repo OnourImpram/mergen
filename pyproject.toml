@@ -7,6 +7,35 @@ requires-python = ">=3.9"
 # built artifact (and any future PyPI page) carries it. SPDX expression per PEP 639.
 license = "Apache-2.0"
 license-files = ["LICENSE", "NOTICE"]
+authors = [{ name = "Onour Impram" }]
+keywords = [
+  "ai-agents",
+  "spec-driven-development",
+  "verification",
+  "governance",
+  "claude-code",
+  "sdd",
+  "adversarial-verification",
+  "deterministic",
+]
+# Classifiers declared explicitly so PyPI metadata reports the supported Python
+# versions and the project's scope. The list mirrors the CI matrix (3.9, 3.11,
+# 3.12, 3.13). No "License ::" classifier here on purpose: under PEP 639 the SPDX
+# `license` expression above is authoritative, and setuptools >= 77 errors if a
+# License classifier is also present (it is superseded by the expression).
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Developers",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3 :: Only",
+  "Topic :: Software Development :: Quality Assurance",
+  "Topic :: Software Development :: Testing",
+]
 
 # Installing this project exposes the `mergen` command. The supported path is an
 # editable/clone install (`pip install -e .` or `pipx install -e .`), because

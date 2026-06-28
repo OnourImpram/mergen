@@ -87,6 +87,27 @@ jobs:
       - name: Type check (strict, library modules from pyproject [tool.mypy])
         run: mypy
 
+  spec-verify:
+    # Critical-path hook import verification. AST-parses every hook that runs
+    # on the live session path (UserPromptSubmit, PostToolUse, Stop, PreCompact,
+    # SessionEnd) and fails if any imports a forbidden network or LLM client
+    # library. Mirrors mneme's tools/spec_verify.py. See scripts/spec_verify.py.
+    name: "spec_verify (hook import gate)"
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: "3.12"
+      - name: Critical-path hook import verification
+        run: python scripts/spec_verify.py --gate
+
   coverage:
     # Statement coverage of the Python source surface, with the fail-under floor
     # from pyproject [tool.coverage.report]. One Linux job so the number is
