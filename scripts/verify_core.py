@@ -800,7 +800,7 @@ def main(argv: list[str] | None = None) -> int:
         test_timeout = args.test_timeout
     else:
         env_timeout = os.environ.get("MERGEN_TEST_TIMEOUT", "")
-        test_timeout = int(env_timeout) if env_timeout.isdigit() and int(env_timeout) > 0 \
+        test_timeout = int(env_timeout) if env_timeout.isdecimal() and int(env_timeout) > 0 \
             else DEFAULT_TEST_TIMEOUT
 
     root = Path(args.root).resolve()

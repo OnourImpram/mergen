@@ -1,0 +1,27 @@
+# Mergen gitleaks configuration.
+#
+# Mergen is a verification harness; part of its job is to PROVE that its own
+# secret-detection and redaction logic works. Its test suite therefore contains
+# synthetic, universally-known placeholder credentials on purpose. A naive secret
+# scan flags those fixtures; they are not real and never were. This allowlist
+# exempts exactly those known-safe placeholder strings, by their literal value, so
+# a full-history `gitleaks detect` stays green without hiding a genuine future leak
+# elsewhere (the exemption is the specific synthetic string, not the whole file).
+#
+# Verified clean: a `gitleaks detect` over the full commit history finds zero real
+# secrets; every hit is one of the placeholders listed below.
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Synthetic placeholder credentials used to exercise Mergen's own secret-detection and redaction tests."
+regexes = [
+  # AWS's own canonical documentation example access key. Not a credential.
+  # Used in tests/test_governor_floor.py, tests/test_governor_adaptive.py, and
+  # tests/test_mneme_emit.py to prove the Governor floor and redaction preflight fire.
+  '''AKIAIOSFODNN7EXAMPLE''',
+  # Synthetic example tokens that only exist to trip the high-trust classifier in tests.
+  '''sk-abc123XYZsecretvalue''',
+  '''ghp_aBcDeFgHiJkLmNoPqRsTuVwXyZ123456''',
+]

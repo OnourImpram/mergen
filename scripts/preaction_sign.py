@@ -83,7 +83,7 @@ def sign(payload_hash: str, key: str) -> str:
     never appears in the output: the HMAC reveals nothing about it. An empty key is rejected.
     """
     _require_key(key)
-    return hmac.new(key.encode("utf-8"), payload_hash.encode("utf-8"), hashlib.sha256).hexdigest()
+    return hmac.HMAC(key.encode("utf-8"), payload_hash.encode("utf-8"), hashlib.sha256).hexdigest()
 
 
 def verify(payload_hash: str, token: str, key: str) -> bool:
