@@ -45,8 +45,8 @@ Seven template files in `core/templates/`:
 - `verification-template.md` and `project-state-template.md` are mergen additions.
 
 Vendored MIT helper scripts from Spec Kit in `core/scripts/`:
-`bash/`: `check-prerequisites.sh`, `common.sh`, `create-new-feature.sh`, `setup-plan.sh`, `setup-tasks.sh`.
-`powershell/`: the same five scripts as `.ps1` files.
+`bash/`: `check-prerequisites.sh`, `create-new-feature.sh`, `setup-plan.sh`, `setup-tasks.sh`.
+`powershell/`: the same four scripts as `.ps1` files.
 
 Two hooks in `core/hooks/`:
 

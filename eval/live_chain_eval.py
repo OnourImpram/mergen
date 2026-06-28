@@ -86,7 +86,10 @@ def protocol() -> dict[str, Any]:
     }
 
 
-def run(scenarios: list[dict[str, Any]], runner: Callable[[dict[str, Any], str], dict[str, Any]] | None) -> dict[str, Any]:
+def run(
+    scenarios: list[dict[str, Any]],
+    runner: Callable[[dict[str, Any], str], dict[str, Any]] | None,
+) -> dict[str, Any]:
     """Run the protocol against a live runner. Without a runner it refuses, it does not fake.
 
     runner is the operator's bridge to the live tool chain. When it is None, this raises rather

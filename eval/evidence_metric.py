@@ -30,7 +30,7 @@ from pathlib import Path
 from typing import Any
 
 
-def load_reports(path_str: str):
+def load_reports(path_str: str) -> tuple[list[tuple[Path, Any]], list[tuple[Path, str]]]:
     """Return (loadable reports, unreadable paths). The unreadable list is surfaced, not
     silently dropped: under a gate a report that cannot be parsed is a hard failure, since
     a corrupt file in a scanned directory would otherwise just shrink the evidence the gate
@@ -38,7 +38,7 @@ def load_reports(path_str: str):
     """
     path = Path(path_str)
     files = sorted(path.glob("**/verification-report.json")) if path.is_dir() else [path]
-    reports = []
+    reports: list[tuple[Path, Any]] = []
     unreadable: list[tuple[Path, str]] = []
     for f in files:
         try:
@@ -48,7 +48,7 @@ def load_reports(path_str: str):
     return reports, unreadable
 
 
-def work_done(reports):
+def work_done(reports: list[tuple[Path, Any]]) -> tuple[int, int, int]:
     claimed = verified = with_evidence = 0
     for _, report in reports:
         if not isinstance(report, dict):
@@ -63,7 +63,7 @@ def work_done(reports):
     return claimed, verified, with_evidence
 
 
-def minimal_change(overbuild_path: str | None):
+def minimal_change(overbuild_path: str | None) -> tuple[int, int, float] | None:
     if not overbuild_path:
         return None
     try:
@@ -94,8 +94,8 @@ def _load_linter() -> Any:
     return mod
 
 
-def strict_lint(reports, allow_conditional: bool, require_provenance: bool = False,
-                allow_empty: bool = False) -> int:
+def strict_lint(reports: list[tuple[Path, Any]], allow_conditional: bool,
+                require_provenance: bool = False, allow_empty: bool = False) -> int:
     """Lint every report for integrity. Return 1 if any report fails, else 0."""
     linter = _load_linter()
     errors = 0
@@ -111,8 +111,8 @@ def strict_lint(reports, allow_conditional: bool, require_provenance: bool = Fal
     return 1 if errors else 0
 
 
-def run_gate(claimed, verified, with_evidence, max_phantoms, min_work_done,
-             min_claimed) -> int:
+def run_gate(claimed: int, verified: int, with_evidence: int, max_phantoms: int,
+             min_work_done: float, min_claimed: int) -> int:
     """CI gate over the committed report. Honest about what it checks.
 
     A phantom is a task claimed done that the verifier did not confirm pass.
@@ -149,7 +149,7 @@ def run_gate(claimed, verified, with_evidence, max_phantoms, min_work_done,
     return 0 if ok else 1
 
 
-def main(argv=None) -> int:
+def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description="Mergen minimal evidence metric")
     ap.add_argument("report", help="verification-report.json file, or a directory to scan")
     ap.add_argument("--overbuild", help="optional overbuild.json with added_lines and lean_flagged_lines")
