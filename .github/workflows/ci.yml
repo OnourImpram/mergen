@@ -204,18 +204,25 @@ jobs:
         run: |
           set -euo pipefail
           git fetch --no-tags --depth=1 origin "$BASE_REF"
-          changed=$(git diff --name-only "origin/$BASE_REF...HEAD")
-          if [ -z "$changed" ]; then
+          # Read changed paths into an array, one per line, and pass them quoted.
+          # Quoting "${changed[@]}" is the safety: a hostile filename (glob
+          # metacharacters, embedded spaces, or a leading dash) cannot word-split or
+          # glob-expand to alter the set of paths the Governor classifies. Silently
+          # downgrading the floor by hiding a high-trust file behind a crafted name is
+          # the exact attack this prevents. The diff-content scan (--diff-file) is an
+          # independent second classifier, so high-trust content fails regardless.
+          readarray -t changed < <(git diff --name-only "origin/$BASE_REF...HEAD")
+          if [ "${#changed[@]}" -eq 0 ]; then
             echo "no changed files, nothing to classify."
             exit 0
           fi
-          echo "changed files:"; echo "$changed"
+          printf 'changed files:\n'; printf '%s\n' "${changed[@]}"
           git diff "origin/$BASE_REF...HEAD" > pr.diff
           ack=""
           if printf '%s' "$PR_BODY" | grep -qiE '^[[:space:]]*Governor-Ack:[[:space:]]*high-trust'; then
             ack="high-trust"
           fi
           python scripts/governor_floor.py \
-            --paths $changed \
+            --paths "${changed[@]}" \
             --diff-file pr.diff \
             --gate --ack "$ack"
