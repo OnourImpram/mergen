@@ -10,13 +10,15 @@ most welcome.
 ```bash
 git clone https://github.com/TheGoatPsy/mergen.git
 cd mergen
-pip install pytest
+pip install pytest ruff mypy
 python -m pytest tests/ -v
 ```
 
-No other dependencies are required. The project uses only the Python standard
-library. Tests use `tmp_path` fixtures and monkeypatch `Path.home()`, so they
-never touch your real `~/.claude` directory.
+The library itself uses only the Python standard library; `ruff` and `mypy` are
+development-only tools that the CI gates run. Their exact pinned versions live in
+the `[dependency-groups]` dev group in `pyproject.toml`, which `pip install pytest
+ruff mypy` matches closely enough for local work. Tests use `tmp_path` fixtures and
+monkeypatch `Path.home()`, so they never touch your real `~/.claude` directory.
 
 ## The single-source contract
 
@@ -40,6 +42,8 @@ committed `dist/` is stale. A pull request with stale output will not pass.
 python -m pytest tests/ -v
 python scripts/check_sync.py
 python scripts/check_no_reference_text.py
+ruff check .
+mypy
 ```
 
 `check_no_reference_text.py` fails the build if any structural fingerprint of a

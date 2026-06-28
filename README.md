@@ -99,6 +99,9 @@ On Windows PowerShell:
 .\install.ps1
 ```
 
+If PowerShell blocks the script, run it for this session only:
+`powershell -ExecutionPolicy Bypass -File .\install.ps1`.
+
 The installer runs three steps in order:
 
 1. `effort-mode/install.sh` (or `.ps1`) installs the `/mergen` command and the `UserPromptSubmit` effort hook.
