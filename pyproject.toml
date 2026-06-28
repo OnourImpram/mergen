@@ -3,6 +3,10 @@ name = "mergen"
 version = "2.0.0"
 description = "The execution backbone for AI coding agents: a wise Governor and a precise verify gate."
 requires-python = ">=3.9"
+# License declared in package metadata, not only in the LICENSE/NOTICE files, so a
+# built artifact (and any future PyPI page) carries it. SPDX expression per PEP 639.
+license = "Apache-2.0"
+license-files = ["LICENSE", "NOTICE"]
 
 # Installing this project exposes the `mergen` command. The supported path is an
 # editable/clone install (`pip install -e .` or `pipx install -e .`), because
@@ -34,16 +38,33 @@ build-backend = "setuptools.build_meta"
 [tool.setuptools]
 py-modules = ["mergen_cli"]
 
+[tool.ruff]
+# Lint is explicit here, not left to ruff's shifting defaults, so a future ruff
+# release cannot move the gate under us. line-length 120 is the width the code
+# already wraps to. The selected families (E/W pycodestyle, F pyflakes) are the
+# correctness-and-style core; a stricter set (I, B, UP, C4, SIM) is a deliberate
+# future step taken under its own review, not folded in silently here.
+line-length = 120
+target-version = "py39"
+
+[tool.ruff.lint]
+select = ["E", "F", "W"]
+
 [tool.mypy]
-# Strict type checking, scoped to mergen's Python library surface. The bash and
-# PowerShell shims and the test suite are out of scope; widening the gate to
-# feature_ops, the hooks, and the other renderers is a follow-up.
+# Strict type checking across mergen's Python surface. The bash and PowerShell
+# shims and the test suite stay out of scope; everything that ships and runs is
+# in. The gate was widened from the original library-only scope to cover the
+# hooks, the speckit and agents renderers, and the eval harness.
 strict = true
 files = [
     "scripts",
     "mergen_cli.py",
+    "core/hooks",
     "dist/native/build_native.py",
     "dist/native/patch_settings_hooks.py",
+    "dist/speckit/build_speckit.py",
+    "dist/agents/build_agents.py",
+    "eval",
 ]
 
 [tool.pytest.ini_options]
@@ -58,7 +79,7 @@ omit = ["tests/*", "*/__pycache__/*"]
 
 [tool.coverage.report]
 show_missing = true
-# Initial floor, set a few points below the measured ~78 percent so a normal
-# change does not false-fail and so variance across the CI matrix is absorbed.
-# Meant to ratchet upward as coverage of the renderers and feature_ops improves.
-fail_under = 75
+# Floor set a few points below the measured ~86.8 percent so a normal change does
+# not false-fail and so variance across the CI matrix is absorbed. Ratcheted up
+# from the original 75 now that the measured number has held above 86 percent.
+fail_under = 84

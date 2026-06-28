@@ -84,7 +84,8 @@ def _summarize(report: dict[str, Any]) -> str:
     # Every surfaced field is sanitized: it is data read from a file, not trusted text.
     verdict = _safe(summary.get("verdict", "unknown"))
     feature = _safe(report.get("feature_id", "this feature"))
-    tasks = report.get("tasks") if isinstance(report.get("tasks"), list) else []
+    raw_tasks = report.get("tasks")
+    tasks = raw_tasks if isinstance(raw_tasks, list) else []
     unproven = [
         _safe(t.get("task_id", "?"), cap=_MAX_TASK_ID) for t in tasks
         if isinstance(t, dict) and t.get("claimed_status") == "done"

@@ -206,7 +206,7 @@ def cmd_build(out_dir: Path, dry_run: bool) -> int:
     return 0
 
 
-def main(argv=None) -> int:
+def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description="mergen spec-kit (B-shell) renderer")
     ap.add_argument("--out", default=str(REPO / "dist" / "speckit"),
                     help="output dir (default: dist/speckit in the repo)")
