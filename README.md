@@ -14,7 +14,7 @@ adversarial verification, governed so the ceremony scales to the risk.**
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-blue" alt="License: Apache-2.0"></a>
 </p>
 
-Mergen is named for the Turkic deity of wisdom and isabet, of sound judgment and the arrow that finds its
+Mergen is named for the Turkic deity of wisdom and accuracy, of sound judgment and the arrow that finds its
 mark. The name states the architecture. Mergen judges, with wisdom, how much care a task deserves, and it
 proves, with accuracy, that the work was actually done and was no larger than it needed to be. The wisdom is
 the Governor. The accuracy is the verify gate.

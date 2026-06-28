@@ -1,7 +1,7 @@
 # Mergen
 
 Mergen is the execution backbone for AI coding agents. It is named for the Turkic deity of wisdom and
-isabet, of sound judgment and the arrow that finds its mark. The name states the architecture. Mergen does
+accuracy, of sound judgment and the arrow that finds its mark. The name states the architecture. Mergen does
 two things and holds them together. It judges, with wisdom, how much care a task deserves. And it proves,
 with accuracy, that the work was actually done and was no larger than it needed to be.
 
