@@ -25,7 +25,7 @@ decides what a task needs and proves it was hit. Together they form the Agent Co
 seam and nothing more. Mergen keeps no durable memory of its own, no vault or index. It writes local execution
 and verification artifacts, and leaves the durable memory to mneme.
 
-> Status: v1.0.0, beta. Built entirely from public Claude Code extension points (slash commands,
+> Status: v2.0.0, beta. Built entirely from public Claude Code extension points (slash commands,
 > hooks, `settings.json`). Does not patch or modify the Claude Code binary.
 
 Mergen is original work. Its operating principles were informed by responsible-AI design ideas and reproduce
@@ -287,7 +287,7 @@ LICENSE / NOTICE / ATTRIBUTION.md Apache-2.0 and third-party attribution
 
 ## Status
 
-v1.0.0, beta. A source version, not yet a tagged release (see `CHANGELOG.md`).
+v2.0.0, beta. The first tagged public release (see `CHANGELOG.md`).
 
 - Native shell: 14 `/mergen-*` commands installed as Claude Code skills, plus the effort-mode hook and command.
 - Spec Kit shell: a preset overriding 8 commands plus an extension adding 6 (`verify`, `rollup`, `go`, `lean`,

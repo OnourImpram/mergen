@@ -6,9 +6,11 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [2.0.0] - 2026-06-28
+
 Engineering line that turns the guarantees the v1.0.0 prompts describe into
-deterministic code. The theme is a tool proves over a prompt promises. Not yet
-tagged as a release.
+deterministic code. The theme is a tool proves over a prompt promises. This is the
+first public release: the v2.0.0 tag closes the engineering line below.
 
 ### Added
 
