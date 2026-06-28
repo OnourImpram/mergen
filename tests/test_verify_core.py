@@ -6,6 +6,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
 """Tests for scripts/verify_core.py.
 
 Each test uses a real throwaway git repo created with subprocess so the
@@ -780,3 +782,107 @@ def test_strict_exit_nonzero_on_high_trust_pending(tmp_path: Path) -> None:
     assert verify_core.main(
         ["--tasks-state", str(tasks_file), "--root", str(repo), "--strict"]
     ) == 1
+
+
+# ---------------------------------------------------------------------------
+# CLI argument paths, the empty-after-normalization edge, the environment
+# timeout, and the two check-manifest staleness sub-branches the happy path
+# does not reach. These cover error and edge branches, not new behaviour.
+# ---------------------------------------------------------------------------
+
+
+def test_safe_repo_relative_path_rejects_dot_only(tmp_path: Path) -> None:
+    # "." clears the option, separator, drive, and traversal screens but
+    # normalizes to nothing. An empty target is not a file the harness can verify.
+    with pytest.raises(verify_core.UnsafePathError, match="empty after normalization"):
+        verify_core.safe_repo_relative_path(".", tmp_path, kind="files")
+
+
+def test_env_test_timeout_drives_the_bound(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # With no --test-timeout flag, the environment supplies the bound.
+    monkeypatch.setenv("MERGEN_TEST_TIMEOUT", "45")
+    repo, tasks_file = _repo_with_done_task(tmp_path)
+    assert verify_core.main(["--tasks-state", str(tasks_file), "--root", str(repo)]) == 0
+
+
+def test_main_requires_tasks_state_or_manifest(tmp_path: Path) -> None:
+    # Neither --tasks-state nor --check-manifest is a usage error, not a silent pass.
+    with pytest.raises(SystemExit):
+        verify_core.main(["--root", str(tmp_path)])
+
+
+def test_main_missing_tasks_state_file_returns_2(tmp_path: Path) -> None:
+    rc = verify_core.main(
+        ["--tasks-state", str(tmp_path / "nope.json"), "--root", str(tmp_path)]
+    )
+    assert rc == 2
+
+
+def test_out_with_json_also_prints_report(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    repo, tasks_file = _repo_with_done_task(tmp_path)
+    out = tmp_path / "report.json"
+    verify_core.main(
+        ["--tasks-state", str(tasks_file), "--root", str(repo), "--out", str(out), "--json"]
+    )
+    # --out writes the file; --json additionally prints the report to stdout.
+    assert '"verdict"' in capsys.readouterr().out
+
+
+def test_check_manifest_require_fresh_no_source_commit_is_stale(tmp_path: Path) -> None:
+    # A report generated outside a git tree records no source_commit, so a
+    # freshness check cannot confirm it and must report stale, not pass.
+    work = tmp_path / "plain"
+    work.mkdir()
+    (work / "src").mkdir()
+    (work / "src" / "x.py").write_text("x = 1\n", encoding="utf-8")
+    tasks_file = write_tasks_state(
+        tmp_path / "ts.json", [{"id": "T1", "status": "done", "files": ["src/x.py"]}]
+    )
+    out = tmp_path / "report.json"
+    verify_core.main(["--tasks-state", str(tasks_file), "--root", str(work), "--out", str(out)])
+    assert verify_core.main(
+        ["--check-manifest", str(out), "--root", str(work), "--require-fresh"]
+    ) == 1
+
+
+def test_check_manifest_require_fresh_non_git_root_is_stale(tmp_path: Path) -> None:
+    # The report has a source_commit, but the root given for the freshness check
+    # is not a git tree, so the current HEAD is unknowable and the report is stale.
+    repo, tasks_file = _repo_with_done_task(tmp_path)
+    out = tmp_path / "report.json"
+    verify_core.main(["--tasks-state", str(tasks_file), "--root", str(repo), "--out", str(out)])
+    plain = tmp_path / "plain"
+    plain.mkdir()
+    assert verify_core.main(
+        ["--check-manifest", str(out), "--root", str(plain), "--require-fresh"]
+    ) == 1
+
+
+def test_main_unparseable_tasks_state_returns_2(tmp_path: Path) -> None:
+    # A tasks-state that exists but is not valid JSON is a harness input error,
+    # exit 2 (no report could be produced), not a verdict.
+    bad = tmp_path / "tasks-state.json"
+    bad.write_text("{ not valid json", encoding="utf-8")
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    init_git_repo(repo)
+    assert verify_core.main(["--tasks-state", str(bad), "--root", str(repo)]) == 2
+
+
+def test_harness_crash_while_building_the_report_returns_2(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # A crash inside build_report is a no-report condition (exit 2), never a
+    # silent pass. This failure mode cannot be provoked with real fs/git state,
+    # so the build step is stubbed to raise; everything else is real.
+    repo, tasks_file = _repo_with_done_task(tmp_path)
+
+    def _boom(*_args: object, **_kwargs: object) -> tuple[dict, bool]:
+        raise RuntimeError("simulated harness crash")
+
+    monkeypatch.setattr(verify_core, "build_report", _boom)
+    assert verify_core.main(["--tasks-state", str(tasks_file), "--root", str(repo)]) == 2
