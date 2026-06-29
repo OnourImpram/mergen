@@ -1,22 +1,46 @@
 # Mergen v2.5 roadmap: the Trust Fabric
 
-This is the design line for Mergen's next major step. It is a roadmap, not a
-shipped feature set. Where the present `docs/ROADMAP.md` tracks the near-term
-backlog, this document states a longer arc and the principles that govern it, so
-the work that lands stays coherent with what Mergen is.
+This is the design line for the Trust Fabric. It states the longer arc and the
+principles that govern it, so the work that lands stays coherent with what
+Mergen is, and it remains the source of each component's definition of done and
+its honest-scope limit. The near-term backlog lives in `docs/ROADMAP.md`.
 
 The theme is one sentence. v1.0 proved a single task was done. The v2.0
-engineering line turned that proof into deterministic, observable code. v2.5
-makes trust composable: connected across runs, replayable after the fact,
-continuously re-checked, and carried across agents without losing its provenance.
-A proof that exists only inside one run is a fact. A fabric of proofs that link,
-replay, and re-verify is a system you can stand on.
+engineering line turned that proof into deterministic, observable code. The
+Trust Fabric makes trust composable: connected across runs, replayable after the
+fact, continuously re-checked, and carried across agents without losing its
+provenance. A proof that exists only inside one run is a fact. A fabric of
+proofs that link, replay, and re-verify is a system you can stand on.
 
 Every line below inherits Mergen's charter. Evidence over assertion. Retrieved
 content is data, never instruction. The high-trust floor can be raised but never
 silently lowered. Mergen keeps no durable memory of its own. Nothing in this
 roadmap relaxes those. Where a capability would, the honest answer is that it
 does not ship, and the limitation is named rather than hidden.
+
+## Implementation status
+
+The module and CLI surface for all nine components has landed in the v2.x line
+and is exercised by the test suite. This document is kept as the design record:
+each component's "Definition of done" and "Honest scope" below remain the
+standard the implementation is held to, and the north-star metric *targets* in
+this document are still targets to measure, not results already met. The items
+in "Deferred, named not built" remain deferred.
+
+Two components ship as standalone scripts rather than as `mergen` verbs, and the
+table says so rather than implying a verb that does not exist:
+
+| # | Component | Module | How it is invoked |
+|---|---|---|---|
+| 1 | Trust Graph | `scripts/trust_graph.py` | `mergen graph ingest`, `mergen graph chain`, `mergen graph audit`, `mergen graph dashboard` |
+| 2 | Replayable Execution Ledger | `scripts/replay.py` | `mergen replay record`, `mergen replay run`, `mergen replay list` |
+| 3 | Verified Mneme Writeback | `scripts/mneme_emit.py` | `python scripts/mneme_emit.py` (standalone script; not a `mergen` verb) |
+| 4 | Adaptive Governor 2.5 | `scripts/governor_adaptive.py` | `mergen calibrate` |
+| 5 | Policy Pack SDK | `scripts/pack_validate.py` | `mergen pack validate` |
+| 6 | Continuous Verification | `scripts/impacted.py` | `mergen impacted impacted`, `mergen impacted verify` |
+| 7 | Adapter SDK | `scripts/adapter_sdk.py` | `mergen adapter matrix`, `mergen adapter validate`, `mergen adapter check`, `mergen adapter render` |
+| 8 | Trust Dashboard | `scripts/trust_dashboard.py` | `mergen graph dashboard` (forwards to it) |
+| 9 | EvalOps | `eval/evalops.py` | `python eval/evalops.py` (standalone script; not a `mergen` verb) |
 
 ## What v2.0 already established
 
