@@ -151,22 +151,26 @@ The `/verify` and `/rollup` commands reference these templates and explain their
 
 ---
 
-## 3. Planned next
+## 3. Shipped since v1.0.0
+
+These items were previously listed as planned and have shipped. Each is now backed by a module and a CLI surface in the v2.x line.
+
+**Clinical and security domain packs.**
+`domains/clinical/pack.toml` and `domains/security/pack.toml` ship as the worked examples for the Policy Pack SDK, validated by `mergen pack validate`. A pack is policy as data, loaded by the floor engine and never executed by it, and it can only raise the floor, never lower it; the validator enforces that at validation time.
+
+**Dashboard and cross-run trends.**
+A static dashboard ships (`scripts/dashboard.py`, `mergen dashboard <dir>`): a self-contained offline HTML snapshot, one row per report. The cross-run dimension ships alongside it (`scripts/trends.py`, `mergen trends <dir>`): phantom-completion and work-done-rate history across the run corpus with an inline SVG sparkline, computed from each report's schema-required `tasks` array. A `--json` flag emits the same metrics as a machine-readable export, the honest observability seam, with no telemetry dependency and no network call in mergen core. The one cross-run signal not shown is the over-build trend, which needs lean data the verification report does not carry.
+
+**Churn analytics.**
+`mergen trends` ranks the tasks that most often flip verified status or return as phantoms across the run corpus, the per-task churn leaderboard that surfaces spec patterns reliably producing verifier failures. Clustering by spec pattern rolls the same churn up per feature, and because a feature is the natural namespace for a task, the rollup never pools a task id across two features. Aggregation across corpora reads several report directories at once and compares them side by side, each corpus analyzed independently so a task id is never pooled across two unrelated projects. The `--json` export carries the per-feature rollup and, in multi-corpus mode, a corpus comparison.
+
+## 4. Planned next
 
 **Real eval runs with published numbers.**
 Execute the methodology in `eval/` against representative codebases, record results (phantom-completion rate, wave-parallel speedup, verification catch rate, and over-build rate), and publish them with reproducible scripts and the exact model versions used.
 
 **GitHub Action and PR comment bot.**
 A CI action that runs `scripts/check_sync.py` and posts a summary comment on pull requests, showing drift status and a diff of any stale rendered output.
-
-**Clinical and security domain packs.**
-Preset overlays that add domain-specific constitution clauses, checklist items, and evidence standards for clinical and security contexts.
-
-**Dashboard trends and history (cross-run view shipped).**
-A basic static dashboard shipped first (`scripts/dashboard.py`, `mergen dashboard <dir>`): a self-contained offline HTML snapshot, one row per report. The cross-run dimension now ships alongside it (`scripts/trends.py`, `mergen trends <dir>`): phantom-completion and work-done-rate history across the run corpus with an inline SVG sparkline, computed from each report's schema-required `tasks` array. A `--json` flag emits the same metrics as a machine-readable export, the honest observability seam, with no telemetry dependency and no network call in mergen core. The one remaining cross-run signal is the over-build trend, which needs lean data the verification report does not carry, so it is not shown yet.
-
-**Churn analytics (shipped).**
-`mergen trends` ranks the tasks that most often flip verified status or return as phantoms across the run corpus, the per-task churn leaderboard that surfaces spec patterns reliably producing verifier failures. Two follow-ons now ship with it. Clustering by spec pattern rolls the same churn up per feature, so a whole spec that keeps fighting the verifier surfaces above its individual tasks, and because a feature is the natural namespace for a task, the rollup never pools a task id across two features. Aggregation across corpora reads several report directories at once and compares them side by side, each corpus analyzed independently so a task id is never pooled across two unrelated projects. The `--json` export carries the per-feature rollup and, in multi-corpus mode, a corpus comparison alongside each corpus in full.
 
 **Full benchmark suite.**
 Extend `eval/evidence_metric.py` into the complete four-metric benchmark with published reproducible results.
