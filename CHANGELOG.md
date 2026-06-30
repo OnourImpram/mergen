@@ -6,6 +6,15 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- The Mergen Agent (`/mergen-agent`), a fifteenth command and single entry point that
+  orchestrates the full SDD lifecycle in one call: arm the substrate, run the Governor,
+  route and execute via `/mergen-go`, then report. It sequences the other fourteen
+  `/mergen-*` skills without replacing them, and never skips the verify gate or
+  auto-completes a high-trust task. Ships in both shells: the native `/mergen-agent` skill
+  and the spec-kit extension command `speckit.mergen.agent`.
+
 ## [2.0.0] - 2026-06-28
 
 Engineering line that turns the guarantees the v1.0.0 prompts describe into

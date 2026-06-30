@@ -32,6 +32,9 @@ provides:
     - name: "speckit.mergen.govern"
       file: "commands/speckit.mergen.govern.md"
       description: "Classify a task by risk and complexity, then set the memory scope, workflow depth, evidence standard, and human-approval requirement (Mergen's wisdom organ)."
+    - name: "speckit.mergen.agent"
+      file: "commands/speckit.mergen.agent.md"
+      description: "The Mergen Agent: arm, govern, and route a task through the full SDD lifecycle in one command. The single entry point that orchestrates the 14 /mergen-* skills without replacing them."
 
 hooks:
   after_implement:
