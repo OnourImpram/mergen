@@ -114,12 +114,13 @@ The spec-kit renderer (`dist/speckit/build_speckit.py`) produces:
 
 - A **preset** (`dist/speckit/preset/mergen/`) that overrides eight stock spec-kit commands
   (constitution, specify, clarify, checklist, plan, tasks, analyze, implement) via `preset.yml`.
-- An **extension** (`dist/speckit/extensions/mergen/`) that adds six commands
+- An **extension** (`dist/speckit/extensions/mergen/`) that adds seven commands
   (`speckit.mergen.verify`, `speckit.mergen.rollup`, `speckit.mergen.go`,
-  `speckit.mergen.lean`, `speckit.mergen.debt`, `speckit.mergen.govern`) via `extension.yml`, with
+  `speckit.mergen.lean`, `speckit.mergen.debt`, `speckit.mergen.govern`,
+  `speckit.mergen.agent`) via `extension.yml`, with
   `after_implement` wired to `speckit.mergen.verify` (optional: false).
 
-The native renderer (`dist/native/build_native.py`) provides the full 14-command suite
+The native renderer (`dist/native/build_native.py`) provides the full 15-command suite
 under `~/.claude/skills/mergen-<name>/SKILL.md`. The eval uses the native renderer by
 default and notes where spec-kit renderer behavior differs.
 

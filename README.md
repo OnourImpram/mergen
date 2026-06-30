@@ -58,8 +58,9 @@ Full mechanism in [docs/HOW-IT-WORKS.md](docs/HOW-IT-WORKS.md).
 
 ### Half B: the spec-driven development layer (a superset of Spec Kit)
 
-Fourteen command files in `core/commands/` define the full SDD lifecycle, each as a named Workflow pattern. A
-single-source renderer produces two distribution shells: a native Claude Code skills install (invoked as
+Fifteen command files in `core/commands/` define the full SDD lifecycle: fourteen named Workflow patterns,
+plus the Mergen Agent (`/mergen-agent`), a single entry point that orchestrates the whole lifecycle in one
+command. A single-source renderer produces two distribution shells: a native Claude Code skills install (invoked as
 `/mergen-*`) and a Spec Kit preset plus extension (invoked as `speckit.*` or `speckit.mergen.*`). Spec Kit
 prompt-suggests structured documents and relies on a single context to follow them. Mergen runs the same
 lifecycle under max effort plus Workflow orchestration, where each command is a multi-agent pattern, tasks
@@ -105,7 +106,7 @@ If PowerShell blocks the script, run it for this session only:
 The installer runs three steps in order:
 
 1. `effort-mode/install.sh` (or `.ps1`) installs the `/mergen` command and the `UserPromptSubmit` effort hook.
-2. `python dist/native/build_native.py build` renders the 14 `/mergen-*` skills to `~/.claude/skills/`.
+2. `python dist/native/build_native.py build` renders the 15 `/mergen-*` skills to `~/.claude/skills/`.
 3. `python dist/native/patch_settings_hooks.py` registers the two SDD hooks in `~/.claude/settings.json`
    (idempotent, corruption-safe, and tolerant of a UTF-8 BOM that Claude Code on Windows can write).
 
@@ -148,13 +149,14 @@ This creates `<project-dir>/.specify/` with scripts, templates, and a `memory/` 
 
 ---
 
-## The 14 /mergen-* commands
+## The 15 /mergen-* commands
 
 Each command is a named Workflow pattern. All run under the mergen substrate (max reasoning effort, standing
 orchestration), with the Governor setting how much of the pattern a given task earns.
 
 | Command | One-line purpose | Workflow pattern |
 |---|---|---|
+| `/mergen-agent` | **The Mergen Agent.** Run a task through the whole lifecycle in one command. | Single entry point: Arm, Govern, Route and execute (via `/mergen-go`), Report. Orchestrates the other 14 skills without replacing them; never skips the verify gate or auto-completes high-trust. |
 | `/mergen-govern` | Classify a task by risk and set its ceremony. | The Governor: tier (tiny/standard/spec/high-trust), memory scope, evidence standard, and human approval, with a deterministic high-trust floor. Emits `governor-decision.json`. |
 | `/mergen-constitution` | Author or update the project constitution. | Author plus adversarial self-check before accepting. |
 | `/mergen-specify` | Write a feature spec. | Judge panel: three parallel drafts (user, architect, rejection lens) plus an adversarial reviewer, then synthesis. |
@@ -200,7 +202,7 @@ If you use GitHub Spec Kit, `./install.sh --speckit` renders a preset and extens
 **Preset** (`dist/speckit/preset/mergen/`): overrides 8 stock Spec Kit commands (`constitution`, `specify`,
 `clarify`, `checklist`, `plan`, `tasks`, `analyze`, `implement`).
 
-**Extension** (`dist/speckit/extensions/mergen/`): adds 6 commands not present in stock Spec Kit.
+**Extension** (`dist/speckit/extensions/mergen/`): adds 7 commands not present in stock Spec Kit.
 
 | Added command | Purpose |
 |---|---|
@@ -210,6 +212,7 @@ If you use GitHub Spec Kit, `./install.sh --speckit` renders a preset and extens
 | `speckit.mergen.go` | Tier executor and router |
 | `speckit.mergen.lean` | Over-engineering review (delete-list, complexity only) |
 | `speckit.mergen.debt` | Deferred-shortcut debt ledger |
+| `speckit.mergen.agent` | The Mergen Agent (single-entry-point lifecycle orchestrator) |
 
 The extension wires `hooks.after_implement -> speckit.mergen.verify` with `optional: false`, making verify
 mandatory in the Spec Kit implement flow. That is the hook contract, reinforced in-session. A CI check against
@@ -256,7 +259,7 @@ effort-mode/
   install.sh / install.ps1        effort-mode-only installers
 
 core/
-  commands/                       14 SDD command source files (single source)
+  commands/                       15 SDD command source files (single source)
   lazy-ladder.md                  the minimalism discipline (single source)
   schemas/                        JSON schemas: verification-report, tasks-state, governor-decision
   templates/                      7 templates (5 vendored MIT, 2 mergen additions)
@@ -269,7 +272,7 @@ dist/
   native/patch_settings_hooks.py  registers the two SDD hooks (BOM-safe)
   speckit/build_speckit.py        renders core/ to spec-kit preset + extension
   speckit/preset/mergen/          committed preset output (8 command overrides)
-  speckit/extensions/mergen/      committed extension output (6 new commands)
+  speckit/extensions/mergen/      committed extension output (7 new commands)
   agents/build_agents.py          renders lazy-ladder.md to non-Claude passive rule files
 
 scripts/
@@ -289,9 +292,9 @@ LICENSE / NOTICE / ATTRIBUTION.md Apache-2.0 and third-party attribution
 
 v2.0.0, beta. The first tagged public release (see `CHANGELOG.md`).
 
-- Native shell: 14 `/mergen-*` commands installed as Claude Code skills, plus the effort-mode hook and command.
-- Spec Kit shell: a preset overriding 8 commands plus an extension adding 6 (`verify`, `rollup`, `go`, `lean`,
-  `debt`, `govern`).
+- Native shell: 15 `/mergen-*` commands installed as Claude Code skills, plus the effort-mode hook and command.
+- Spec Kit shell: a preset overriding 8 commands plus an extension adding 7 (`verify`, `rollup`, `go`, `lean`,
+  `debt`, `govern`, `agent`).
 - The Governor sets risk-calibrated ceremony with a deterministic high-trust floor.
 - Machine-readable verify (`verification-report.json`, `tasks-state.json`) and a minimal eval evidence metric.
 - The mneme seam is bidirectional and network-free. `scripts/mneme_emit.py` emits and reads decision records,
