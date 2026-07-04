@@ -8,7 +8,7 @@
 adversarial verification, governed so the ceremony scales to the risk.**
 
 <p align="center">
-  <a href="https://github.com/TheGoatPsy/mergen/actions/workflows/ci.yml"><img src="https://github.com/TheGoatPsy/mergen/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://github.com/OnourImpram/mergen/actions/workflows/ci.yml"><img src="https://github.com/OnourImpram/mergen/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <img src="https://img.shields.io/badge/status-beta-blue" alt="status: beta">
   <img src="https://img.shields.io/badge/python-3.9%2B-blue" alt="Python 3.9+">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-blue" alt="License: Apache-2.0"></a>
@@ -19,7 +19,7 @@ mark. The name states the architecture. Mergen judges, with wisdom, how much car
 proves, with accuracy, that the work was actually done and was no larger than it needed to be. The wisdom is
 the Governor. The accuracy is the verify gate.
 
-Mergen is the execution half of a two-part whole. [mneme](https://github.com/TheGoatPsy/mneme) is the memory
+Mergen is the execution half of a two-part whole. [mneme](https://github.com/OnourImpram/mneme) is the memory
 half. mneme remembers why a project is the way it is, with provenance visible and nothing fabricated. Mergen
 decides what a task needs and proves it was hit. Together they form the Agent Continuity Stack, joined by one
 seam and nothing more. Mergen keeps no durable memory of its own, no vault or index. It writes local execution
@@ -89,7 +89,7 @@ affordable.
 Requirements: Claude Code, Python 3.9+ on `PATH`.
 
 ```bash
-git clone https://github.com/TheGoatPsy/mergen.git
+git clone https://github.com/OnourImpram/mergen.git
 cd mergen
 ./install.sh               # macOS / Linux / Git Bash
 ```

@@ -61,7 +61,7 @@ representative at an online or offline event.
 Instances of abusive, harassing, or otherwise unacceptable behavior may be
 reported privately to the project maintainer. The project does not publish a
 contact email; report through the repository's private channel by opening a
-[private security advisory](https://github.com/TheGoatPsy/mergen/security/advisories/new)
+[private security advisory](https://github.com/OnourImpram/mergen/security/advisories/new)
 (the same private vehicle this project uses for sensitive reports), and the
 maintainer will respond. All complaints will be reviewed and investigated
 promptly and fairly.

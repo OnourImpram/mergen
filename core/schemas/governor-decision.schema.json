@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/TheGoatPsy/mergen/schemas/governor-decision.schema.json",
+  "$id": "https://github.com/OnourImpram/mergen/schemas/governor-decision.schema.json",
   "title": "Mergen Governor decision",
   "description": "The Governor's classification of a task: the tier and the ceremony it sets. Auditable because the matched triggers are recorded, not just the label.",
   "type": "object",

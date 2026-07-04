@@ -4,7 +4,7 @@
 
 If you find a security issue, please report it privately. Open a private security
 advisory on this repository through the Security tab, or contact the maintainer
-through the GitHub profile at https://github.com/TheGoatPsy. Please do not open a
+through the GitHub profile at https://github.com/OnourImpram. Please do not open a
 public issue for a vulnerability.
 
 Include the affected file or command, the conditions that trigger the issue, and

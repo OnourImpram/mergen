@@ -8,7 +8,7 @@ most welcome.
 ## Development setup
 
 ```bash
-git clone https://github.com/TheGoatPsy/mergen.git
+git clone https://github.com/OnourImpram/mergen.git
 cd mergen
 pip install pytest ruff mypy
 python -m pytest tests/ -v

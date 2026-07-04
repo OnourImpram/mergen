@@ -6,8 +6,8 @@ was inherited and what changed, so the lineage stays visible and honest.
 
 ## Seed
 
-Mergen's execution engine was seeded from `TheGoatPsy/claude-code-hypercode` (v1.1.0), the operator's own
-private spec-driven-development and effort-mode toolkit. That repository is the operator's own work, so the
+Mergen's execution engine was seeded from the operator's own prior `claude-code-hypercode` toolkit
+(v1.1.0), a private spec-driven-development and effort-mode system. That repository is the operator's own work, so the
 seed carries no third-party obligation. The seed brought across the single-source command suite
 (`core/commands/`), the two renderers (`dist/native`, `dist/speckit`), the cross-agent renderer
 (`dist/agents`), the effort-mode hook, the minimalism discipline (`core/lazy-ladder.md`), the drift gate
@@ -38,13 +38,12 @@ skills. The test suite passes.
 
 ## Naming
 
-The GitHub repository is `TheGoatPsy/mergen`. The bare `mergen` name on npm is taken by an unrelated
-package, so the npm publishing identity, if and when Mergen publishes, is the scoped name
-`@thegoatpsy/mergen`.
+The GitHub repository is `OnourImpram/mergen`. The bare `mergen` name on npm is taken by an unrelated
+package, so the npm publishing identity requires a separate scoped package decision before any publish.
 
 ## Relationship to mneme
 
-Mergen is the execution layer. mneme (`TheGoatPsy/mneme`, published and MIT) is the memory layer and remains
+Mergen is the execution layer. mneme (`OnourImpram/mneme`, published and MIT) is the memory layer and remains
 untouched. No mneme package name (`mneme-core`, `mneme-mcp-server`, `mneme-cc-plugin`, the `mneme-mcp`
 command) was renamed, forked, or vendored. Mergen consumes mneme only across the documented seam, through
 mneme's public interface.

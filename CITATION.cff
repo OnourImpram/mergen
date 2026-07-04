@@ -13,8 +13,8 @@ authors:
   - family-names: Impram
     given-names: Onour
     orcid: "https://orcid.org/0000-0003-1076-3928"
-repository-code: "https://github.com/TheGoatPsy/mergen"
-url: "https://github.com/TheGoatPsy/mergen"
+repository-code: "https://github.com/OnourImpram/mergen"
+url: "https://github.com/OnourImpram/mergen"
 license: Apache-2.0
 version: "2.0.0"
 date-released: "2026-06-28"

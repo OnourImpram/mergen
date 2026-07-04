@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/TheGoatPsy/mergen/schemas/verification-report.schema.json",
+  "$id": "https://github.com/OnourImpram/mergen/schemas/verification-report.schema.json",
   "title": "Mergen verification report",
   "description": "Machine-readable record of an independent verification pass. Companion to verification-report.md. Each task carries a confidence label so calibration is recorded, not assumed.",
   "type": "object",

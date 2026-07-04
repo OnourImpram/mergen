@@ -126,7 +126,7 @@ Wires `hooks.after_implement -> speckit.mergen.verify` with `optional: false`, m
 
 ### Promo website
 
-A static promo site for Mergen and the Agent Continuity Stack is published at https://thegoatpsy.github.io/mergen/ . It is served from the `gh-pages` branch, kept separate from the engine source on `main`. It presents the identity, the Governor, the verify gate, and the honest enforcement distinction, and it claims no benchmark numbers. A public launch of the repository is gated on a full git-history secret sweep and the operator's final sign-off; until then the repository's visibility is the operator's call.
+A static promo site for Mergen and the Agent Continuity Stack is published at https://onourimpram.github.io/mergen/ . It is served from the `gh-pages` branch, kept separate from the engine source on `main`. It presents the identity, the Governor, the verify gate, and the honest enforcement distinction, and it claims no benchmark numbers. A public launch of the repository is gated on a full git-history secret sweep and the operator's final sign-off; until then the repository's visibility is the operator's call.
 
 ---
 
