@@ -44,7 +44,7 @@ mergen-supervise = "mergen_supervise:main"
 
 [dependency-groups]
 dev = [
-  "coverage>=7,<8",
+  "coverage>=7.15.2,<8",
   "jsonschema>=4.25.1,<5",
   "mypy>=1.11,<2",
   "pytest>=8,<9",
