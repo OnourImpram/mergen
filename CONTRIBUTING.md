@@ -14,7 +14,7 @@ python -m pip install pytest pytest-cov jsonschema ruff mypy
 python -m pytest tests/ -v
 ```
 
-The runtime uses the Python standard-library. Development tools are declared in the `dev` dependency group in
+The runtime uses the Python standard library. Development tools are declared in the `dev` dependency group in
 `pyproject.toml`.
 
 ## Architectural invariants
