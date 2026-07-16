@@ -7,6 +7,8 @@ Start with the repository [README](../README.md), then continue with the focused
 - [How Mergen works](HOW-IT-WORKS.md)
 - [Compatibility matrix](COMPAT.md)
 - [Host capability matrix](CAPABILITIES.md)
+- [Publishing policy](PUBLISHING.md)
+- [GitHub administration baseline](GITHUB-SETTINGS.md)
 - [Roadmap](ROADMAP.md)
 - [Mneme seam](MNEME-SEAM.md)
 
