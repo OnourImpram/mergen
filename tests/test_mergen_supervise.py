@@ -1,4 +1,4 @@
-"""Tests for the fail-closed milestone supervisor."""
+"""Tests for independent, fail-closed milestone supervision."""
 
 from __future__ import annotations
 
@@ -16,7 +16,7 @@ import mergen_supervise  # noqa: E402
 
 
 def _run(*args: str, cwd: Path) -> str:
-    proc = subprocess.run(
+    process = subprocess.run(
         list(args),
         cwd=cwd,
         check=True,
@@ -24,7 +24,7 @@ def _run(*args: str, cwd: Path) -> str:
         stderr=subprocess.PIPE,
         text=True,
     )
-    return proc.stdout.strip()
+    return process.stdout.strip()
 
 
 def _write_json(path: Path, value: dict) -> bytes:
@@ -41,7 +41,7 @@ def _write_manifest(path: Path, raw: bytes) -> None:
     )
 
 
-def _base_state() -> dict:
+def _base_state(file_path: str = "src/a.py") -> dict:
     return {
         "schema_version": "1.0",
         "feature_id": "M001",
@@ -49,18 +49,18 @@ def _base_state() -> dict:
             {
                 "id": "T001",
                 "status": "done",
-                "files": ["src/a.py"],
+                "files": [file_path],
                 "test_task": None,
             }
         ],
     }
 
 
-def _base_report(head: str, state_raw: bytes) -> dict:
+def _base_report(head: str, state_raw: bytes, file_path: str = "src/a.py") -> dict:
     return {
         "schema_version": "1.0",
         "feature_id": "M001",
-        "verified_at": "2026-07-15T00:00:00Z",
+        "verified_at": "2026-07-16T00:00:00Z",
         "verifier": {"tool": "verify_core.py", "mode": "mechanical", "agent": "none"},
         "summary": {
             "verdict": "pass",
@@ -81,9 +81,9 @@ def _base_report(head: str, state_raw: bytes) -> dict:
                 "confidence": "extracted",
                 "evidence_strength": 0.5,
                 "evidence_tier": "corroborated",
-                "files_checked": ["src/a.py"],
+                "files_checked": [file_path],
                 "tests_run": [],
-                "evidence": ["exists: src/a.py", "git-tracked: src/a.py"],
+                "evidence": [f"exists: {file_path}", f"git-tracked: {file_path}"],
                 "failures": [],
             }
         ],
@@ -97,20 +97,28 @@ def _base_report(head: str, state_raw: bytes) -> dict:
     }
 
 
-def _case(tmp_path: Path, *, state: dict | None = None, report_edit=None) -> tuple[Path, Path, dict]:
+def _case(
+    tmp_path: Path,
+    *,
+    file_path: str = "src/a.py",
+    state: dict | None = None,
+    report_edit=None,
+) -> tuple[Path, Path, dict]:
     root = tmp_path
     _run("git", "init", "-q", cwd=root)
     _run("git", "config", "user.name", "Mergen Tests", cwd=root)
     _run("git", "config", "user.email", "tests@example.invalid", cwd=root)
-    (root / "src").mkdir()
-    (root / "src" / "a.py").write_text("VALUE = 1\n", encoding="utf-8")
+    artifact = root / file_path
+    artifact.parent.mkdir(parents=True, exist_ok=True)
+    artifact.write_text("VALUE = 1\n", encoding="utf-8")
     state_path = root / "tasks-state.json"
-    state_raw = _write_json(state_path, state or _base_state())
-    _run("git", "add", "src/a.py", "tasks-state.json", cwd=root)
+    state_value = state or _base_state(file_path)
+    state_raw = _write_json(state_path, state_value)
+    _run("git", "add", file_path, "tasks-state.json", cwd=root)
     _run("git", "commit", "-q", "-m", "fixture", cwd=root)
     head = _run("git", "rev-parse", "HEAD", cwd=root)
 
-    report = _base_report(head, state_raw)
+    report = _base_report(head, state_raw, file_path)
     if report_edit is not None:
         report_edit(report)
     report_path = root / "verification-report.json"
@@ -128,28 +136,32 @@ def _supervise(root: Path, **kwargs) -> dict:
     )
 
 
-def test_clean_current_evidence_is_the_only_advancing_state(tmp_path):
+def test_clean_current_evidence_advances(tmp_path):
     _case(tmp_path)
     decision = _supervise(tmp_path)
     assert decision["verdict"] == "pass"
+    assert decision["advancement_action"] == "advance"
     assert decision["decision"] == "advance"
     assert all(check["result"] == "pass" for check in decision["checks"])
+    assert decision["source"]["source_state_hash"]
+    assert decision["decision_hash"] == mergen_supervise._decision_hash(decision)
+    assert decision["evidence_summary"]["independently_executed"] == 1
 
 
-def test_missing_manifest_is_unverifiable_and_blocks(tmp_path):
+def test_missing_manifest_is_unverifiable_and_holds(tmp_path):
     report_path, _, _ = _case(tmp_path)
     report_path.with_name(report_path.name + ".sha256").unlink()
     decision = _supervise(tmp_path)
     assert decision["verdict"] == "unverifiable"
-    assert decision["decision"] == "block"
+    assert decision["advancement_action"] == "hold"
 
 
-def test_manifest_mismatch_is_fail_and_blocks(tmp_path):
+def test_manifest_mismatch_is_fail(tmp_path):
     report_path, _, _ = _case(tmp_path)
     report_path.write_text(report_path.read_text(encoding="utf-8") + "\n", encoding="utf-8")
     decision = _supervise(tmp_path)
     assert decision["verdict"] == "fail"
-    assert decision["decision"] == "block"
+    assert decision["advancement_action"] == "return_for_remediation"
 
 
 def test_stale_source_commit_is_unverifiable(tmp_path):
@@ -159,8 +171,15 @@ def test_stale_source_commit_is_unverifiable(tmp_path):
     _run("git", "commit", "-q", "-m", "move head", cwd=tmp_path)
     decision = _supervise(tmp_path)
     assert decision["verdict"] == "unverifiable"
-    assert decision["decision"] == "block"
-    assert any(check["check_id"] == "source-commit" for check in decision["checks"])
+    assert "source-commit" in decision["unverifiable_criteria"]
+
+
+def test_dirty_tree_outside_evidence_is_unverifiable(tmp_path):
+    _case(tmp_path)
+    (tmp_path / "unexpected.txt").write_text("dirty\n", encoding="utf-8")
+    decision = _supervise(tmp_path)
+    assert decision["verdict"] == "unverifiable"
+    assert any(check["check_id"] == "worktree-state" for check in decision["checks"])
 
 
 def test_tasks_state_digest_mismatch_is_fail(tmp_path):
@@ -168,7 +187,7 @@ def test_tasks_state_digest_mismatch_is_fail(tmp_path):
     state_path.write_text(state_path.read_text(encoding="utf-8") + "\n", encoding="utf-8")
     decision = _supervise(tmp_path)
     assert decision["verdict"] == "fail"
-    assert decision["decision"] == "block"
+    assert "tasks-state-digest" in decision["failed_criteria"]
 
 
 def test_pending_task_is_direct_failure(tmp_path):
@@ -195,13 +214,10 @@ def test_pending_task_is_direct_failure(tmp_path):
     _case(tmp_path, state=state, report_edit=edit)
     decision = _supervise(tmp_path)
     assert decision["verdict"] == "fail"
-    assert any(
-        check["check_id"] == "task-completion" and check["result"] == "fail"
-        for check in decision["checks"]
-    )
+    assert "task-completion" in decision["failed_criteria"]
 
 
-def test_ambiguous_done_task_is_unverifiable(tmp_path):
+def test_ambiguous_done_task_is_unverifiable_not_fail(tmp_path):
     def edit(report):
         item = report["tasks"][0]
         item["verified_status"] = "fail"
@@ -220,7 +236,17 @@ def test_ambiguous_done_task_is_unverifiable(tmp_path):
     _case(tmp_path, report_edit=edit)
     decision = _supervise(tmp_path)
     assert decision["verdict"] == "unverifiable"
-    assert decision["decision"] == "block"
+    task_check = next(item for item in decision["checks"] if item["check_id"] == "task-verdicts")
+    assert task_check["result"] == "unverifiable"
+
+
+def test_duplicate_task_ids_are_unverifiable(tmp_path):
+    state = _base_state()
+    state["tasks"].append(dict(state["tasks"][0]))
+    _case(tmp_path, state=state)
+    decision = _supervise(tmp_path)
+    assert decision["verdict"] == "unverifiable"
+    assert "task-set" in decision["unverifiable_criteria"]
 
 
 def test_task_set_mismatch_is_fail(tmp_path):
@@ -230,28 +256,164 @@ def test_task_set_mismatch_is_fail(tmp_path):
     _case(tmp_path, report_edit=edit)
     decision = _supervise(tmp_path)
     assert decision["verdict"] == "fail"
-    assert decision["decision"] == "block"
 
 
-def test_report_path_cannot_escape_trusted_root(tmp_path):
+def test_explicit_milestone_id_must_match_report(tmp_path):
+    _case(tmp_path)
+    decision = _supervise(tmp_path, milestone_id="M999")
+    assert decision["verdict"] == "fail"
+    assert "feature-binding" in decision["failed_criteria"]
+
+
+def test_report_path_cannot_escape_root(tmp_path):
     decision = _supervise(tmp_path, report_arg="../verification-report.json")
     assert decision["verdict"] == "unverifiable"
-    assert decision["decision"] == "block"
     assert decision["checks"][0]["check_id"] == "evidence-paths"
 
 
-def test_positive_review_claim_is_observed_but_not_independence_proof(tmp_path):
+def test_symlinked_report_cannot_escape_root(tmp_path):
+    outside = tmp_path.parent / "outside-report.json"
+    outside.write_text("{}\n", encoding="utf-8")
+    (tmp_path / "link.json").symlink_to(outside)
+    decision = _supervise(tmp_path, report_arg="link.json")
+    assert decision["verdict"] == "unverifiable"
+    assert decision["checks"][0]["check_id"] == "evidence-paths"
+
+
+def test_option_shaped_path_is_data_not_command(tmp_path):
+    decision = _supervise(tmp_path, report_arg="--version")
+    assert decision["verdict"] == "unverifiable"
+    assert decision["checks"][0]["check_id"] == "report-readable"
+
+
+def test_high_trust_downgrade_is_rejected(tmp_path):
+    _case(tmp_path, file_path="src/auth.py")
+    decision = _supervise(tmp_path)
+    assert decision["verdict"] == "fail"
+    assert "governor-risk" in decision["failed_criteria"]
+    assert decision["governor_decision"]["risk_level"] == "high-trust"
+
+
+def test_recorded_high_trust_trigger_cannot_carry_standard_risk(tmp_path):
+    def edit(report):
+        report["summary"]["risk_triggers"] = ["auth-path"]
+
+    _case(tmp_path, report_edit=edit)
+    decision = _supervise(tmp_path)
+    assert decision["verdict"] == "fail"
+    assert decision["governor_decision"]["risk_level"] == "high-trust"
+
+
+def test_effective_risk_preserves_the_higher_non_high_trust_tier(tmp_path):
+    def edit(report):
+        report["summary"]["risk_level"] = "spec"
+
+    _case(tmp_path, report_edit=edit)
+    decision = _supervise(tmp_path)
+    assert decision["verdict"] == "pass"
+    assert decision["governor_decision"]["risk_level"] == "spec"
+
+
+def test_high_trust_without_bound_approval_is_conditional(tmp_path):
+    def edit(report):
+        report["summary"].update(
+            {
+                "risk_level": "high-trust",
+                "risk_triggers": ["auth-path"],
+                "human_review_required": True,
+            }
+        )
+
+    _case(tmp_path, file_path="src/auth.py", report_edit=edit)
+    decision = _supervise(tmp_path)
+    assert decision["verdict"] == "conditional_pass"
+    assert decision["advancement_action"] == "human_review_required"
+    assert decision["decision"] == "block"
+
+
+def test_valid_artifact_bound_human_approval_advances(tmp_path, monkeypatch):
+    key = "Ab9!" * 16
+    monkeypatch.setenv("MERGEN_SIGNING_KEY", key)
+
+    def edit(report):
+        report["summary"].update(
+            {
+                "risk_level": "high-trust",
+                "risk_triggers": ["auth-path"],
+                "human_review_required": True,
+                "human_review": {
+                    "status": "approved",
+                    "reviewer": "operator",
+                    "approved_at": "2026-07-16T00:00:00Z",
+                    "evidence": ["reviewed exact report and diff"],
+                },
+            }
+        )
+
+    report_path, _, _ = _case(tmp_path, file_path="src/auth.py", report_edit=edit)
+    digest = hashlib.sha256(report_path.read_bytes()).hexdigest()
+    token = hmac.new(key.encode(), digest.encode(), hashlib.sha256).hexdigest()
+    decision = _supervise(tmp_path, approval_token=token)
+    assert decision["verdict"] == "pass"
+    assert decision["advancement_action"] == "advance"
+
+
+def test_invalid_artifact_bound_approval_fails(tmp_path, monkeypatch):
+    monkeypatch.setenv("MERGEN_SIGNING_KEY", "Bc8@" * 16)
+
+    def edit(report):
+        report["summary"].update(
+            {
+                "risk_level": "high-trust",
+                "human_review_required": True,
+                "human_review": {
+                    "status": "approved",
+                    "reviewer": "operator",
+                    "approved_at": "2026-07-16T00:00:00Z",
+                    "evidence": ["reviewed exact report and diff"],
+                },
+            }
+        )
+
+    _case(tmp_path, file_path="src/auth.py", report_edit=edit)
+    decision = _supervise(tmp_path, approval_token="0" * 64)
+    assert decision["verdict"] == "fail"
+    assert "human-approval" in decision["failed_criteria"]
+
+
+def test_rejected_human_review_fails_without_token(tmp_path):
+    def edit(report):
+        report["summary"].update(
+            {
+                "risk_level": "high-trust",
+                "human_review_required": True,
+                "human_review": {
+                    "status": "rejected",
+                    "reviewer": "operator",
+                    "approved_at": None,
+                    "evidence": ["unsafe change"],
+                },
+            }
+        )
+
+    _case(tmp_path, file_path="src/auth.py", report_edit=edit)
+    decision = _supervise(tmp_path)
+    assert decision["verdict"] == "fail"
+
+
+def test_positive_review_is_observed_but_not_independence_proof(tmp_path):
     _case(tmp_path)
-    review = {
-        "reviewer": "implementation-agent",
-        "verdict": "pass",
-        "independent": True,
-        "workspace_root": "/tmp/attacker-selected-root",
-    }
-    _write_json(tmp_path / "review.json", review)
+    _write_json(
+        tmp_path / "review.json",
+        {
+            "reviewer": "implementation-agent",
+            "verdict": "pass",
+            "independent": True,
+            "workspace_root": "/tmp/attacker-selected-root",
+        },
+    )
     decision = _supervise(tmp_path, review_arg="review.json")
     assert decision["verdict"] == "pass"
-    assert decision["decision"] == "advance"
     observation = decision["review_observation"]
     assert observation["claimed_independent"] is True
     assert observation["independence_verified"] is False
@@ -264,7 +426,6 @@ def test_negative_external_review_blocks(tmp_path):
     _write_json(tmp_path / "review.json", {"reviewer": "reviewer", "verdict": "reject"})
     decision = _supervise(tmp_path, review_arg="review.json")
     assert decision["verdict"] == "fail"
-    assert decision["decision"] == "block"
 
 
 def test_unresolved_external_review_is_unverifiable(tmp_path):
@@ -272,87 +433,32 @@ def test_unresolved_external_review_is_unverifiable(tmp_path):
     _write_json(tmp_path / "review.json", {"reviewer": "reviewer", "verdict": "pending"})
     decision = _supervise(tmp_path, review_arg="review.json")
     assert decision["verdict"] == "unverifiable"
-    assert decision["decision"] == "block"
 
 
-def test_required_human_approval_without_bound_token_is_unverifiable(tmp_path):
+def test_malformed_policy_result_is_unverifiable(tmp_path):
     def edit(report):
-        report["summary"]["human_review_required"] = True
-        report["summary"]["human_review"] = {
-            "status": "approved",
-            "reviewer": "operator",
-            "approved_at": "2026-07-15T00:00:00Z",
-            "evidence": ["reviewed report and diff"],
-        }
+        report["policy_results"] = [{"result": "pass"}]
 
     _case(tmp_path, report_edit=edit)
     decision = _supervise(tmp_path)
     assert decision["verdict"] == "unverifiable"
-    assert decision["decision"] == "block"
+    assert "policy-results" in decision["unverifiable_criteria"]
 
 
-def test_valid_artifact_bound_human_approval_advances(tmp_path, monkeypatch):
-    key = "Ab9!" * 16
-    monkeypatch.setenv("MERGEN_SIGNING_KEY", key)
-
-    def edit(report):
-        report["summary"]["human_review_required"] = True
-        report["summary"]["human_review"] = {
-            "status": "approved",
-            "reviewer": "operator",
-            "approved_at": "2026-07-15T00:00:00Z",
-            "evidence": ["reviewed report and diff"],
-        }
-
-    report_path, _, _ = _case(tmp_path, report_edit=edit)
-    raw = report_path.read_bytes()
-    digest = hashlib.sha256(raw).hexdigest()
-    token = hmac.new(key.encode(), digest.encode(), hashlib.sha256).hexdigest()
-    (tmp_path / "approval-token.txt").write_text(token + "\n", encoding="utf-8")
-    decision = _supervise(
-        tmp_path,
-        approval_token=token,
-        approval_token_path_arg="approval-token.txt",
-    )
-    assert decision["verdict"] == "pass"
-    assert decision["decision"] == "advance"
+def test_no_reproduction_can_never_cleanly_pass(tmp_path):
+    _case(tmp_path)
+    decision = _supervise(tmp_path, reproduce=False)
+    assert decision["verdict"] == "unverifiable"
+    assert decision["advancement_action"] == "hold"
 
 
-def test_invalid_artifact_bound_human_approval_fails(tmp_path, monkeypatch):
-    monkeypatch.setenv("MERGEN_SIGNING_KEY", "Bc8@" * 16)
-
-    def edit(report):
-        report["summary"]["human_review_required"] = True
-        report["summary"]["human_review"] = {
-            "status": "approved",
-            "reviewer": "operator",
-            "approved_at": "2026-07-15T00:00:00Z",
-            "evidence": ["reviewed report and diff"],
-        }
-
-    _case(tmp_path, report_edit=edit)
-    decision = _supervise(tmp_path, approval_token="0" * 64)
-    assert decision["verdict"] == "fail"
-    assert decision["decision"] == "block"
+def test_status_parser_handles_nul_terminated_rename():
+    paths, malformed = mergen_supervise._status_paths(b"R  new name\x00old name\x00")
+    assert paths == ["new name", "old name"]
+    assert malformed is False
 
 
-def test_rejected_human_review_is_fail_even_without_token(tmp_path):
-    def edit(report):
-        report["summary"]["human_review_required"] = True
-        report["summary"]["human_review"] = {
-            "status": "rejected",
-            "reviewer": "operator",
-            "approved_at": None,
-            "evidence": ["unsafe change"],
-        }
-
-    _case(tmp_path, report_edit=edit)
-    decision = _supervise(tmp_path)
-    assert decision["verdict"] == "fail"
-    assert decision["decision"] == "block"
-
-
-def test_cli_writes_decision_and_manifest(tmp_path):
+def test_cli_writes_json_manifest_and_markdown(tmp_path):
     _case(tmp_path)
     out = tmp_path / "milestone-decision.json"
     rc = mergen_supervise.main(
@@ -370,15 +476,23 @@ def test_cli_writes_decision_and_manifest(tmp_path):
     assert rc == 0
     decision = json.loads(out.read_text(encoding="utf-8"))
     assert decision["verdict"] == "pass"
-    assert decision["decision"] == "advance"
     sidecar = out.with_name(out.name + ".sha256")
-    expected = hashlib.sha256(out.read_bytes()).hexdigest()
-    assert sidecar.read_text(encoding="utf-8").split()[0] == expected
+    assert sidecar.read_text(encoding="utf-8").split()[0] == hashlib.sha256(out.read_bytes()).hexdigest()
+    markdown = out.with_suffix(".md").read_text(encoding="utf-8")
+    assert "Advancement action" in markdown
+    assert "independently_executed" in markdown
 
 
-def test_cli_returns_two_for_unverifiable(tmp_path):
-    _case(tmp_path)
-    (tmp_path / "verification-report.json.sha256").unlink()
+def test_cli_returns_two_for_conditional_pass(tmp_path):
+    def edit(report):
+        report["summary"].update(
+            {
+                "risk_level": "high-trust",
+                "human_review_required": True,
+            }
+        )
+
+    _case(tmp_path, file_path="src/auth.py", report_edit=edit)
     rc = mergen_supervise.main(
         [
             "--root",
@@ -408,9 +522,29 @@ def test_cli_returns_one_for_fail(tmp_path):
     assert rc == 1
 
 
-@pytest.mark.parametrize("verdict", ["fail", "unverifiable"])
-def test_decision_builder_never_advances_non_pass(verdict):
-    checks = [mergen_supervise._check("fixture", verdict, "fixture")]
-    decision = mergen_supervise._decision("M001", checks, {}, None)
-    assert decision["verdict"] == verdict
+def test_cli_rejects_markdown_out_without_json_out():
+    with pytest.raises(SystemExit) as exc:
+        mergen_supervise.main(
+            [
+                "--report",
+                "report.json",
+                "--tasks-state",
+                "tasks.json",
+                "--markdown-out",
+                "report.md",
+            ]
+        )
+    assert exc.value.code == 2
+
+
+@pytest.mark.parametrize("result", ["fail", "unverifiable"])
+def test_decision_builder_never_advances_non_pass(result):
+    decision = mergen_supervise._decision(
+        "M001",
+        [mergen_supervise._check("fixture", result, "fixture")],
+        {},
+        None,
+    )
+    assert decision["verdict"] == result
     assert decision["decision"] == "block"
+    assert decision["advancement_action"] != "advance"
