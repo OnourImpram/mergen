@@ -6,7 +6,7 @@ abstract: >-
   executors own planning and implementation. Mergen evaluates declared evidence,
   reproduces deterministic checks where possible, applies a non-downgradable risk
   floor, and returns a fail-closed advancement decision. The core uses the Python
-  standard-library, runs locally without a model or network dependency, and records
+  standard library, runs locally without a model or network dependency, and records
   provenance and honest limitations with every decision.
 type: software
 authors:
