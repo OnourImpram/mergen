@@ -1,33 +1,78 @@
 # Milestone Supervisor
 
-Mergen's authority layer is an independent, deterministic milestone supervisor. It sits outside the implementation
-path. An implementation agent can propose that work is complete, but it cannot authorize its own advancement.
+The Mergen milestone supervisor is an independent, deterministic authority process. It sits outside the implementation
+path. An executor may claim that work is complete. It cannot write its own final Mergen decision or authorize its own
+advancement.
 
-The supervisor consumes a verification report, its SHA-256 sidecar, the exact tasks-state input, repository
-provenance, policy results, and any required artifact-bound human approval. It emits one machine-readable decision:
+The bundled supervisor currently verifies Mergen software task reports. The protocol is host neutral. Other artifact
+profiles can be added without changing the executor and verifier separation.
 
-| Verdict | Decision | Meaning |
-|---|---|---|
-| `pass` | `advance` | The required evidence is complete, current, internally consistent, and passing. |
-| `fail` | `block` | The evidence positively demonstrates failed, incomplete, rejected, or tampered work. |
-| `unverifiable` | `block` | Evidence is missing, stale, malformed, ambiguous, or cannot be authenticated. |
+## Inputs
 
-There is no fourth path. `unverifiable` never degrades into a guessed pass.
+The supervisor reads evidence produced by an external workflow.
+
+1. `verification-report.json`.
+2. `verification-report.json.sha256`.
+3. The exact `tasks-state.json` named by report provenance.
+4. The current Git source state.
+5. Policy results and Governor risk information.
+6. An optional external review record.
+7. An optional exact state human approval token.
+
+Every executor supplied field remains untrusted until it is reproduced or corroborated.
+
+## Outputs
+
+The supervisor emits machine-readable JSON, a SHA-256 sidecar, and human-readable Markdown.
+
+| Verdict | Advancement action | Compatibility decision | Meaning |
+| --- | --- | --- | --- |
+| `pass` | `advance` | `advance` | Required evidence is current, consistent, independently reproduced, and passing. |
+| `conditional_pass` | `human_review_required` | `block` | Deterministic criteria pass, but required exact state human approval is absent. |
+| `fail` | `return_for_remediation` | `block` | Evidence demonstrates failed, incomplete, contradicted, rejected, or tampered work. |
+| `unverifiable` | `hold` | `block` | Evidence is missing, stale, malformed, ambiguous, or unavailable. |
+
+There is no guessed pass. Only `pass` authorizes advancement. The compatibility field `decision` exists for integrations
+that understand only `advance` and `block`. New integrations should use `advancement_action`.
 
 ## Trust boundary
 
-`--root` is selected by the operator who starts the supervisor. Evidence paths must resolve inside that root.
-Neither a verification report nor an external review record can replace the root or direct the supervisor to an
-arbitrary workspace.
+`--root` is selected by the operator who starts the supervisor. Evidence paths must resolve inside that root. Neither a
+report nor an external review record can replace the root or direct the verifier to an arbitrary workspace. Path
+traversal and symlink escapes are refused.
 
-The supervisor does not edit source files, route implementation work, mark tasks done, or call a model. Its only
-write is the requested decision artifact and its SHA-256 sidecar.
+The supervisor does not edit source files, route implementation work, mark tasks complete, or call a model. Its only
+writes are the requested decision artifact, its sidecar, and its Markdown rendering.
 
-## External review claims
+## Independent reproduction
 
-An optional review record may be observed. A negative or unresolved review blocks. A positive review is recorded,
-but it is not used as proof that the reviewer is independent. Fields such as `independent: true`, `workspace_root`,
-or a reviewer name are claims from untrusted data. The decision artifact therefore records:
+A clean pass requires a fresh invocation of the deterministic verifier against the current repository. The executor
+report remains an input claim until Mergen reproduces the applicable checks.
+
+`--no-reproduce` exists for diagnostics. It always prevents a clean pass.
+
+The supervisor compares the fresh risk level with the supplied report. A freshly detected high-trust surface that was
+reported as a lower risk is a failure. This prevents an executor from silently lowering the Governor floor. When both
+risk levels are valid, the higher tier is preserved. A recorded Governor trigger also requires the high-trust tier.
+
+## Evidence classes
+
+Each check records how its evidence was obtained.
+
+| Class | Meaning |
+| --- | --- |
+| `independently_executed` | Mergen ran the deterministic check. |
+| `independently_observed` | Mergen inspected current local state. |
+| `cryptographically_verified` | Exact bytes matched a digest or approval token. |
+| `source_verified` | A structured source was checked for consistency. |
+| `executor_supplied` | The executor supplied the assertion. |
+| `agentically_inferred` | An interpretive conclusion, not deterministic proof. |
+| `human_attested` | A human decision was recorded. |
+| `unavailable` | Required evidence could not be obtained. |
+| `conflicting` | Evidence sources contradicted each other. |
+
+A positive external review claim is recorded but is not used as proof of reviewer independence. Fields such as
+`independent: true`, `workspace_root`, and reviewer names remain untrusted content.
 
 ```json
 {
@@ -37,27 +82,26 @@ or a reviewer name are claims from untrusted data. The decision artifact therefo
 }
 ```
 
-Independent supervision comes from the separate deterministic authority process and direct evidence checks, not
-from a self-description inside the evidence.
+A negative review can block. An unresolved review produces `unverifiable`.
 
 ## Human approval binding
 
-When `verification-report.json` says human review is required, a populated `human_review` object is necessary but
-not sufficient. The approval must also carry a valid Mergen HMAC token for the exact report bytes. This prevents an
-approval copied from one report from authorizing another.
+When the effective risk level requires human review, a populated `human_review` record is necessary but not sufficient.
+The approval must also carry a valid Mergen HMAC token for the exact report bytes. This prevents an approval copied from
+one artifact state from authorizing another.
 
-Mergen's existing signer creates the token:
+Create a local signing key and token.
 
 ```bash
 export MERGEN_SIGNING_KEY="$(python -c 'import secrets; print(secrets.token_hex(32))')"
 mergen sign sign --artifact verification-report.json > approval.txt
 ```
 
-Place only the hexadecimal value after `mergen-ack-token:` in a file inside the trusted root, or expose it through
-`MERGEN_ACK_TOKEN`. The shared secret remains in `MERGEN_SIGNING_KEY`.
+Place only the hexadecimal value after `mergen-ack-token:` in a file inside the trusted root. The secret remains in
+`MERGEN_SIGNING_KEY`.
 
 The HMAC proves that a holder of the shared secret authorized these exact bytes. It is not public-key identity or
-third-party non-repudiation. That limitation remains explicit.
+third-party nonrepudiation.
 
 ## Run the supervisor
 
@@ -71,7 +115,7 @@ mergen-supervise \
   --out milestone-decision.json
 ```
 
-For a high-trust report:
+For high-trust work:
 
 ```bash
 mergen-supervise \
@@ -82,7 +126,7 @@ mergen-supervise \
   --out milestone-decision.json
 ```
 
-An optional external review can be observed without treating it as proof:
+To observe a separate review record:
 
 ```bash
 mergen-supervise \
@@ -93,23 +137,59 @@ mergen-supervise \
   --out milestone-decision.json
 ```
 
-The command exits `0` only for `pass` and `advance`. It exits `1` for `fail` and `block`, and `2` for
-`unverifiable` and `block`.
+The output set is:
 
-## Required evidence
+```text
+milestone-decision.json
+milestone-decision.json.sha256
+milestone-decision.md
+```
+
+Exit codes are stable.
+
+| Exit | Meaning |
+| --- | --- |
+| `0` | `pass`, `advance` |
+| `1` | `fail`, `return_for_remediation` |
+| `2` | `conditional_pass` or `unverifiable` |
+
+## Required checks
 
 A milestone can advance only when all applicable checks pass.
 
-1. The report and tasks state are readable JSON objects inside the trusted root.
-2. The report bytes match `<report>.sha256`.
-3. The report source commit matches the current repository `HEAD`.
-4. The verifier recorded a clean tree, and no later workspace changes exist outside the named evidence artifacts.
-5. The tasks-state bytes match the digest recorded in report provenance.
-6. Feature identifiers and task sets match exactly.
-7. Every task is complete and has a non-ambiguous, evidenced pass.
-8. Summary counts agree with task-level evidence.
-9. No policy result is failed or unresolved.
-10. Any required human review is complete and bound to the exact report bytes.
+1. Evidence paths remain inside the trusted root.
+2. The report and tasks state are readable JSON objects.
+3. The report bytes match the sidecar digest.
+4. The report source commit matches current `HEAD`.
+5. The verifier recorded a clean starting tree.
+6. The current worktree differs only by named evidence artifacts.
+7. Tasks state bytes match report provenance.
+8. Milestone identifiers and task sets match exactly.
+9. Every task is complete and has a non-ambiguous, evidenced pass.
+10. Summary counts agree with task-level evidence.
+11. Policy results are complete and passing.
+12. Deterministic evidence is freshly reproduced.
+13. The supplied risk level does not downgrade the fresh Governor result.
+14. Required human approval is complete and bound to exact report bytes.
+15. Optional review records contain no unresolved or negative finding.
 
-The output validates against `core/schemas/milestone-decision.schema.json`. Its own `.sha256` sidecar makes later
-edits detectable.
+## Decision integrity
+
+The decision includes a `source_state_hash` derived from report bytes, tasks state bytes, source commit, and the effective
+Governor result. It also includes a `decision_hash` over the complete decision object except the hash field itself. The
+serialized JSON receives a separate SHA-256 sidecar.
+
+These controls make later edits detectable when at least one trust anchor is preserved. They are tamper-evident, not
+tamper-proof against an attacker who can replace every artifact and every anchor.
+
+## Schema
+
+The output validates against `core/schemas/milestone-decision.schema.json`, schema version `1.1`. The schema enforces the
+relationship between verdict and advancement action. `pass` must map to `advance`. Every other verdict must block.
+
+## Honest limitations
+
+The bundled profile understands the Mergen software task report contract. It does not yet provide complete academic,
+design, game, data science, or generic artifact profiles. Provenance establishes lineage. It does not prove universal
+semantic correctness. A passing decision means that the checks which applied were supported by the evidence available
+at the verified source state.
