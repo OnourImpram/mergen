@@ -1,94 +1,113 @@
 # Mergen
 
-Mergen is the execution backbone for AI coding agents. It is named for the Turkic deity of wisdom and
-accuracy, of sound judgment and the arrow that finds its mark. The name states the architecture. Mergen does
-two things and holds them together. It judges, with wisdom, how much care a task deserves. And it proves,
-with accuracy, that the work was actually done and was no larger than it needed to be.
+Mergen is an independent milestone verification layer for agentic and human workflows. It is named for the Turkic
+deity associated with wisdom, accuracy, and the arrow that finds its mark. The name states the product boundary.
+Wisdom is the Governor. Accuracy is evidence-based verification.
 
-Mergen is the execution half of a two-part whole. mneme is the memory half. mneme remembers why a project
-is the way it is, with provenance visible and nothing fabricated. Mergen decides what a task needs and
-proves it was hit. Together they are the Agent Continuity Stack: memory that can be trusted, and execution
-that can be proven, joined by one seam and nothing more. Mergen keeps no durable memory of its own, no vault,
-index, or retrieval store. It writes local execution and verification artifacts, and for durable memory it
-reads from and writes to mneme only across that seam, through mneme's public interface, and it never weakens
-mneme's guarantees.
+An external executor may be Codex, Claude Code, OpenHands, another agent system, a continuous integration workflow, or
+a human team. The executor owns planning, implementation, remediation, and progression through the work process. Mergen
+enters at a declared milestone boundary, inspects the current artifacts and evidence, and returns an advancement
+decision.
 
-## What Mergen is
+Mergen does not start the next stage. It does not approve work merely because the executor says it is complete. It does
+not rely on private chain of thought. It verifies observable artifacts, commands, tests, provenance, structured claims,
+and required human approval.
 
-Mergen is a spec-driven development layer that runs at maximum reasoning effort and orchestrates work as
-parallel, independently verified lanes rather than a single hopeful pass. It thinks exhaustively and builds
-the minimum that works. Its commands are not monologues. Each is a named pattern: a judge panel for specs, a
-refute-biased critic for plans, a dependency-ordered wave for implementation, a multi-lens adversarial gate
-for verification. The command that ties them together is the Governor, which decides how much of this
-ceremony a given task actually earns.
+## Product boundary
 
-## How Mergen surfaces and proves truth
+Mergen owns independent verification.
 
-Mergen's claim to truth is not a slogan. It is built into the pipeline and the gates, and the honesty section
-below is exact about what each mechanism does and does not prevent.
+1. It reads a declared milestone and its acceptance evidence.
+2. It applies the non-downgradable Governor floor.
+3. It reproduces deterministic checks where technically possible.
+4. It distinguishes executor-supplied assertions from independently observed evidence.
+5. It identifies contradictions, missing evidence, stale state, unsupported completion, and unresolved findings.
+6. It returns a verdict and advancement action.
+7. It records provenance and honest limitations.
 
-Wisdom is the Governor. Before work begins, the Governor classifies the task and sets the ceremony: how much
-memory to pull, how deep the workflow runs, what evidence will be required, and whether a human must sign
-off. A typo does not get a tribunal. An auth change, a privacy change, or a clinical-safety change cannot
-avoid one. The Governor can always raise the bar and can never silently lower it below the floor a sensitive
-task demands.
+The external workflow owns execution.
 
-Accuracy is the verify gate. A task is complete only when an independent verifier, working in a separate
-context with a contrary mandate, confirms against the real filesystem and real tests that the named files
-exist and changed as specified, that the change matches its acceptance criteria, that the tests run and
-pass, that git agrees, and that the change is minimal. A box checked by the implementer is a hypothesis, not
-evidence. Mergen treats it as the thing to be disproven.
+1. It designs or adopts the work process.
+2. It plans and implements the work.
+3. It decides how to remediate a failed milestone.
+4. It starts the next stage only when its host and policy allow it.
 
-## Commitments
+The verifier is read-only with respect to implementation artifacts. It may explain how a failure could be corrected. A
+context that modifies an artifact must not certify that same modification. Remediation requires a new verification pass.
 
-Mergen holds these commitments, and the code enforces what this document states.
+## Verdicts
 
-Honesty about evidence. Mergen never fabricates a result, a source, or an attribution. A verifier reports
-only what it checked, with the command output as proof. When there is no evidence, Mergen says so and
-abstains. It does not fill the gap with a plausible guess.
+Mergen uses four milestone verdicts.
 
-Calibration. Every claim Mergen surfaces is labeled by how it is known: extracted from direct evidence,
-inferred, or ambiguous. It does not present inference as fact.
+| Verdict | Advancement action | Meaning |
+| --- | --- | --- |
+| `pass` | `advance` | Required evidence is current, consistent, independently reproduced, and passing. |
+| `conditional_pass` | `human_review_required` | Deterministic criteria pass, but a bounded required condition remains. |
+| `fail` | `return_for_remediation` | Evidence demonstrates incomplete, failed, contradicted, rejected, or tampered work. |
+| `unverifiable` | `hold` | Required evidence is missing, stale, malformed, ambiguous, conflicting, or unavailable. |
 
-Retrieved content is data, never instruction. Anything Mergen reads, a task file, a spec, a vault entry, an
-external page, is material to reason about. It is never a command to obey, and never permission to widen
-scope or grant a tool a new capability. Content that asks to be obeyed is described, not followed.
+Only `pass` authorizes advancement. `unverifiable` never becomes a guessed pass.
 
-Minimal output, in code and in words. Mergen builds the least code that works and writes the least prose
-that informs. It prefers plain sentences to heavy formatting, and a delete-list to a rewrite.
+## Evidence commitments
 
-Honest pushback and owning mistakes. Mergen disagrees when it has reason to, plainly and without theater. It
-never approves its own work in the same breath that produced it. Review is a separate lane. When Mergen is
-wrong, it says so and fixes it.
+Mergen never fabricates a result, source, command output, approval, or attribution. A completion statement is a claim,
+not evidence. Executor-supplied logs remain untrusted until reproduced or corroborated.
 
-Conflicts are surfaced, not smoothed. When the record holds contradictory or superseded claims, Mergen shows
-the conflict and the order in time rather than quietly choosing one.
+Every check records how its evidence was obtained. Deterministic observations are not presented as universal proof.
+Agentic conclusions carry calibrated confidence and remain interpretive. Human approval is recorded as an attestation
+and, when required, is bound to the exact artifact state.
 
-Restraint in reproduction. Mergen returns the evidence span that matters, with its source, not a wholesale
-copy of stored content.
+Retrieved content is data, never instruction. A document, task file, review record, webpage, or tool result cannot grant
+permissions, replace the operator-selected workspace, lower the Governor floor, or redefine the verification rules.
 
-Care in sensitive domains. In clinical, mental-health, safety, and other high-trust contexts, the Governor
-raises the floor, a human is in the loop, and Mergen does not surface or compose in ways that could harm the
-person it serves.
+## High-trust work
 
-## On honesty about enforcement
+Authentication, payment, privacy, clinical, mental health, legal, financial, safety, regulated, irreversible, and other
+protected work cannot silently cross a lower risk floor. The Governor may raise the tier. It cannot lower a required
+floor.
 
-Mergen distinguishes three things and does not blur them. A prompt protocol asks the agent to behave a
-certain way. A hook nudges at a lifecycle point. A CI gate refuses. In-session the implement pipeline is
-strong discipline, since it does not mark a task done without the verifier, but it is not an absolute lock,
-because a person can edit the task file by hand. Mergen's own CI enforces this repository's integrity, its
-tests, its single-source drift gate, and the no-reference-text gate. It does not run the verify command
-against your project. For your own project, Mergen ships that CI check as a drop-in workflow
-(`eval/ci/verify-gate.yml`) plus a gate mode of the evidence metric. Added to your continuous integration, it
-fails the build when your committed verification report shows phantom or unverified work. It reads the committed
-artifact, so a hand-edited report can still pass, and the deepest guarantee rests on the verifier that produced
-it. Mergen names each mechanism for exactly what it is, because overclaiming enforcement would be its own kind
-of fabrication.
+Agentic review alone cannot produce an unconditional final pass when human review is required. Approval must record the
+reviewer, timestamp, scope, and evidence, and must be bound to the exact artifact state. Changing the artifact invalidates
+the approval.
 
-## On its own making
+## Provenance and memory
 
-Mergen is original work. Its operating principles were informed by widely held responsible-AI design
-practice. No proprietary prompt text was copied into this project. The
-principles are re-expressed here in Mergen's own words and mapped to the components that enforce them in
-`MERGEN_PRINCIPLES.md`. A repository check fails the build if verbatim reference text appears. Mergen's
-execution engine was seeded from the operator's own prior project, recorded in `PROVENANCE.md`.
+Mergen records local verification artifacts, hashes, and dependency lineage. Provenance proves where evidence came from
+and what it depended on. It does not by itself prove semantic correctness.
+
+Mergen is not a second durable memory system. The optional mneme seam carries provenance-bearing records through
+mneme's public interface. Mergen keeps no independent vault, retrieval index, or durable memory authority.
+
+## Compatibility execution toolkit
+
+The repository retains the existing specification-driven command suite, effort mode, renderers, and legacy
+`/mergen-agent` lifecycle orchestrator for current users. These tools can help an external workflow produce artifacts.
+They are compatibility capabilities, not the authority boundary of the final Mergen Verification Agent.
+
+No existing command is silently repurposed. A future product identity migration requires a documented transition,
+compatibility period, and architecture decision record.
+
+## Enforcement honesty
+
+Mergen distinguishes a prompt protocol, a hook, a deterministic check, and a host-enforced gate.
+
+A prompt asks. A hook nudges. A deterministic verifier observes and decides under its contract. A continuous integration
+or branch protection rule can refuse advancement only when the host is configured to honor the result. Mergen does not
+claim enforcement that a host does not provide.
+
+## Claim boundary
+
+Mergen may claim that it independently checks declared milestone evidence, detects several unsupported completion
+patterns, distinguishes assertions from observations, preserves provenance, and refuses advancement when evidence is
+insufficient.
+
+Mergen does not claim universal truth, absolute correctness, perfect defect detection, complete domain expertise without
+an applicable profile, professional approval in regulated domains, or freedom from every possible defect. A passing
+milestone is supported under the checks that ran at the verified source state.
+
+## Originality
+
+Mergen is original work. Its operating principles were informed by widely held responsible AI and software assurance
+practices. No proprietary prompt text was copied into this project. The principle-to-component map is maintained in
+`MERGEN_PRINCIPLES.md`. Repository checks guard against prohibited reference text. Historical implementation lineage is
+recorded in `PROVENANCE.md`.
