@@ -1,331 +1,325 @@
 <p align="center">
-  <img src="assets/mergen-emblem.png" alt="Mergen emblem: a gold arrow finding its mark above a verify checkmark, flanked by two wolves, ringed by a runic border on a deep night sky" width="360">
+  <img src="assets/mergen-emblem.png" alt="Mergen emblem, a gold arrow finding its mark above a verification checkmark" width="320">
 </p>
 
-# Mergen
-
-**The execution backbone for AI coding agents. Maximum reasoning effort, Workflow orchestration, and
-adversarial verification, governed so the ceremony scales to the risk.**
+<h1 align="center">Mergen</h1>
 
 <p align="center">
-  <a href="https://github.com/OnourImpram/mergen/actions/workflows/ci.yml"><img src="https://github.com/OnourImpram/mergen/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
-  <img src="https://img.shields.io/badge/status-beta-blue" alt="status: beta">
-  <img src="https://img.shields.io/badge/python-3.9%2B-blue" alt="Python 3.9+">
-  <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-blue" alt="License: Apache-2.0"></a>
+  <strong>Independent milestone verification for agentic and human engineering workflows.</strong>
 </p>
 
-Mergen is named for the Turkic deity of wisdom and accuracy, of sound judgment and the arrow that finds its
-mark. The name states the architecture. Mergen judges, with wisdom, how much care a task deserves, and it
-proves, with accuracy, that the work was actually done and was no larger than it needed to be. The wisdom is
-the Governor. The accuracy is the verify gate.
+<p align="center">
+  <a href="https://github.com/OnourImpram/mergen/actions/workflows/ci.yml"><img src="https://github.com/OnourImpram/mergen/actions/workflows/ci.yml/badge.svg" alt="CI status"></a>
+  <img src="https://img.shields.io/badge/status-beta-blue" alt="Status, beta">
+  <img src="https://img.shields.io/badge/python-3.9%2B-blue" alt="Python 3.9 or newer">
+  <img src="https://img.shields.io/badge/runtime-standard%20library-success" alt="Runtime, Python standard library">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-blue" alt="Apache 2.0 license"></a>
+</p>
 
-Mergen is the execution half of a two-part whole. [mneme](https://github.com/OnourImpram/mneme) is the memory
-half. mneme remembers why a project is the way it is, with provenance visible and nothing fabricated. Mergen
-decides what a task needs and proves it was hit. Together they form the Agent Continuity Stack, joined by one
-seam and nothing more. Mergen keeps no durable memory of its own, no vault or index. It writes local execution
-and verification artifacts, and leaves the durable memory to mneme.
+Mergen verifies whether a declared milestone is sufficiently supported by the actual artifacts and evidence to advance.
+The executor can be Codex, Claude Code, OpenHands, another agent system, a continuous integration workflow, or a human
+team. The executor owns planning, implementation, and remediation. Mergen owns independent verification.
 
-> Status: v2.0.0, beta. Built entirely from public Claude Code extension points (slash commands,
-> hooks, `settings.json`). Does not patch or modify the Claude Code binary.
+> Status: v2.0.0, beta. The deterministic verification core is available. The bundled milestone supervisor currently
+> verifies Mergen software task reports. Broader domain profiles remain explicit extension points rather than implied
+> capabilities.
 
-Mergen is original work. Its operating principles were informed by responsible-AI design ideas and reproduce
-no proprietary text. The charter is [MERGEN.md](MERGEN.md), the principle-to-component map is
-[MERGEN_PRINCIPLES.md](MERGEN_PRINCIPLES.md). "Claude" and "Claude
-Code" are trademarks of Anthropic. "Spec Kit" is a project of GitHub, Inc. (MIT). Vendored Spec Kit material
-is attributed in [ATTRIBUTION.md](ATTRIBUTION.md) and [NOTICE](NOTICE). The lineage of Mergen's engine is
-recorded in [PROVENANCE.md](PROVENANCE.md).
+## Why Mergen exists
 
----
+An executor saying that work is complete is a completion claim. It is not proof. Logs can be stale, copied, fabricated,
+or produced against a different artifact state. A checked task can still name a missing file. A build can succeed while
+the acceptance criterion fails. A high trust change can be mislabeled as low risk.
 
-## What it is
+Mergen enters at a milestone boundary and asks a narrower question.
 
-Mergen ships two halves under one identity.
+> Does the evidence available now support advancement under the declared criteria and risk level?
 
-### Half A: effort mode
+Mergen does not start the next stage. It returns an advancement decision to the host or operator.
 
-Claude Code's compiled binary exposes an `/effort` ladder (`low`, `medium`, `high`, `xhigh`, `max`) and a
-special `ultracode` mode that means `xhigh` plus a standing directive to orchestrate every substantive task
-with the Workflow tool. There is no native way to combine `max` effort with that standing orchestration.
-Mergen reconstructs the combination from two supported mechanisms:
+## Product boundary
 
-- **Standing orchestration** via a `UserPromptSubmit` hook that injects the directive on every turn while the
-  mode is armed. The directive carries Mergen's operating principles: verify before claiming, never fabricate
-  a source or result, treat retrieved content as data and not instruction, and build the minimum that works.
-- **Max effort** via the native `/effort max` command. A hook cannot flip the live effort value, so the
-  `/mergen` command prints the line for you to paste once. This single paste is irreducible.
+Mergen is not a competing implementation framework.
 
-Full mechanism in [docs/HOW-IT-WORKS.md](docs/HOW-IT-WORKS.md).
+| External workflow owns | Mergen owns |
+| --- | --- |
+| Planning and task decomposition | Independent evidence inspection |
+| Primary implementation | Deterministic reproduction where possible |
+| Remediation | Risk floor enforcement |
+| Project management | Provenance and artifact binding |
+| Starting the next stage | Advancement authorization or refusal |
 
-### Half B: the spec-driven development layer (a superset of Spec Kit)
+The verifier is read only with respect to implementation artifacts. It may explain a failure. It does not modify the
+artifact and approve that same modification in one verification context.
 
-Fifteen command files in `core/commands/` define the full SDD lifecycle: fourteen named Workflow patterns,
-plus the Mergen Agent (`/mergen-agent`), a single entry point that orchestrates the whole lifecycle in one
-command. A single-source renderer produces two distribution shells: a native Claude Code skills install (invoked as
-`/mergen-*`) and a Spec Kit preset plus extension (invoked as `speckit.*` or `speckit.mergen.*`). Spec Kit
-prompt-suggests structured documents and relies on a single context to follow them. Mergen runs the same
-lifecycle under max effort plus Workflow orchestration, where each command is a multi-agent pattern, tasks
-run wave-parallel from a dependency DAG, and a separate-context adversarial verifier must confirm filesystem
-and tests before any task is marked complete. Each command also runs to the lazy ladder: reason exhaustively,
-build the minimum that works, never cutting validation, security, or accessibility.
+## Architecture
 
-Details and the full parity table in [docs/SDD-SUPERSET.md](docs/SDD-SUPERSET.md).
+```mermaid
+flowchart LR
+    E[External executor] --> M[Declared milestone]
+    M --> G[Governor risk floor]
+    G --> D[Deterministic verification]
+    D --> A[Independent review evidence]
+    A --> V{Verdict}
+    V -->|pass| P[advance]
+    V -->|conditional_pass| H[human review required]
+    V -->|fail| R[return for remediation]
+    V -->|unverifiable| O[hold]
+```
 
-### The Governor: wisdom over the lifecycle
+The deterministic path is local first, model independent, and suitable for continuous integration. Optional agentic
+review is treated as a separate evidence source. A positive review claim does not prove that the reviewer was
+independent.
 
-Maximum effort on every task is its own failure mode. A typo does not deserve a tribunal, and an auth change
-must not avoid one. The Governor (`/mergen-govern`) classifies a task into `tiny`, `standard`, `spec`, or
-`high-trust` and sets the memory scope, the workflow depth, the evidence standard, and whether a human must
-sign off. High-trust triggers (auth, payment, secrets, privacy and PII, clinical and regulated content,
-irreversible operations, public-contract changes, and treating untrusted input as instruction) force a
-deterministic floor that the Governor can raise but never silently lower. Clinical and sensitive work cannot
-be downgraded, even by configuration. The Governor emits `governor-decision.json`, and the `go` router
-executes the chosen tier, adding the high-trust human checkpoint. The Governor is what makes maximum effort
-affordable.
+## What ships today
 
----
+### Milestone supervisor
 
-## Quickstart (native install)
+`mergen-supervise` consumes an externally produced `verification-report.json`, its SHA-256 sidecar, the exact
+`tasks-state.json`, Git provenance, policy results, fresh deterministic reproduction, and any required artifact bound
+human approval.
 
-Requirements: Claude Code, Python 3.9+ on `PATH`.
+It produces JSON, a SHA-256 sidecar, and human readable Markdown.
+
+### Deterministic verification core
+
+`mergen verify` runs the model independent mechanical verifier. It checks declared files, tests, Git consistency,
+evidence calibration, and the Governor floor. It runs without a model or network dependency.
+
+### Verification infrastructure
+
+Mergen also includes the Governor, report linter, Trust Graph, replay, impacted verification, evidence metrics, policy
+packs, adapter capability manifests, dashboards, and continuous integration examples.
+
+### Compatibility execution toolkit
+
+The existing specification driven command suite remains available for users who already rely on it. It includes
+`/mergen-govern`, `/mergen-specify`, `/mergen-plan`, `/mergen-tasks`, `/mergen-implement`, `/mergen-verify`, and the
+legacy `/mergen-agent` lifecycle orchestrator. These commands are compatibility tooling. They do not redefine the
+verification layer as the owner of an external workflow.
+
+## Quickstart
+
+### Requirements
+
+Python 3.9 or newer. Git is required for provenance checks. `pytest` is required only when a declared task asks the
+mechanical verifier to execute a test.
+
+### Install from a clone
 
 ```bash
 git clone https://github.com/OnourImpram/mergen.git
 cd mergen
-./install.sh               # macOS / Linux / Git Bash
+python -m pip install -e .
 ```
 
-On Windows PowerShell:
+The editable install is currently the supported package path because the legacy renderers read the repository `core`
+tree. The two verification entry points are installed together.
 
-```powershell
-.\install.ps1
+```text
+mergen
+mergen-supervise
 ```
 
-If PowerShell blocks the script, run it for this session only:
-`powershell -ExecutionPolicy Bypass -File .\install.ps1`.
-
-The installer runs three steps in order:
-
-1. `effort-mode/install.sh` (or `.ps1`) installs the `/mergen` command and the `UserPromptSubmit` effort hook.
-2. `python dist/native/build_native.py build` renders the 15 `/mergen-*` skills to `~/.claude/skills/`.
-3. `python dist/native/patch_settings_hooks.py` registers the two SDD hooks in `~/.claude/settings.json`
-   (idempotent, corruption-safe, and tolerant of a UTF-8 BOM that Claude Code on Windows can write).
-
-After install, restart Claude Code or run `/hooks` to load the new hooks.
-
-### One command, every platform
-
-`./install.sh` and `.\install.ps1` shell out to bash and PowerShell. The same
-three steps, plus a health check and a clean uninstall, are also available as a
-single cross-platform `mergen` command:
+### Produce deterministic evidence
 
 ```bash
-pipx install -e .        # or: pip install -e .
-mergen install           # render skills and register hooks (idempotent)
-mergen doctor            # read-only health check, honest about the caveats
-mergen upgrade           # re-render the skills after pulling a new version
-mergen uninstall         # remove every artifact it created
+mergen verify \
+  --tasks-state tasks-state.json \
+  --root . \
+  --out verification-report.json \
+  --strict
 ```
 
-The editable install is the supported path: mergen renders the skills from this
-repo's `core/`, so the command needs the clone. A standalone wheel that bundles
-`core/` is on the roadmap. `mergen doctor` reports what is present, what is
-missing, and the honest caveats (the one manual `/effort max` paste, and that
-the SDD hooks are reinforcement nudges, not enforcement).
+This writes `verification-report.json` and `verification-report.json.sha256`.
 
-### Arm effort mode
-
-```
-/mergen            arm the mode, then paste the /effort max line it prints
-/mergen off        disarm
-```
-
-### Bootstrap SDD in a project
+### Verify the milestone independently
 
 ```bash
-./install.sh --init <project-dir>
+mergen-supervise \
+  --root . \
+  --report verification-report.json \
+  --tasks-state tasks-state.json \
+  --out milestone-decision.json
 ```
 
-This creates `<project-dir>/.specify/` with scripts, templates, and a `memory/` directory.
+This writes three artifacts.
 
----
-
-## The 15 /mergen-* commands
-
-Each command is a named Workflow pattern. All run under the mergen substrate (max reasoning effort, standing
-orchestration), with the Governor setting how much of the pattern a given task earns.
-
-| Command | One-line purpose | Workflow pattern |
-|---|---|---|
-| `/mergen-agent` | **The Mergen Agent.** Run a task through the whole lifecycle in one command. | Single entry point: Arm, Govern, Route and execute (via `/mergen-go`), Report. Orchestrates the other 14 skills without replacing them; never skips the verify gate or auto-completes high-trust. |
-| `/mergen-govern` | Classify a task by risk and set its ceremony. | The Governor: tier (tiny/standard/spec/high-trust), memory scope, evidence standard, and human approval, with a deterministic high-trust floor. Emits `governor-decision.json`. |
-| `/mergen-constitution` | Author or update the project constitution. | Author plus adversarial self-check before accepting. |
-| `/mergen-specify` | Write a feature spec. | Judge panel: three parallel drafts (user, architect, rejection lens) plus an adversarial reviewer, then synthesis. |
-| `/mergen-clarify` | Ask targeted questions before spec work. | Targeted question loop, maximum 5, answers encoded back. |
-| `/mergen-checklist` | Apply a requirements-quality checklist. | Requirements-quality checklist ("unit tests for requirements") before implementation. |
-| `/mergen-plan` | Produce an implementation plan. | Multi-approach generation in parallel lanes plus a refute-biased architecture critic, then synthesis. |
-| `/mergen-tasks` | Break the plan into tasks and a dependency DAG. | Loop-until-dry completeness critic plus DAG builder. Outputs `tasks-dag.json`. |
-| `/mergen-analyze` | Check cross-artifact consistency before code. | Four parallel adversarial checker lanes, deduplicated. |
-| `/mergen-implement` | Execute the task list. | Wave-parallel pipeline from `tasks-dag.json`: isolated implementer per task, then a separate-context refute-biased verifier that checks filesystem and tests before marking `[X]`. Re-queues on failure. |
-| `/mergen-verify` | Re-check every `[X]` task as a standalone gate. | Parallel four-lens check per task (file-exists, spec-match, tests-pass, git-consistent). Majority-or-FAIL. Emits `verification-report.json` (a confidence label per task) and `tasks-state.json`. |
-| `/mergen-rollup` | Synthesize feature specs into canonical project state. | Parallel reader lanes plus conflict adjudication, writes `.specify/memory/project-state.md`. |
-| `/mergen-go` | Route a request to the tier the Governor chose. | Executes the Governor's tier (tiny/standard/spec/high-trust), adding the high-trust human checkpoint. |
-| `/mergen-lean` | Review the diff or repo for over-engineering. | Parallel per-file reviewers, deduped into a ranked delete-list (`delete`/`stdlib`/`native`/`yagni`/`shrink`). Complexity only, never correctness. |
-| `/mergen-debt` | Track deferred shortcuts. | Harvests `mergen:` comments into `.specify/memory/debt.md` by risk band. Gate mode fails on any shortcut with no named ceiling. |
-
----
-
-## Proof, not assertion
-
-A box checked by the implementer is a hypothesis, not evidence. Mergen treats it as the thing to be
-disproven. `/mergen-verify` re-checks every `[X]` task in a separate context with a contrary mandate, against
-the real filesystem and real tests, and emits `verification-report.json` so the result can be measured and
-audited. The eval evidence metric (`eval/evidence_metric.py`) reads that JSON and reports a work-done rate and
-a phantom-completion count, abstaining honestly when it has no data. Worth-remembering decisions cross the one
-seam to mneme as provenance-bearing records (`scripts/mneme_emit.py`, [docs/MNEME-SEAM.md](docs/MNEME-SEAM.md)),
-never as a memory store of Mergen's own.
-
-On honesty about enforcement: a prompt protocol asks, a hook nudges, and a CI gate refuses. In-session the
-implement pipeline will not mark a task done without the verifier, which is strong discipline but not an
-absolute lock. Mergen's own CI guards this repository (its tests, the drift gate, the no-reference-text gate),
-not your project's task verification. For your own project, Mergen ships that CI gate as a drop-in workflow
-(`eval/ci/verify-gate.yml`) plus the `--gate` mode of the evidence metric. Added to your CI, it fails the build
-when your committed verification report shows phantom or unverified work. It reads the committed artifact, so a
-hand-edited report can still pass, and the deepest guarantee rests on the verifier that produced it. Mergen does
-not blur the three.
-
----
-
-## Spec Kit option
-
-If you use GitHub Spec Kit, `./install.sh --speckit` renders a preset and extension under `dist/speckit/`.
-
-**Preset** (`dist/speckit/preset/mergen/`): overrides 8 stock Spec Kit commands (`constitution`, `specify`,
-`clarify`, `checklist`, `plan`, `tasks`, `analyze`, `implement`).
-
-**Extension** (`dist/speckit/extensions/mergen/`): adds 7 commands not present in stock Spec Kit.
-
-| Added command | Purpose |
-|---|---|
-| `speckit.mergen.govern` | The Governor (risk-tier classification) |
-| `speckit.mergen.verify` | Parallel phantom-completion gate, emits JSON evidence |
-| `speckit.mergen.rollup` | Canonical project-state synthesis |
-| `speckit.mergen.go` | Tier executor and router |
-| `speckit.mergen.lean` | Over-engineering review (delete-list, complexity only) |
-| `speckit.mergen.debt` | Deferred-shortcut debt ledger |
-| `speckit.mergen.agent` | The Mergen Agent (single-entry-point lifecycle orchestrator) |
-
-The extension wires `hooks.after_implement -> speckit.mergen.verify` with `optional: false`, making verify
-mandatory in the Spec Kit implement flow. That is the hook contract, reinforced in-session. A CI check against
-your project would make it a true gate. Spec Kit behavior outside those command surfaces is not modified or
-replicated.
-
----
-
-## Minimalism (the lazy ladder)
-
-Max effort has a failure mode: over-building. A request that should be `<input type="date">` becomes more code
-than the task needs. Mergen addresses it with a minimalism discipline derived from
-[`DietrichGebert/ponytail`](https://github.com/DietrichGebert/ponytail) (MIT, attributed in
-[ATTRIBUTION.md](ATTRIBUTION.md)).
-
-The discipline is the lazy ladder in [`core/lazy-ladder.md`](core/lazy-ladder.md). Before writing code, stop at
-the first rung that holds: is it needed at all, then stdlib, then a native platform feature, then an installed
-dependency, then one line, then the minimum that works. Validation, security, accessibility, error handling,
-and tests are never on the chopping block. The thesis in one line: **think exhaustively, build minimally,
-verify it works and that it is minimal.** The same restraint governs prose, which is why Mergen prefers plain
-sentences and a delete-list to a rewrite.
-
-It enters the lifecycle in `plan` (prefer stdlib and native over new abstractions), `implement` (the Stage B
-verifier rejects a correct-but-over-built task), `lean` (a ranked delete-list), and `debt` (harvest deferred
-shortcuts so a simplification with a known ceiling does not become permanent by silence). The discipline, and
-only the discipline, ports to non-Claude agents via `python dist/agents/build_agents.py <project>`, which
-renders the ladder into `AGENTS.md`, `.cursor/rules/`, `.windsurf/rules/`, `.clinerules/`,
-`.github/copilot-instructions.md`, and `.kiro/steering/`. The Workflow-orchestrated SDD engine is Claude Code
-specific and is not ported.
-
----
-
-## Repository layout
-
-```
-MERGEN.md                         the charter (what Mergen is and commits to)
-MERGEN_PRINCIPLES.md              principle-to-component map
-PROVENANCE.md                     lineage and the identity transform
-
-effort-mode/
-  commands/mergen.md              /mergen slash command (arm, disarm, print /effort max)
-  hooks/mergen_prompt_hook.py     UserPromptSubmit hook (fail-soft, no-op when disarmed)
-  scripts/patch_settings.py       idempotent, BOM-safe settings.json patcher
-  install.sh / install.ps1        effort-mode-only installers
-
-core/
-  commands/                       15 SDD command source files (single source)
-  lazy-ladder.md                  the minimalism discipline (single source)
-  schemas/                        JSON schemas: verification-report, tasks-state, governor-decision
-  templates/                      7 templates (5 vendored MIT, 2 mergen additions)
-  scripts/bash/ powershell/       vendored MIT helper scripts
-  hooks/                          verify_gate.py, constitution_inject.py (reinforcement nudges)
-  CONVENTIONS.md                  single-source / two-renderer contract
-
-dist/
-  native/build_native.py          renders core/ to ~/.claude/skills/mergen-*/
-  native/patch_settings_hooks.py  registers the two SDD hooks (BOM-safe)
-  speckit/build_speckit.py        renders core/ to spec-kit preset + extension
-  speckit/preset/mergen/          committed preset output (8 command overrides)
-  speckit/extensions/mergen/      committed extension output (7 new commands)
-  agents/build_agents.py          renders lazy-ladder.md to non-Claude passive rule files
-
-scripts/
-  check_sync.py                   drift gate: committed dist/ matches a fresh render of core/
-  check_no_reference_text.py      fails the build if reference-prompt fingerprints appear
-  mneme_emit.py                   the mneme seam (verification report -> decision record)
-
-eval/evidence_metric.py           minimal honest metric (work-done rate, phantom count) from verify JSON
-install.sh / install.ps1          root installers (all three steps)
-docs/                             HOW-IT-WORKS, SDD-SUPERSET, ROADMAP, MNEME-SEAM
-LICENSE / NOTICE / ATTRIBUTION.md Apache-2.0 and third-party attribution
+```text
+milestone-decision.json
+milestone-decision.json.sha256
+milestone-decision.md
 ```
 
----
+The process exit code is zero only for a clean `pass` and `advance` decision. `fail` exits one. `conditional_pass` and
+`unverifiable` exit two.
 
-## Status
+## Verdicts
 
-v2.0.0, beta. The first tagged public release (see `CHANGELOG.md`).
+| Verdict | Advancement action | Meaning |
+| --- | --- | --- |
+| `pass` | `advance` | Required evidence is current, consistent, independently reproduced, and passing. |
+| `conditional_pass` | `human_review_required` | Deterministic criteria pass, but required exact state human approval is absent. |
+| `fail` | `return_for_remediation` | Evidence demonstrates incomplete, failed, contradicted, rejected, or tampered work. |
+| `unverifiable` | `hold` | Required evidence is absent, stale, malformed, ambiguous, or unavailable. |
 
-- Native shell: 15 `/mergen-*` commands installed as Claude Code skills, plus the effort-mode hook and command.
-- Spec Kit shell: a preset overriding 8 commands plus an extension adding 7 (`verify`, `rollup`, `go`, `lean`,
-  `debt`, `govern`, `agent`).
-- The Governor sets risk-calibrated ceremony with a deterministic high-trust floor.
-- Machine-readable verify (`verification-report.json`, `tasks-state.json`) and a minimal eval evidence metric.
-- The mneme seam is bidirectional and network-free. `scripts/mneme_emit.py` emits and reads decision records,
-  and `--write DIR` persists one into a directory you name, with a redaction preflight (fails closed on a secret)
-  and duplicate detection. The full store integration (direct vault write versus MCP) is intentionally left open.
-- The verify-gate ships as a drop-in CI workflow (`eval/ci/verify-gate.yml`) with a `--strict` gate (the merge
-  gate: work-done check plus the integrity lint), so your project can fail the build on phantom, unverified,
-  ambiguous, empty, or unsigned high-trust work. The committed-report workflow checks a committed report, while
-  `eval/ci/verify-gate-live.yml` regenerates the report from the live tree first for a tamper-resistant gate.
-- The verify harness is agent agnostic. `scripts/verify_core.py` is pure standard library and runs anywhere
-  Python 3.9 or newer runs, with no Claude Code, no network, and no model. Run it directly or as `mergen verify`.
-  A worked end-to-end run is in [`examples/verify-demo/`](examples/verify-demo/README.md), and which features need
-  which runtime is mapped in [docs/COMPAT.md](docs/COMPAT.md).
-- Every report carries provenance and a tamper-evidence sidecar. `--out` writes a `<report>.sha256` next to the
-  report, and `mergen verify --check-manifest <report>` re-checks the hash to catch an edited report. With
-  `--require-fresh` it also rejects a report whose recorded source commit no longer matches the tree.
-- A static, offline dashboard. `mergen dashboard <dir>` (or `python scripts/dashboard.py <dir>`) renders one
-  self-contained HTML page over a directory of reports, showing each verdict, phantom count, and provenance,
-  with every value HTML-escaped. No network, no JavaScript.
-- No live-model benchmark numbers are claimed. A deterministic phantom-detection harness does ship under
-  `eval/` (`eval/benchmark.py --gate`), with its methodology and a reproduction procedure.
-- `/effort max` requires one manual paste per session. The binary does not expose that control to hooks.
-- Hooks are reinforcement nudges. Enforcement is the implement pipeline's adversarial verify stage, made a
-  true gate by CI.
+`unverifiable` never becomes a guessed pass. The compatibility field `decision` contains only `advance` or `block`.
+New integrations should use `advancement_action`.
 
-Further reading: [MERGEN.md](MERGEN.md), [docs/HOW-IT-WORKS.md](docs/HOW-IT-WORKS.md),
-[docs/SDD-SUPERSET.md](docs/SDD-SUPERSET.md), [docs/COMPAT.md](docs/COMPAT.md),
-[docs/ROADMAP.md](docs/ROADMAP.md), [docs/MNEME-SEAM.md](docs/MNEME-SEAM.md).
+## Evidence classes
 
----
+Every supervisor check records how its evidence was obtained.
 
-## License
+| Evidence class | Interpretation |
+| --- | --- |
+| `independently_executed` | Mergen ran the applicable deterministic check. |
+| `independently_observed` | Mergen inspected current local state directly. |
+| `cryptographically_verified` | Exact bytes matched a digest or artifact bound token. |
+| `source_verified` | A structured source was checked for internal consistency. |
+| `executor_supplied` | The executor provided the assertion. It is not independent proof. |
+| `agentically_inferred` | An interpretive conclusion, never deterministic proof. |
+| `human_attested` | A human decision was recorded. |
+| `unavailable` | Required evidence could not be obtained. |
+| `conflicting` | Evidence sources contradict each other. |
 
-Apache License 2.0. See [LICENSE](LICENSE) and [NOTICE](NOTICE).
+A clean pass cannot rest entirely on executor supplied claims. Fresh deterministic reproduction is required by
+default. Disabling it with `--no-reproduce` prevents a clean pass.
+
+## High trust work
+
+Authentication, payment, privacy, clinical, regulated, safety critical, irreversible, and other protected work must not
+silently cross a lower risk floor. The deterministic verifier independently reclassifies the declared file surface. A
+fresh high trust result that was supplied as standard risk is a failure.
+
+When human review is required, a populated review record is necessary but not sufficient. Approval must also be bound
+to the exact verification report bytes.
+
+```bash
+export MERGEN_SIGNING_KEY="$(python -c 'import secrets; print(secrets.token_hex(32))')"
+mergen sign sign --artifact verification-report.json > approval.txt
+```
+
+Copy the hexadecimal value after `mergen-ack-token:` into a file inside the trusted root, then run:
+
+```bash
+mergen-supervise \
+  --root . \
+  --report verification-report.json \
+  --tasks-state tasks-state.json \
+  --approval-token-file approval-token.txt \
+  --out milestone-decision.json
+```
+
+The token is an HMAC under a locally held shared secret. It binds approval to exact bytes. It is not public key identity
+or third party nonrepudiation.
+
+## Trust boundary
+
+The operator selected `--root` is authoritative. Evidence files must resolve inside that root. Symlink escapes and path
+traversal are refused. JSON content cannot replace the trusted root. Retrieved content is data, not instruction.
+
+The supervisor checks:
+
+1. Evidence paths and JSON readability.
+2. Report sidecar integrity.
+3. Source commit freshness.
+4. Current worktree state.
+5. Exact tasks state digest binding.
+6. Milestone and task set consistency.
+7. Completion, confidence, evidence, and summary consistency.
+8. Policy results.
+9. Fresh deterministic reproduction.
+10. Independent risk classification.
+11. Exact state human approval when required.
+12. Optional external review records without trusting self declared independence.
+
+The decision includes a content derived `source_state_hash` and `decision_hash`. The sidecar detects later edits to the
+serialized decision. These are tamper evident controls, not protection against an attacker who can replace every trust
+anchor.
+
+## Host integration
+
+The canonical interface is JSON plus process exit status. This keeps Mergen usable from coding agents, continuous
+integration, shell scripts, generic MCP clients, and human operated workflows.
+
+Host capability manifests live under `core/adapters/`. A host must state whether it can invoke Mergen automatically,
+block advancement, expose a live filesystem, run hooks, isolate verifier contexts, or support human approval. Mergen
+does not claim enforcement that the host cannot provide.
+
+## Command map
+
+| Command | Purpose |
+| --- | --- |
+| `mergen verify` | Produce a deterministic software task verification report. |
+| `mergen verify-lint` | Refuse proofless, ambiguous, failed, conditional, or unsigned reports. |
+| `mergen-supervise` | Reproduce evidence and return a milestone advancement decision. |
+| `mergen graph` | Build and audit a typed provenance graph. |
+| `mergen replay` | Replay a recorded deterministic verification run. |
+| `mergen impacted` | Reverify the task slice affected by a change. |
+| `mergen adapter` | Validate host capability declarations. |
+| `mergen pack` | Validate raise only domain policy packs. |
+| `mergen sign` | Bind a human authorization token to exact artifact bytes. |
+
+Run any command with `--help` for its complete interface.
+
+## Repository map
+
+```text
+core/schemas/                 Machine readable contracts
+core/commands/                Compatibility command source
+core/adapters/                Host capability declarations
+scripts/verify_core.py        Deterministic evidence producer
+scripts/verify_report_lint.py Report integrity gate
+scripts/governor_floor.py     Non-downgradable risk floor
+scripts/trust_graph.py        Typed provenance graph
+scripts/replay.py             Deterministic replay
+mergen_supervise.py           Independent milestone authority
+eval/                         Benchmarks, dogfood, and CI examples
+tests/                        Unit, integration, adversarial, and contract tests
+docs/                         Architecture and operating documentation
+```
+
+## Development and verification
+
+```bash
+python -m pip install -e .
+python -m pip install pytest pytest-cov jsonschema ruff mypy
+python -m pytest tests/ -v
+ruff check .
+mypy
+python scripts/check_sync.py
+python scripts/check_no_reference_text.py
+python eval/benchmark.py --gate
+```
+
+Continuous integration runs the test suite across Python 3.9, 3.11, 3.12, and 3.13, including Windows. It also runs
+Ruff, strict mypy, coverage, schema checks, renderer drift checks, security checks, and live phantom detection dogfood.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the contribution contract.
+
+## Claim boundary
+
+Mergen can claim that it independently checks declared milestone evidence, distinguishes observed evidence from
+assertions, detects several unsupported completion patterns, refuses advancement when evidence is insufficient, and
+records provenance for later audit.
+
+Mergen does not claim universal truth, perfect defect detection, absolute semantic correctness, professional approval
+in regulated domains, or enforcement that a host has not configured. A passing milestone is supported under the
+checks that ran. It is not guaranteed to be free of every possible defect.
+
+## Documentation
+
+- [Milestone supervisor](docs/MILESTONE-SUPERVISOR.md)
+- [How Mergen works](docs/HOW-IT-WORKS.md)
+- [Compatibility matrix](docs/COMPAT.md)
+- [Host capability matrix](docs/CAPABILITIES.md)
+- [Security policy](SECURITY.md)
+- [Roadmap](docs/ROADMAP.md)
+- [Provenance](PROVENANCE.md)
+
+## Name, citation, and license
+
+Mergen is named for the Turkic deity associated with wisdom, accuracy, and the arrow that finds its mark. The Governor
+represents judgment. Verification represents accuracy.
+
+Citation metadata is provided in [CITATION.cff](CITATION.cff). Mergen is licensed under the Apache License 2.0. Vendored
+material and lineage are documented in [ATTRIBUTION.md](ATTRIBUTION.md), [NOTICE](NOTICE), and
+[PROVENANCE.md](PROVENANCE.md).
