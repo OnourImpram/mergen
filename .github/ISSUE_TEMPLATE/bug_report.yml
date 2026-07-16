@@ -1,0 +1,65 @@
+name: Bug report
+description: Report a reproducible defect in Mergen
+title: "bug: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for reporting a defect. Do not include secrets, personal data, or proprietary artifacts. Security vulnerabilities must use a private security advisory.
+  - type: input
+    id: version
+    attributes:
+      label: Mergen version or commit
+      placeholder: v2.0.0 or commit SHA
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      description: Operating system, Python version, and host or CI system
+      placeholder: Ubuntu 24.04, Python 3.12, GitHub Actions
+    validations:
+      required: true
+  - type: textarea
+    id: command
+    attributes:
+      label: Command and sanitized inputs
+      description: Include the exact command and the smallest safe fixture that reproduces the issue
+      render: shell
+    validations:
+      required: true
+  - type: textarea
+    id: observed
+    attributes:
+      label: Observed behavior
+      description: Include exit code, verdict, and relevant sanitized output
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: Explain the evidence and contract that support the expected result
+    validations:
+      required: true
+  - type: textarea
+    id: trust_boundary
+    attributes:
+      label: Trust boundary and impact
+      description: State whether the issue can cause a false pass, false failure, path escape, risk downgrade, stale evidence acceptance, or another impact
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Preflight
+      options:
+        - label: I searched existing issues and pull requests
+          required: true
+        - label: I removed secrets, personal data, and proprietary content
+          required: true
+        - label: This is not a vulnerability that requires private reporting
+          required: true

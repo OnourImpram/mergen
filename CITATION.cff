@@ -1,13 +1,13 @@
 cff-version: 1.2.0
 message: "If you use this software, please cite it as below."
-title: "Mergen: The execution backbone for AI coding agents"
+title: "Mergen: Independent milestone verification for agentic workflows"
 abstract: >-
-  Mergen is the execution half of the Agent Continuity Stack. It judges, with
-  wisdom, how much care a task deserves (the Governor), and it proves, with
-  accuracy, that the work was actually done and was no larger than it needed
-  to be (the verify gate). Built entirely from public Claude Code extension
-  points, with a deterministic, agent-agnostic core that runs anywhere Python
-  3.9 or newer runs. Pure standard library, no network, no model.
+  Mergen is an independent verification layer for milestone-based work. External
+  executors own planning and implementation. Mergen evaluates declared evidence,
+  reproduces deterministic checks where possible, applies a non-downgradable risk
+  floor, and returns a fail-closed advancement decision. The core uses the Python
+  standard library, runs locally without a model or network dependency, and records
+  provenance and honest limitations with every decision.
 type: software
 authors:
   - family-names: Impram
@@ -20,10 +20,10 @@ version: "2.0.0"
 date-released: "2026-06-28"
 keywords:
   - ai-agents
-  - spec-driven-development
-  - verification
-  - governance
-  - claude-code
-  - sdd
   - adversarial-verification
+  - governance
+  - milestone-verification
+  - provenance
+  - quality-assurance
+  - spec-driven-development
   - deterministic

@@ -1,0 +1,67 @@
+name: Feature request
+description: Propose a verification capability or developer experience improvement
+title: "feat: "
+labels:
+  - enhancement
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Mergen verifies external work. It should not become the owner of planning or implementation. Please frame the proposal as a milestone, evidence, and advancement problem.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What unsupported completion or verification gap exists today
+    validations:
+      required: true
+  - type: textarea
+    id: milestone
+    attributes:
+      label: Milestone and acceptance criteria
+      description: Define the checkpoint, expected artifacts, and conditions for advancement
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Available evidence
+      description: Distinguish executor-supplied evidence from evidence Mergen could reproduce independently
+    validations:
+      required: true
+  - type: dropdown
+    id: domain
+    attributes:
+      label: Domain
+      options:
+        - Software engineering
+        - Academic writing and research
+        - Game development
+        - Product and visual design
+        - Data science and machine learning
+        - Documentation and publishing
+        - Generic artifact
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: host
+    attributes:
+      label: Host integration
+      description: Name the host and whether it can invoke, display, or enforce a Mergen decision
+    validations:
+      required: true
+  - type: textarea
+    id: risk
+    attributes:
+      label: Risk and human review
+      description: Identify high-trust triggers, irreversible effects, and required human approval
+    validations:
+      required: true
+  - type: textarea
+    id: minimal_design
+    attributes:
+      label: Minimal design
+      description: Describe the smallest backward-compatible change that would verify the requirement
+    validations:
+      required: true
