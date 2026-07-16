@@ -1,43 +1,124 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/OnourImpram/mergen/schemas/milestone-decision.schema.json",
-  "title": "Mergen milestone supervision decision",
-  "description": "Fail-closed milestone authority. Only a pass verdict may authorize advance. Fail and unverifiable always block.",
+  "title": "Mergen milestone verification decision",
+  "description": "Fail-closed milestone verification. Only pass may authorize advancement. Conditional pass requires human review, fail returns the milestone for remediation, and unverifiable holds it.",
   "type": "object",
   "additionalProperties": false,
   "required": [
     "schema_version",
+    "verifier_version",
     "milestone_id",
     "evaluated_at",
+    "verification_profile",
     "verdict",
+    "advancement_action",
     "decision",
     "checks",
+    "evidence_summary",
+    "passed_criteria",
+    "failed_criteria",
+    "unverifiable_criteria",
+    "governor_decision",
     "source",
-    "authority"
+    "authority",
+    "honest_limitations",
+    "decision_hash"
   ],
   "properties": {
-    "schema_version": { "const": "1.0" },
+    "schema_version": { "const": "1.1" },
+    "verifier_version": { "type": "string", "minLength": 1 },
     "milestone_id": { "type": "string", "minLength": 1 },
     "evaluated_at": { "type": "string", "format": "date-time" },
-    "verdict": { "enum": ["pass", "fail", "unverifiable"] },
-    "decision": { "enum": ["advance", "block"] },
+    "verification_profile": { "type": "string", "minLength": 1 },
+    "verdict": {
+      "enum": ["pass", "conditional_pass", "fail", "unverifiable"]
+    },
+    "advancement_action": {
+      "enum": [
+        "advance",
+        "hold",
+        "return_for_remediation",
+        "human_review_required"
+      ]
+    },
+    "decision": {
+      "description": "Compatibility alias. New consumers should use advancement_action.",
+      "enum": ["advance", "block"]
+    },
     "checks": {
       "type": "array",
       "minItems": 1,
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["check_id", "result", "reason"],
+        "required": ["check_id", "result", "reason", "evidence_class"],
         "properties": {
           "check_id": { "type": "string", "minLength": 1 },
           "result": { "enum": ["pass", "fail", "unverifiable"] },
-          "reason": { "type": "string", "minLength": 1 }
+          "reason": { "type": "string", "minLength": 1 },
+          "evidence_class": {
+            "enum": [
+              "independently_executed",
+              "independently_observed",
+              "cryptographically_verified",
+              "source_verified",
+              "executor_supplied",
+              "agentically_inferred",
+              "human_attested",
+              "unavailable",
+              "conflicting"
+            ]
+          }
         }
+      }
+    },
+    "evidence_summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "independently_executed": { "type": "integer", "minimum": 0 },
+        "independently_observed": { "type": "integer", "minimum": 0 },
+        "cryptographically_verified": { "type": "integer", "minimum": 0 },
+        "source_verified": { "type": "integer", "minimum": 0 },
+        "executor_supplied": { "type": "integer", "minimum": 0 },
+        "agentically_inferred": { "type": "integer", "minimum": 0 },
+        "human_attested": { "type": "integer", "minimum": 0 },
+        "unavailable": { "type": "integer", "minimum": 0 },
+        "conflicting": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "passed_criteria": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "failed_criteria": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "unverifiable_criteria": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "governor_decision": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "risk_level": {
+          "type": ["string", "null"],
+          "enum": ["tiny", "standard", "spec", "high-trust", null]
+        },
+        "risk_triggers": {
+          "type": "array",
+          "items": { "type": "string" },
+          "uniqueItems": true
+        },
+        "human_review_required": { "type": "boolean" }
       }
     },
     "source": {
       "type": "object",
-      "additionalProperties": true,
+      "additionalProperties": false,
       "properties": {
         "report": { "type": "string" },
         "report_sha256": {
@@ -49,7 +130,13 @@
           "type": ["string", "null"],
           "pattern": "^[0-9a-f]{64}$"
         },
-        "source_commit": { "type": ["string", "null"] }
+        "source_commit": { "type": ["string", "null"] },
+        "independent_reverification": { "type": "boolean" },
+        "governor_decision": { "$ref": "#/$defs/governorDecision" },
+        "source_state_hash": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
       }
     },
     "authority": {
@@ -58,12 +145,14 @@
       "required": [
         "mode",
         "implements_changes",
-        "trusts_self_declared_independence"
+        "trusts_self_declared_independence",
+        "starts_next_stage"
       ],
       "properties": {
         "mode": { "const": "deterministic-separate-process" },
         "implements_changes": { "const": false },
-        "trusts_self_declared_independence": { "const": false }
+        "trusts_self_declared_independence": { "const": false },
+        "starts_next_stage": { "const": false }
       }
     },
     "review_observation": {
@@ -91,30 +180,90 @@
           "uniqueItems": true
         }
       }
+    },
+    "honest_limitations": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "decision_hash": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    }
+  },
+  "$defs": {
+    "governorDecision": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "risk_level": {
+          "type": ["string", "null"],
+          "enum": ["tiny", "standard", "spec", "high-trust", null]
+        },
+        "risk_triggers": {
+          "type": "array",
+          "items": { "type": "string" },
+          "uniqueItems": true
+        },
+        "human_review_required": { "type": "boolean" }
+      }
     }
   },
   "allOf": [
     {
       "if": {
-        "required": ["verdict"],
-        "properties": { "verdict": { "const": "pass" } }
+        "properties": { "verdict": { "const": "pass" } },
+        "required": ["verdict"]
       },
       "then": {
-        "required": ["decision"],
-        "properties": { "decision": { "const": "advance" } }
-      },
-      "else": {
-        "required": ["decision"],
-        "properties": { "decision": { "const": "block" } }
+        "properties": {
+          "advancement_action": { "const": "advance" },
+          "decision": { "const": "advance" }
+        }
       }
     },
     {
       "if": {
-        "required": ["decision"],
-        "properties": { "decision": { "const": "advance" } }
+        "properties": { "verdict": { "const": "conditional_pass" } },
+        "required": ["verdict"]
       },
       "then": {
-        "required": ["verdict"],
+        "properties": {
+          "advancement_action": { "const": "human_review_required" },
+          "decision": { "const": "block" }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": { "verdict": { "const": "fail" } },
+        "required": ["verdict"]
+      },
+      "then": {
+        "properties": {
+          "advancement_action": { "const": "return_for_remediation" },
+          "decision": { "const": "block" }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": { "verdict": { "const": "unverifiable" } },
+        "required": ["verdict"]
+      },
+      "then": {
+        "properties": {
+          "advancement_action": { "const": "hold" },
+          "decision": { "const": "block" }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": { "advancement_action": { "const": "advance" } },
+        "required": ["advancement_action"]
+      },
+      "then": {
         "properties": { "verdict": { "const": "pass" } }
       }
     }
