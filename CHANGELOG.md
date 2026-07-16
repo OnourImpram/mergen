@@ -222,11 +222,36 @@ a renamed one, so its history begins here rather than carrying the seed project'
   component map) state Mergen's commitments in its own voice: evidence honesty, calibration and abstention,
   retrieved content as data and never instruction, minimal communication, honest pushback, surfacing
   conflicts, restraint in reproduction, and care in sensitive domains. The principles were informed by
-  responsible-AI design ideas and reproduce no proprietary text. A repository check enforces that no
-  reference-prompt text was committed.
-- The effort-mode half: a `/mergen` command that writes an armed-state marker and prints the one irreducible
-  manual `/effort max` line, plus a `UserPromptSubmit` hook that injects a standing Workflow-orchestration
-  directive while armed.
+  responsible-AI design ideas and reproduce no proprietary text. A repository check enforces that.
+- The minimalism discipline (the lazy ladder, `core/lazy-ladder.md`, derived from `DietrichGebert/ponytail`,
+  MIT). `/mergen-lean` returns a tagged delete-list, `/mergen-debt` harvests `mergen:` deferred-shortcut
+  comments into a ledger, and `implement` builds to the ladder while its verifier checks the result is
+  minimal as well as correct.
+- The cross-agent renderer `dist/agents/build_agents.py` ports the minimalism discipline only into passive
+  rule files for non-Claude agents.
+- The mneme seam (`docs/MNEME-SEAM.md`, `scripts/mneme_emit.py`). Mergen stores no memory of its own. It
+  emits provenance-bearing decision records that mneme ingests through its public interface, with no network
+  or LLM on the path.
+- The eval evidence metric (`eval/evidence_metric.py`). A minimal honest measure derived from the verify
+  JSON: a work-done rate and a phantom-completion count. It abstains on minimal-change without lean data.
+- Reinforcement hooks (`core/hooks/`): `verify_gate.py` and `constitution_inject.py`, both fail-soft. They
+  reinforce the discipline. The enforcement is the implement pipeline's adversarial verify stage and CI.
+- Gates and CI. `scripts/check_sync.py` is the single-source drift gate. `scripts/check_no_reference_text.py`
+  fails the build if reference-prompt fingerprints appear. Both run in CI alongside the test suite.
+- Vendored Spec Kit templates and scripts (MIT), attributed in `ATTRIBUTION.md`.
+
+### Honesty notes
+
+- "Non-bypassable" describes the spec-kit `after_implement` hook contract and the implement pipeline's own
+  gate. In-session these are strong reinforcement. The gate that genuinely cannot be talked around is CI.
+- No benchmark numbers are claimed. The eval methodology is described and the full benchmark is on the
+  roadmap.
+
+### Deferred to a later release
+
+See `docs/ROADMAP.md`: a GitHub Action and PR comment bot, clinical and security domain packs, the full
+benchmark suite, and a full mneme writeback adapter. The dashboard, cross-run trends, and churn analytics
+listed here originally have since shipped in the Unreleased line above.
 
 [Unreleased]: https://github.com/OnourImpram/mergen/compare/v2.0.0...HEAD
 [2.0.0]: https://github.com/OnourImpram/mergen/releases/tag/v2.0.0
