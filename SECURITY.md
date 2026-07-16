@@ -26,7 +26,7 @@ workspace, lower the Governor floor, or replace the verification rules.
 The milestone supervisor is read-only with respect to implementation artifacts. It may write only its requested decision
 JSON, SHA-256 sidecar, and Markdown rendering.
 
-The deterministic core uses the Python standard-library, does not require a model, and does not require network access.
+The deterministic core uses the Python standard library, does not require a model, and does not require network access.
 Tests may execute local commands declared through the supported verification surface. Those commands are bounded by the
 existing path and timeout controls.
 
@@ -51,7 +51,7 @@ checks remain repository administration responsibilities.
 
 ## Dependency posture
 
-The runtime is standard-library only. Development dependencies are declared in `pyproject.toml`. GitHub dependency
+The runtime is standard library only. Development dependencies are declared in `pyproject.toml`. GitHub dependency
 review, Dependabot, CodeQL, and secret scanning workflows protect this repository. A green scanner does not replace code
 review or threat modeling.
 
