@@ -8,6 +8,20 @@ All notable changes to this project are documented here. The format follows
 
 No unreleased changes yet.
 
+## [2.1.1] - 2026-07-25
+
+### Changed
+
+- The published distribution is now `mergen-verdict`. The name `mergen` on PyPI
+  belongs to an unrelated time-domain astronomy package, so `pip install mergen`
+  never installed this project and never could. Nothing inside the project moves:
+  the import package and the `mergen` and `mergen-supervise` commands are
+  unchanged, and no released version was ever published under the old
+  distribution name, so no existing installation breaks.
+- The product is named Mergen Verdict, after what it returns. It does not perform
+  verification; it adjudicates evidence produced elsewhere and renders a verdict,
+  which is why a name built on "verify" would misdescribe it.
+
 ## [2.1.0] - 2026-07-25
 
 ### Added
