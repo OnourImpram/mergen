@@ -6,6 +6,10 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+No unreleased changes yet.
+
+## [2.1.0] - 2026-07-25
+
 ### Added
 
 - Independent milestone verification is now the primary Mergen product identity.

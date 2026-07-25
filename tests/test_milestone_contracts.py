@@ -99,7 +99,7 @@ def test_packaging_installs_supervisor_entry_point_and_module():
 
 def test_readme_version_stamp_and_product_boundary_are_present():
     text = (REPO / "README.md").read_text(encoding="utf-8")
-    assert "Status: v2.0.0" in text
+    assert "Status: v2.1.0" in text
     assert "External workflow owns" in text
     assert "Mergen owns" in text
     assert "mergen-supervise" in text
