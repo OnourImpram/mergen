@@ -5,22 +5,22 @@
 # already cover it.
 
 # Default owner for everything.
-*                                   @TheGoatPsy
+*                                   @OnourImpram
 
 # The deterministic core that proves work was done. Changes here change the
 # guarantee, so they are owned explicitly.
-/scripts/verify_core.py             @TheGoatPsy
-/scripts/verify_report_lint.py      @TheGoatPsy
-/scripts/governor_floor.py          @TheGoatPsy
-/core/schemas/                      @TheGoatPsy
-/core/hooks/                        @TheGoatPsy
+/scripts/verify_core.py             @OnourImpram
+/scripts/verify_report_lint.py      @OnourImpram
+/scripts/governor_floor.py          @OnourImpram
+/core/schemas/                      @OnourImpram
+/core/hooks/                        @OnourImpram
 
 # Single-source render contract and its drift gates.
-/core/commands/                     @TheGoatPsy
-/dist/                              @TheGoatPsy
-/scripts/check_sync.py              @TheGoatPsy
-/scripts/check_no_reference_text.py @TheGoatPsy
+/core/commands/                     @OnourImpram
+/dist/                              @OnourImpram
+/scripts/check_sync.py              @OnourImpram
+/scripts/check_no_reference_text.py @OnourImpram
 
 # Supply chain and CI.
-/.github/                           @TheGoatPsy
-/pyproject.toml                     @TheGoatPsy
+/.github/                           @OnourImpram
+/pyproject.toml                     @OnourImpram

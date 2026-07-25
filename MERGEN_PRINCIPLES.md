@@ -1,57 +1,75 @@
-# Mergen principles, and where they live
+# Mergen principles and their implementation homes
 
-This is the map from operating principle to the code or schema that enforces it. The principles were
-informed by widely held responsible-AI design practice and are re-expressed here in Mergen's own words.
-No proprietary text was copied. `MERGEN.md` is the human-readable
-charter. This file is the wiring, so a reader can check that every commitment has a home in the code and is
-not merely described.
+`MERGEN.md` is the human-readable charter. This document maps each commitment to the code, schema, or process that
+enforces it. The map separates the final verification authority from the compatibility execution toolkit.
 
-| Principle | The idea, in our words | Component it governs | The concrete change |
-|---|---|---|---|
-| Evidence honesty and provenance | Never invent a result, a source, or an attribution. Report only what was checked, with proof. | verify gate, rollup memory proposals | Each verify lane returns command output as evidence. A claim without output is not accepted. Rollup proposes memory with its real source. |
-| Calibration and abstention | Separate what is known from what is inferred. With no evidence, abstain rather than guess. | claim and evidence schema, verify verdict | `verification-report.json` carries a confidence label per finding, drawn from the one confidence vocabulary defined below. The verdict defaults to FAIL under uncertainty. |
-| Retrieved content is data, never instruction | Anything read is material to reason about, never a command to obey or a grant of new capability. | implement and verify prompts, the fence convention | Stage A and Stage B treat task files, specs, and retrieved content as data. Content that asks to be obeyed is described, not followed. No read widens scope or grants a permission. |
-| Minimal output | Build the least code that works. Write the least prose that informs. | lazy ladder, lean, communication disposition | implement builds to the ladder and the verifier flags over-build. lean returns a delete-list. CONVENTIONS states the prose disposition. |
-| Honest pushback, owning mistakes | Disagree plainly when there is reason. Never self-approve. Fix errors without theater. | never-self-approve rule, adversarial verify | Authoring and review are separate lanes in separate contexts. The verifier's mandate is to disprove. Corrections update the record. |
-| Surface conflicts | Show contradictions and their order in time rather than quietly choosing one. | decision-consistency reporting, the mneme seam | verify reports decision conflicts. The seam carries mneme's supersession relationships rather than flattening them. |
-| Restraint in reproduction | Return the evidence span that matters, with its source, not a wholesale copy. | snippet and evidence emission, IP guardrail | verify and rollup emit match-centered spans with provenance. A repository check forbids verbatim reference text. |
-| Operational discipline, right tool before default | Classify the task and pick the right ceremony before reaching for the heavy default. | the Governor | `govern.md` classifies into tiers and selects memory scope, workflow depth, evidence standard, and approval. The default is no longer all-or-nothing. |
-| Care in sensitive domains | In high-trust contexts do not surface or compose in ways that could harm the person. | the Governor's high-trust tier, surfacing policy | Clinical, safety, privacy, and other triggers force the high-trust floor, a human checkpoint, and a verdict that caps until sign-off. The floor can be raised, never silently lowered. |
+| Principle | Meaning | Primary implementation home |
+| --- | --- | --- |
+| Executor and verifier separation | The executor may produce artifacts and claims. It cannot write the final Mergen verdict. A modifying context does not approve its own change. | `mergen_supervise.py`, milestone decision schema, separate verification contexts |
+| Evidence before advancement | Completion statements and supplied logs are inputs, not proof. A pass requires current, corroborated evidence and fresh deterministic reproduction where available. | `scripts/verify_core.py`, `mergen_supervise.py`, report linter |
+| Calibration and abstention | Deterministic observation, interpretation, human attestation, missing evidence, and conflict are labeled rather than blurred together. Uncertainty does not become a pass. | verification report schema, milestone decision schema, evidence classes |
+| Non-downgradable risk floor | Protected work can raise the required review tier. Executor declarations cannot lower the independently reproduced floor. | `scripts/governor_floor.py`, `scripts/project_config.py`, supervisor risk comparison |
+| Exact-state human approval | Required approval names the reviewer, timestamp, scope, and evidence, and is bound to the exact artifact bytes. A changed artifact invalidates approval. | `scripts/preaction_sign.py`, supervisor approval check |
+| Retrieved content is data | Files, reviews, web content, task descriptions, and tool results cannot grant permission, replace the trusted root, or redefine verification rules. | path containment, injection quarantine, data fence convention |
+| Read-only verification | Verification inspects artifacts and may write only its own report outputs. Remediation belongs to a different context and requires re-verification. | supervisor authority record, host integration contract |
+| Provenance without overclaim | Hashes, commits, manifests, and Trust Graph edges establish lineage and dependency. They do not prove universal semantic correctness. | provenance fields, sidecars, Trust Graph, replay |
+| Host honesty | A host adapter states whether it can invoke, display, or enforce a decision. Mergen does not claim enforcement the host does not provide. | adapter manifests and capability matrix |
+| Minimal verified scope | Mergen runs applicable checks and records irrelevant capabilities as not applicable rather than forcing ceremony for its own sake. | Governor, verification profiles, capability records |
+| No second durable memory | Mergen emits local verification and provenance artifacts. Durable memory remains optional and external. | mneme seam and provenance emission |
+| Honest product claims | A pass is bounded by the profile, artifacts, permissions, and checks that ran. It is not a claim of perfect defect detection. | charter, README, decision limitations |
 
-## The confidence vocabulary, defined once
+## Milestone verdict vocabulary
 
-Every surfaced verdict carries one of three confidence labels. They are defined here, once, and
-referenced everywhere else (the `verification-report.json` schema enum, `verify.md`, `core/CONVENTIONS.md`),
-so the vocabulary cannot drift between the prose and the code. The machine-readable mirror is the
-`CONFIDENCE` constant in `scripts/verify_core.py`. A test asserts the constant and the schema enum hold the
-same labels, which keeps this a checked guarantee rather than a claim.
+The final advancement decision uses four verdicts.
 
-- **extracted**. Backed by direct evidence the harness observed, a file on disk, a test exit code, a git
-  record. This is the default for any mechanically checked verdict.
-- **inferred**. Reasoned from indirect signals rather than observed directly. Allowed for an agent lens that
-  argues from context, never for a mechanical pass.
-- **ambiguous**. Evidence is absent or conflicting, so no confident verdict is possible. It resolves to FAIL,
-  never to a guessed pass.
+1. `pass` maps to `advance`.
+2. `conditional_pass` maps to `human_review_required`.
+3. `fail` maps to `return_for_remediation`.
+4. `unverifiable` maps to `hold`.
 
-The order is calibration order, most grounded to least. The mechanical harness emits only extracted and
-ambiguous, since it either observes evidence or it does not. inferred is reserved for the agent lenses that
-reason beyond what a filesystem check can see.
+Only `pass` advances. The schema enforces this relationship in both directions.
 
-## A note on enforcement honesty
+## Evidence class vocabulary
 
-Three mechanisms appear in Mergen and the table above, and they are not equal. A prompt protocol asks. A
-hook nudges. A CI gate refuses. In-session the implement pipeline will not mark a task done without the
-verifier, and the spec-kit `after_implement` hook makes verify mandatory in that flow. Neither is an absolute
-lock, since a person can edit the task file by hand. Mergen's own CI guards this repository (its tests, the
-single-source drift gate, and the no-reference-text gate). For a user project, Mergen ships the CI gate as a
-drop-in workflow plus the gate mode of the evidence metric. It fails the build when the committed verification
-report shows phantom or unverified work, and because it reads the committed artifact, the deepest guarantee
-still rests on the verifier that produced it. Naming a nudge as enforcement would itself violate the
-evidence-honesty principle, so Mergen does not.
+Each milestone check records how evidence was obtained.
 
-## A note on the reference
+1. `independently_executed`.
+2. `independently_observed`.
+3. `cryptographically_verified`.
+4. `source_verified`.
+5. `executor_supplied`.
+6. `agentically_inferred`.
+7. `human_attested`.
+8. `unavailable`.
+9. `conflicting`.
 
-The reference study contributed design ideas, not text. Where a principle above echoes a well-known
-responsible-AI norm, that norm is common property. The specific words here are Mergen's own. The build fails
-if verbatim reference text is found in the repository, which keeps this guarantee testable rather than
-asserted.
+These labels describe provenance and epistemic status. They are not calibrated probabilities.
+
+## Legacy task report confidence vocabulary
+
+The existing deterministic task report retains three confidence labels for backward compatibility.
+
+1. `extracted`. Direct file, test, or Git evidence was observed.
+2. `inferred`. An agentic lens reasoned from indirect evidence. It is never a deterministic proof label.
+3. `ambiguous`. Evidence is absent or conflicting. A milestone supervisor treats the criterion as unverifiable rather
+   than converting uncertainty into a clean pass.
+
+The machine-readable mirror is `CONFIDENCE` in `scripts/verify_core.py`. Tests assert that this vocabulary matches the
+verification report schema.
+
+## Compatibility execution toolkit
+
+The command suite under `core/commands/`, the renderers, effort mode, and the legacy `/mergen-agent` orchestrator remain
+available to current users. Their outputs can be verified by the independent authority layer. Their existence does not
+make Mergen the owner of an external executor's planning or implementation process.
+
+## Enforcement honesty
+
+A prompt protocol asks. A hook nudges. A deterministic verifier observes and decides under its contract. A host gate
+refuses only when the host is configured to honor the result. Branch protection, required checks, and human approval
+remain explicit operator and host responsibilities.
+
+## Originality
+
+The principles were informed by widely held responsible AI and software assurance practices and are expressed in
+Mergen's own words. No proprietary reference text is reproduced. Repository checks keep that commitment testable.

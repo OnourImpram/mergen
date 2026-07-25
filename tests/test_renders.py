@@ -42,8 +42,9 @@ def test_native_parses_every_command_including_lean_and_debt():
     assert "lean" in names
     assert "debt" in names
     assert "govern" in names
-    # 11 original commands + lean + debt + govern.
-    assert len(names) == 14, f"expected 14 commands, got {len(names)}: {sorted(names)}"
+    assert "agent" in names
+    # 11 original commands + lean + debt + govern + agent.
+    assert len(names) == 15, f"expected 15 commands, got {len(names)}: {sorted(names)}"
 
 
 # --------------------------------------------------------------------------- #
@@ -54,6 +55,7 @@ def test_speckit_ext_cmds_include_lean_and_debt():
     build_speckit = _load("dist/speckit/build_speckit.py")
     assert "lean" in build_speckit.EXT_CMDS
     assert "debt" in build_speckit.EXT_CMDS
+    assert "agent" in build_speckit.EXT_CMDS
 
 
 def test_committed_extension_yaml_lists_lean_and_debt():
@@ -62,12 +64,13 @@ def test_committed_extension_yaml_lists_lean_and_debt():
     assert "speckit.mergen.lean" in ext_yaml
     assert "speckit.mergen.debt" in ext_yaml
     assert "speckit.mergen.govern" in ext_yaml
+    assert "speckit.mergen.agent" in ext_yaml
     assert 'version: "1.0.0"' in ext_yaml
 
 
 def test_committed_command_files_exist():
     cmds_dir = REPO / "dist" / "speckit" / "extensions" / "mergen" / "commands"
-    for name in ("lean", "debt"):
+    for name in ("lean", "debt", "agent"):
         assert (cmds_dir / f"speckit.mergen.{name}.md").is_file()
 
 

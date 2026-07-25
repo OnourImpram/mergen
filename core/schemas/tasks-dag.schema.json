@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/TheGoatPsy/mergen/core/schemas/tasks-dag.schema.json",
+  "$id": "https://github.com/OnourImpram/mergen/core/schemas/tasks-dag.schema.json",
   "title": "tasks-dag",
   "description": "Wave-ordered dependency DAG emitted by /mergen-tasks. A top-level array of waves; each wave is an array of task objects whose dependencies are all satisfied by earlier waves and which can run in parallel. The semantic invariants (unique ids, references resolve, no cycles, dependencies appear in earlier waves) are enforced by scripts/tasks_dag_validator.py, which JSON Schema alone cannot express.",
   "type": "array",

@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/TheGoatPsy/mergen/schemas/adapter-manifest.schema.json",
+  "$id": "https://github.com/OnourImpram/mergen/schemas/adapter-manifest.schema.json",
   "title": "Mergen adapter manifest",
   "description": "A per-host capability manifest (core/adapters/<host>.json). It declares, as data, exactly what a render target can and cannot do, so a renderer never claims a capability the host lacks and the capability matrix is generated from these manifests rather than hand-maintained. Each capability is a boolean and the full vocabulary is required, so a host states a yes or a no for every capability and none is left ambiguous. additionalProperties is false at every level so a manifest cannot smuggle an undeclared capability a reader might misinterpret. The runtime that enforces this is scripts/adapter_sdk.py (mergen adapter validate).",
   "type": "object",

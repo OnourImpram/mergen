@@ -50,9 +50,9 @@ mechanisms and they do not block, prevent, or enforce any action. The real enfor
 implement pipeline's adversarial verify stage.
 
 The spec-kit renderer (`dist/speckit/build_speckit.py`) produces a preset that overrides eight
-stock spec-kit commands and an extension that adds verify, rollup, go, lean, debt, and govern as
-`speckit.mergen.*` commands wired via `after_implement` (optional: false). The native renderer
-(`dist/native/build_native.py`) provides the complete 14-command suite. The eval below uses
+stock spec-kit commands and an extension that adds verify, rollup, go, lean, debt, govern, and
+agent as `speckit.mergen.*` commands wired via `after_implement` (optional: false). The native
+renderer (`dist/native/build_native.py`) provides the complete 15-command suite. The eval below uses
 the native renderer.
 
 ---

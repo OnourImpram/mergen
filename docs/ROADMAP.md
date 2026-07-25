@@ -20,7 +20,7 @@ The effort-mode layer reconstructs "max reasoning effort plus standing Workflow 
 
 ### SDD layer, single-source core (half B)
 
-Fourteen command files in `core/commands/`, each defining a named Workflow-tool pattern:
+Fifteen command files in `core/commands/`: fourteen each defining a named Workflow-tool pattern, plus the Mergen Agent (`/mergen-agent`) that orchestrates the whole lifecycle in a single command:
 
 | File | Pattern summary |
 |---|---|
@@ -38,6 +38,7 @@ Fourteen command files in `core/commands/`, each defining a named Workflow-tool 
 | `lean.md` | Over-engineering review: parallel per-file reviewers against the lazy ladder, deduplicated ranked delete-list. Complexity only, never correctness. |
 | `debt.md` | Harvests `mergen:` deferred-shortcut comments into a risk-banded ledger. Gate mode fails on unceiled shortcuts. |
 | `govern.md` | The Governor. Classifies a task into tiny, standard, spec, or high-trust and sets memory scope, workflow depth, evidence standard, and human-approval threshold. Deterministic high-trust floor: can be raised by explicit configuration, never silently lowered. The wisdom organ that precedes routing. `/mergen-go` executes the chosen tier. |
+| `agent.md` | The Mergen Agent. A single entry point that sequences the lifecycle in one command: arm the substrate, run the Governor, route and execute via `/mergen-go`, then report. It orchestrates the other fourteen commands without replacing them, and never skips the verify gate or auto-completes a high-trust task. |
 
 Seven template files in `core/templates/`:
 
@@ -104,8 +105,8 @@ Overrides 8 stock Spec Kit commands via `provides.templates` entries of type `co
 `speckit.constitution`, `speckit.specify`, `speckit.clarify`, `speckit.checklist`, `speckit.plan`, `speckit.tasks`, `speckit.analyze`, `speckit.implement`.
 
 **Extension** (`dist/speckit/extensions/mergen/`, declared in `extension.yml`):
-Adds 6 new commands not present in stock Spec Kit:
-`speckit.mergen.verify`, `speckit.mergen.rollup`, `speckit.mergen.go`, `speckit.mergen.lean`, `speckit.mergen.debt`, `speckit.mergen.govern`.
+Adds 7 new commands not present in stock Spec Kit:
+`speckit.mergen.verify`, `speckit.mergen.rollup`, `speckit.mergen.go`, `speckit.mergen.lean`, `speckit.mergen.debt`, `speckit.mergen.govern`, `speckit.mergen.agent`.
 Wires `hooks.after_implement -> speckit.mergen.verify` with `optional: false`, making verify mandatory in the Spec Kit implement flow. This is the hook contract, reinforced by the drop-in CI verify-gate, not an absolute in-session lock.
 
 ### Cross-agent renderer
@@ -125,14 +126,14 @@ Wires `hooks.after_implement -> speckit.mergen.verify` with `optional: false`, m
 
 ### Promo website
 
-A static promo site for Mergen and the Agent Continuity Stack is published at https://thegoatpsy.github.io/mergen/ . It is served from the `gh-pages` branch, kept separate from the engine source on `main`. It presents the identity, the Governor, the verify gate, and the honest enforcement distinction, and it claims no benchmark numbers. A public launch of the repository is gated on a full git-history secret sweep and the operator's final sign-off; until then the repository's visibility is the operator's call.
+A static promo site for Mergen and the Agent Continuity Stack is published at https://onourimpram.github.io/mergen/ . It is served from the `gh-pages` branch, kept separate from the engine source on `main`. It presents the identity, the Governor, the verify gate, and the honest enforcement distinction, and it claims no benchmark numbers. A public launch of the repository is gated on a full git-history secret sweep and the operator's final sign-off; until then the repository's visibility is the operator's call.
 
 ---
 
 ## 2. Known limits of v1.0.0
 
 **Spec-kit renderer is preset plus extension, not full feature parity.**
-The spec-kit half ships a preset that replaces 8 commands and an extension that adds 6 commands. The agent-agnostic CLI now also covers the Spec Kit diagnostic surfaces that matter most: `mergen doctor` (install integrity, hook registration, and shipped-schema validity), `mergen status` (a `tasks-state.json` summary, the `specify status` analog), and `mergen issues` (issue stubs rendered from a `tasks.md`, the taskstoissues analog, which renders rather than creates). Other Spec Kit behavior outside the 14 command surfaces, such as its own project-bootstrap scripts, is still not replicated by this release.
+The spec-kit half ships a preset that replaces 8 commands and an extension that adds 7 commands. The agent-agnostic CLI now also covers the Spec Kit diagnostic surfaces that matter most: `mergen doctor` (install integrity, hook registration, and shipped-schema validity), `mergen status` (a `tasks-state.json` summary, the `specify status` analog), and `mergen issues` (issue stubs rendered from a `tasks.md`, the taskstoissues analog, which renders rather than creates). Other Spec Kit behavior outside the 15 command surfaces, such as its own project-bootstrap scripts, is still not replicated by this release.
 
 **`/effort max` requires a manual paste.**
 The `mergen_prompt_hook.py` hook injects a standing orchestration directive on each turn, but it cannot flip Claude Code's live effort value to `max`. The user must paste the `/effort max` line once after arming the mode. This is documented in `docs/HOW-IT-WORKS.md`.
@@ -151,22 +152,26 @@ The `/verify` and `/rollup` commands reference these templates and explain their
 
 ---
 
-## 3. Planned next
+## 3. Shipped since v1.0.0
+
+These items were previously listed as planned and have shipped. Each is now backed by a module and a CLI surface in the v2.x line.
+
+**Clinical and security domain packs.**
+`domains/clinical/pack.toml` and `domains/security/pack.toml` ship as the worked examples for the Policy Pack SDK, validated by `mergen pack validate`. A pack is policy as data, loaded by the floor engine and never executed by it, and it can only raise the floor, never lower it; the validator enforces that at validation time.
+
+**Dashboard and cross-run trends.**
+A static dashboard ships (`scripts/dashboard.py`, `mergen dashboard <dir>`): a self-contained offline HTML snapshot, one row per report. The cross-run dimension ships alongside it (`scripts/trends.py`, `mergen trends <dir>`): phantom-completion and work-done-rate history across the run corpus with an inline SVG sparkline, computed from each report's schema-required `tasks` array. A `--json` flag emits the same metrics as a machine-readable export, the honest observability seam, with no telemetry dependency and no network call in mergen core. The one cross-run signal not shown is the over-build trend, which needs lean data the verification report does not carry.
+
+**Churn analytics.**
+`mergen trends` ranks the tasks that most often flip verified status or return as phantoms across the run corpus, the per-task churn leaderboard that surfaces spec patterns reliably producing verifier failures. Clustering by spec pattern rolls the same churn up per feature, and because a feature is the natural namespace for a task, the rollup never pools a task id across two features. Aggregation across corpora reads several report directories at once and compares them side by side, each corpus analyzed independently so a task id is never pooled across two unrelated projects. The `--json` export carries the per-feature rollup and, in multi-corpus mode, a corpus comparison.
+
+## 4. Planned next
 
 **Real eval runs with published numbers.**
 Execute the methodology in `eval/` against representative codebases, record results (phantom-completion rate, wave-parallel speedup, verification catch rate, and over-build rate), and publish them with reproducible scripts and the exact model versions used.
 
 **GitHub Action and PR comment bot.**
 A CI action that runs `scripts/check_sync.py` and posts a summary comment on pull requests, showing drift status and a diff of any stale rendered output.
-
-**Clinical and security domain packs.**
-Preset overlays that add domain-specific constitution clauses, checklist items, and evidence standards for clinical and security contexts.
-
-**Dashboard trends and history (cross-run view shipped).**
-A basic static dashboard shipped first (`scripts/dashboard.py`, `mergen dashboard <dir>`): a self-contained offline HTML snapshot, one row per report. The cross-run dimension now ships alongside it (`scripts/trends.py`, `mergen trends <dir>`): phantom-completion and work-done-rate history across the run corpus with an inline SVG sparkline, computed from each report's schema-required `tasks` array. A `--json` flag emits the same metrics as a machine-readable export, the honest observability seam, with no telemetry dependency and no network call in mergen core. The one remaining cross-run signal is the over-build trend, which needs lean data the verification report does not carry, so it is not shown yet.
-
-**Churn analytics (shipped).**
-`mergen trends` ranks the tasks that most often flip verified status or return as phantoms across the run corpus, the per-task churn leaderboard that surfaces spec patterns reliably producing verifier failures. Two follow-ons now ship with it. Clustering by spec pattern rolls the same churn up per feature, so a whole spec that keeps fighting the verifier surfaces above its individual tasks, and because a feature is the natural namespace for a task, the rollup never pools a task id across two features. Aggregation across corpora reads several report directories at once and compares them side by side, each corpus analyzed independently so a task id is never pooled across two unrelated projects. The `--json` export carries the per-feature rollup and, in multi-corpus mode, a corpus comparison alongside each corpus in full.
 
 **Full benchmark suite.**
 Extend `eval/evidence_metric.py` into the complete four-metric benchmark with published reproducible results.
@@ -178,7 +183,7 @@ Extend `eval/evidence_metric.py` into the complete four-metric benchmark with pu
 The v1.0.0 preset covers the 8 core workflow commands. Remaining Spec Kit command surfaces and any new commands Spec Kit ships after this release are candidates for inclusion in a future preset version.
 
 **Additional Workflow patterns.**
-The 14 commands in v1.0.0 cover the primary SDD lifecycle. Patterns for common adjacent tasks (incremental re-specification, cross-project dependency tracking, change-impact analysis) are candidates for new commands in a future minor release.
+The 15 commands (14 lifecycle commands plus the Mergen Agent orchestrator) cover the primary SDD lifecycle. Patterns for common adjacent tasks (incremental re-specification, cross-project dependency tracking, change-impact analysis) are candidates for new commands in a future minor release.
 
 **Spec-kit extension: `init` equivalent.**
 A mechanism to bootstrap the `.specify/templates/` directory (including the two mergen-addition templates) into a project that adopts the spec-kit preset, so no manual copy step is required.

@@ -108,6 +108,29 @@ jobs:
       - name: Critical-path hook import verification
         run: python scripts/spec_verify.py --gate
 
+  version-consistency:
+    # Version-stamp consistency across pyproject.toml, CITATION.cff,
+    # CHANGELOG.md, and README.md. Structurally prevents the docs-drift class
+    # where a release bumps pyproject.toml but misses a prose source. The
+    # validator is pure-regex and 3.9-safe; its 3.9-safety is exercised by the
+    # test suite's 3.9 matrix job (tests/test_validate_version.py). This job
+    # runs the gate itself on 3.12. See scripts/validate_version.py.
+    name: "validate_version (stamp consistency)"
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: "3.12"
+      - name: Version stamp consistency
+        run: python scripts/validate_version.py
+
   coverage:
     # Statement coverage of the Python source surface, with the fail-under floor
     # from pyproject [tool.coverage.report]. One Linux job so the number is
