@@ -112,7 +112,7 @@ The discipline, and only the discipline, ports to non-Claude agents via `dist/ag
 
 ## 4. Feature and Parity Table
 
-The table below maps each Spec Kit command to its mergen equivalent and describes what mergen adds. The native shell (C) is the full 14-command experience. The spec-kit shell (B) ships a preset that overrides eight stock Spec Kit commands and an extension that adds six commands Spec Kit lacks.
+The table below maps each Spec Kit command to its mergen equivalent and describes what mergen adds. The native shell (C) is the full 15-command experience (14 lifecycle commands plus the Mergen Agent orchestrator). The spec-kit shell (B) ships a preset that overrides eight stock Spec Kit commands and an extension that adds seven commands Spec Kit lacks.
 
 | Spec Kit command | mergen native equivalent | mergen spec-kit equivalent | What mergen adds |
 |---|---|---|---|
@@ -130,8 +130,9 @@ The table below maps each Spec Kit command to its mergen equivalent and describe
 | (not present) | `/mergen-lean` | `speckit.mergen.lean` (extension) | Over-engineering review: parallel per-file reviewers against the lazy ladder, deduplicated into a ranked delete-list (`delete`/`stdlib`/`native`/`yagni`/`shrink`). Complexity only, never correctness. Lists cuts, never applies them. |
 | (not present) | `/mergen-debt` | `speckit.mergen.debt` (extension) | Harvests `mergen:` deferred-shortcut comments into a risk-banded ledger. Gate mode fails on any shortcut with no named ceiling and upgrade path. |
 | (not present) | `/mergen-govern` | `speckit.mergen.govern` (extension) | Classifies a task into tiny, standard, spec, or high-trust and sets memory scope, workflow depth, evidence standard, and human approval threshold. Deterministic high-trust floor: the floor can be raised by explicit configuration but is never silently lowered. The wisdom organ that precedes routing. The `/mergen-go` router executes the chosen tier. |
+| (not present) | `/mergen-agent` | `speckit.mergen.agent` (extension) | The Mergen Agent. A single entry point that runs a task through the whole lifecycle in one command: arm the substrate, run the Governor, route and execute via `/mergen-go`, then report. Orchestrates the other commands without replacing them; never skips the verify gate or auto-completes a high-trust task. |
 
-**Scope note.** The native shell installs all 14 commands as Claude Code skills under `~/.claude/skills/mergen-<name>/SKILL.md`, invoked as `/mergen-<name>`, via `dist/native/build_native.py`. The spec-kit shell (`dist/speckit/build_speckit.py`) delivers a preset (`dist/speckit/preset/mergen/`) that overrides eight stock Spec Kit commands and an extension (`dist/speckit/extensions/mergen/`) that adds six commands Spec Kit lacks (`verify`, `rollup`, `go`, `lean`, `debt`, `govern`) as `speckit.mergen.<cmd>`, with the verify gate wired as a mandatory `after_implement` hook (`optional: false`), reinforced in-session and made a true gate by the drop-in project CI check `eval/ci/verify-gate.yml`. The spec-kit shell does not claim to replace Spec Kit's own install tooling or preset infrastructure.
+**Scope note.** The native shell installs all 15 commands as Claude Code skills under `~/.claude/skills/mergen-<name>/SKILL.md`, invoked as `/mergen-<name>`, via `dist/native/build_native.py`. The spec-kit shell (`dist/speckit/build_speckit.py`) delivers a preset (`dist/speckit/preset/mergen/`) that overrides eight stock Spec Kit commands and an extension (`dist/speckit/extensions/mergen/`) that adds seven commands Spec Kit lacks (`verify`, `rollup`, `go`, `lean`, `debt`, `govern`, `agent`) as `speckit.mergen.<cmd>`, with the verify gate wired as a mandatory `after_implement` hook (`optional: false`), reinforced in-session and made a true gate by the drop-in project CI check `eval/ci/verify-gate.yml`. The spec-kit shell does not claim to replace Spec Kit's own install tooling or preset infrastructure.
 
 ---
 

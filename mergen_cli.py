@@ -16,7 +16,7 @@ standalone wheel that bundles core/ as package data is on the roadmap.
 The verbs:
 
   install    copy the effort command and hook, register the effort hook, render
-             the 14 SDD skills, and register the two SDD hooks. Idempotent.
+             the 15 SDD skills, and register the two SDD hooks. Idempotent.
   doctor     read-only health probe. Reports what is present, what is missing,
              and the honest caveats (the /effort max manual paste, and that the
              hooks are reinforcement nudges, not enforcement).
@@ -282,7 +282,7 @@ def install(python_exe: str, dry_run: bool) -> int:
     if rc != 0:
         return rc
 
-    print("==> 3/4 render the 14 SDD skills")
+    print("==> 3/4 render the 15 SDD skills")
     rc = _run(_BUILD_NATIVE, "build", dry_run=dry_run)
     if rc != 0:
         return rc

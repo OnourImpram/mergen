@@ -1,33 +1,42 @@
-<!-- Mergen pull request. Keep the description honest and evidence-bearing, the
-     same standard the tool enforces. Delete sections that do not apply. -->
+<!-- Mergen pull request. Keep the description evidence-bearing and honest. Delete sections that do not apply. -->
 
-## What and why
+## Problem and boundary
 
-<!-- One paragraph. What changes, and what problem it solves. -->
+<!-- What verification or developer experience problem does this solve. State what remains owned by the external executor. -->
+
+## Change
+
+<!-- Describe the smallest implemented change. Do not describe roadmap work as shipped. -->
 
 ## Evidence
 
-<!-- How you know it works. The verification report, the tests you ran, the
-     output you checked. A claim without evidence is a claim, not a result. -->
+<!-- List the commands, fixtures, reports, and outputs that support the change. -->
 
-- [ ] Tests pass on 3.9, 3.11, and 3.12 (Linux), and 3.12 (Windows) (`python -m pytest tests/ -q`)
-- [ ] `ruff check .`, `mypy`, `python scripts/check_sync.py`, and `python scripts/check_no_reference_text.py` are green
-- [ ] Docs and CHANGELOG updated where user-facing behavior changed
+- [ ] `python -m pytest tests/ -v`
+- [ ] `ruff check .`
+- [ ] `mypy`
+- [ ] `python scripts/check_sync.py`
+- [ ] `python scripts/check_no_reference_text.py`
+- [ ] `python scripts/spec_verify.py --gate`
+- [ ] `python scripts/validate_version.py`
+- [ ] `python eval/benchmark.py --gate`
+- [ ] Documentation and schemas updated where behavior changed
+- [ ] A valid control passes and planted invalid cases fail
+
+## Security and trust boundary
+
+<!-- Identify untrusted inputs, path or command boundaries, human review requirements, and false pass or false failure risk. -->
 
 ## Governor acknowledgement
 
-<!-- The govern-diff CI gate classifies the real diff against the deterministic
-     high-trust floor (auth, payment, secrets, privacy, clinical, irreversible
-     operations, public-contract changes, untrusted-input-as-instruction). A
-     high-trust change fails the build unless this line is present in the PR body,
-     exactly as written, on its own line. The floor is non-downgradable: it can be
-     raised but never silently lowered. Add the line only after a human has
-     reviewed the high-trust change. -->
+<!-- The PR diff gate raises protected changes to high-trust. Add the next line only after a human has reviewed the exact diff. -->
 
-<!-- Uncomment the next line if the diff is high-trust: -->
 <!-- Governor-Ack: high-trust -->
 
-## Scope honesty
+## Compatibility and migration
 
-<!-- Anything deferred, any caveat, any place the change is narrower than it
-     might appear. Name it here rather than letting a reader infer more. -->
+<!-- State whether schemas, commands, outputs, adapters, or existing users are affected. Name any deprecation period. -->
+
+## Honest limitations
+
+<!-- State what this change does not prove, verify, or enforce. -->

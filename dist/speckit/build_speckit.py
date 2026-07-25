@@ -41,11 +41,11 @@ COMMANDS_DIR = REPO / "core" / "commands"
 PRESET_CMDS = ["constitution", "specify", "clarify", "checklist",
                "plan", "tasks", "analyze", "implement"]
 # Spec Kit LACKS these; the extension adds them.
-EXT_CMDS = ["verify", "rollup", "go", "lean", "debt", "govern"]
+EXT_CMDS = ["verify", "rollup", "go", "lean", "debt", "govern", "agent"]
 
 EXT_ID = "mergen"
-AUTHOR = "TheGoatPsy"
-REPO_URL = "https://github.com/TheGoatPsy/mergen"
+AUTHOR = "OnourImpram"
+REPO_URL = "https://github.com/OnourImpram/mergen"
 LICENSE = "Apache-2.0"
 SPECKIT_REQ = ">=0.6.0"
 

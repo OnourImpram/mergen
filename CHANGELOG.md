@@ -6,6 +6,55 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+No unreleased changes yet.
+
+## [2.1.1] - 2026-07-25
+
+### Changed
+
+- The published distribution is now `mergen-verdict`. The name `mergen` on PyPI
+  belongs to an unrelated time-domain astronomy package, so `pip install mergen`
+  never installed this project and never could. Nothing inside the project moves:
+  the import package and the `mergen` and `mergen-supervise` commands are
+  unchanged, and no released version was ever published under the old
+  distribution name, so no existing installation breaks.
+- The product is named Mergen Verdict, after what it returns. It does not perform
+  verification; it adjudicates evidence produced elsewhere and renders a verdict,
+  which is why a name built on "verify" would misdescribe it.
+
+## [2.1.0] - 2026-07-25
+
+### Added
+
+- Independent milestone verification is now the primary Mergen product identity.
+  The standalone `mergen-supervise` entry point consumes externally produced
+  verification evidence, reproduces deterministic checks, applies the Governor
+  risk floor, and returns a fail-closed advancement decision without owning the
+  external implementation workflow.
+- The versioned milestone decision 1.1 contract with `pass`, `conditional_pass`,
+  `fail`, and `unverifiable` verdicts, plus the corresponding `advance`,
+  `human_review_required`, `return_for_remediation`, and `hold` actions.
+- Evidence classes, fresh deterministic reproduction, source-state and decision
+  hashes, exact-report human approval binding, Markdown rendering, professional
+  issue forms, support guidance, contribution guidance, and verification-focused
+  security documentation.
+
+### Changed
+
+- The existing specification-driven command suite and `/mergen-agent` lifecycle
+  orchestrator are retained as compatibility tooling. External executors own
+  planning, implementation, remediation, and progression. Mergen owns independent
+  milestone verification.
+- Repository presentation, package metadata, charter, principles, citation
+  metadata, and pull request intake now use the independent verification boundary.
+
+### Verification
+
+- The complete GitHub Actions matrix passed across supported Python versions and
+  Windows, together with Ruff, strict mypy, coverage, version consistency, schema
+  validation, renderer sync, phantom-completion dogfood, CodeQL, dependency review,
+  and gitleaks.
+
 ## [2.0.0] - 2026-06-28
 
 Engineering line that turns the guarantees the v1.0.0 prompts describe into
@@ -221,3 +270,7 @@ a renamed one, so its history begins here rather than carrying the seed project'
 See `docs/ROADMAP.md`: a GitHub Action and PR comment bot, clinical and security domain packs, the full
 benchmark suite, and a full mneme writeback adapter. The dashboard, cross-run trends, and churn analytics
 listed here originally have since shipped in the Unreleased line above.
+
+[Unreleased]: https://github.com/OnourImpram/mergen/compare/v2.0.0...HEAD
+[2.0.0]: https://github.com/OnourImpram/mergen/releases/tag/v2.0.0
+[1.0.0]: https://github.com/OnourImpram/mergen/releases/tag/v1.0.0

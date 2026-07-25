@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/TheGoatPsy/mergen/schemas/policy-pack.schema.json",
+  "$id": "https://github.com/OnourImpram/mergen/schemas/policy-pack.schema.json",
   "title": "Mergen policy pack",
   "description": "A shareable domain policy pack (domains/<name>/pack.toml). Policy as data, loaded by the Governor floor engine, never code the engine executes. A pack can only RAISE the high-trust floor, never lower it. additionalProperties is false so a pack carries only the known raise-only fields and cannot smuggle a directive a future engine might misread as a downgrade. The runtime enforcement that mirrors this declaration is scripts/pack_validate.py (mergen pack validate), which also checks name matches the directory and that extra_high_trust_paths is a single-line array the 3.9 and 3.10 fallback TOML reader can recover.",
   "type": "object",

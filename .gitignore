@@ -36,3 +36,6 @@ Thumbs.db
 
 # oh-my-claudecode session state (orchestration runtime, not part of this tool)
 .omc/
+
+# Local ruvector index artifact, not part of the source tree
+ruvector.db

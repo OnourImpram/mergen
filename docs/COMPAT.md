@@ -55,7 +55,7 @@ it verbatim.
 
 ## Tier 1. Needs a renderer install, then runs in that host
 
-The 14 SDD commands are authored once in `core/commands/` and rendered into one
+The 15 SDD commands are authored once in `core/commands/` and rendered into one
 of two shells. The rendered command is a prompt, so it needs a host that runs
 slash commands. The single-source contract is in `core/CONVENTIONS.md`.
 

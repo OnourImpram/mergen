@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/TheGoatPsy/mergen/schemas/tasks-state.schema.json",
+  "$id": "https://github.com/OnourImpram/mergen/schemas/tasks-state.schema.json",
   "title": "Mergen tasks state",
   "description": "Machine-readable mirror of the post-verification completion state of tasks.md.",
   "type": "object",
