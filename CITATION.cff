@@ -1,6 +1,6 @@
 cff-version: 1.2.0
 message: "If you use this software, please cite it as below."
-title: "Mergen: Independent milestone verification for agentic workflows"
+title: "Mergen Verdict: Independent milestone verification for agentic workflows"
 abstract: >-
   Mergen is an independent verification layer for milestone-based work. External
   executors own planning and implementation. Mergen evaluates declared evidence,
@@ -16,7 +16,7 @@ authors:
 repository-code: "https://github.com/OnourImpram/mergen"
 url: "https://github.com/OnourImpram/mergen"
 license: Apache-2.0
-version: "2.1.0"
+version: "2.1.1"
 date-released: "2026-07-25"
 keywords:
   - ai-agents
