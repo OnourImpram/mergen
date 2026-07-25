@@ -20,7 +20,7 @@ Mergen verifies whether a declared milestone is sufficiently supported by the ac
 The executor can be Codex, Claude Code, OpenHands, another agent system, a continuous integration workflow, or a human
 team. The executor owns planning, implementation, and remediation. Mergen owns independent verification.
 
-> Status: v2.0.0, beta. The deterministic verification core is available. The bundled milestone supervisor currently
+> Status: v2.1.0, beta. The deterministic verification core is available. The bundled milestone supervisor currently
 > verifies Mergen software task reports. Broader domain profiles remain explicit extension points rather than implied
 > capabilities.
 
