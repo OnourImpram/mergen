@@ -2,7 +2,7 @@
   <img src="assets/mergen-emblem.png" alt="Mergen emblem, a gold arrow finding its mark above a verification checkmark" width="320">
 </p>
 
-<h1 align="center">Mergen</h1>
+<h1 align="center">Mergen Verdict</h1>
 
 <p align="center">
   <strong>Independent milestone verification for agentic and human engineering workflows.</strong>
@@ -10,6 +10,7 @@
 
 <p align="center">
   <a href="https://github.com/OnourImpram/mergen/actions/workflows/ci.yml"><img src="https://github.com/OnourImpram/mergen/actions/workflows/ci.yml/badge.svg" alt="CI status"></a>
+  <a href="https://pypi.org/project/mergen-verdict/"><img src="https://img.shields.io/pypi/v/mergen-verdict" alt="PyPI version"></a>
   <img src="https://img.shields.io/badge/status-beta-blue" alt="Status, beta">
   <img src="https://img.shields.io/badge/python-3.9%2B-blue" alt="Python 3.9 or newer">
   <img src="https://img.shields.io/badge/runtime-standard%20library-success" alt="Runtime, Python standard library">
@@ -20,9 +21,22 @@ Mergen verifies whether a declared milestone is sufficiently supported by the ac
 The executor can be Codex, Claude Code, OpenHands, another agent system, a continuous integration workflow, or a human
 team. The executor owns planning, implementation, and remediation. Mergen owns independent verification.
 
-> Status: v2.1.0, beta. The deterministic verification core is available. The bundled milestone supervisor currently
+> Status: v2.1.1, beta. The deterministic verification core is available. The bundled milestone supervisor currently
 > verifies Mergen software task reports. Broader domain profiles remain explicit extension points rather than implied
 > capabilities.
+
+## Install
+
+```bash
+pip install mergen-verdict
+```
+
+The distribution is `mergen-verdict`; the import package and the commands stay `mergen`:
+
+```bash
+mergen --help
+mergen-supervise report.json
+```
 
 ## Why Mergen exists
 
