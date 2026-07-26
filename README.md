@@ -5,7 +5,7 @@
 <h1 align="center">Mergen Verdict</h1>
 
 <p align="center">
-  <strong>Independent milestone verification for agentic and human engineering workflows.</strong>
+  <strong>Independent verification that re-checks a completion claim against the actual repository, for agentic and human engineering workflows.</strong>
 </p>
 
 <p align="center">
@@ -17,26 +17,73 @@
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-blue" alt="Apache 2.0 license"></a>
 </p>
 
-Mergen verifies whether a declared milestone is sufficiently supported by the actual artifacts and evidence to advance.
+Your agent reports the task done. The checkbox is ticked, the summary is confident, and the file it names is not on disk.
+You find out later, in review or in production, that a run you already accepted was partly fiction.
+
 The executor can be Codex, Claude Code, OpenHands, another agent system, a continuous integration workflow, or a human
 team. The executor owns planning, implementation, and remediation. Mergen owns independent verification.
+
+Mergen takes that completion claim and re-checks it against the actual tree — file on disk, test exits zero, git tracks
+it — then returns one of four verdicts: `pass`, `conditional_pass`, `fail`, or `unverifiable`. `unverifiable` never
+becomes a `pass`, and `conditional_pass` means the mechanical checks passed while the required human approval is still
+absent.
+
+```bash
+git clone https://github.com/OnourImpram/mergen.git && cd mergen && python -m pip install -e .
+```
+
+The published distribution is `mergen-verdict`; the import package and the commands stay `mergen` and `mergen-supervise`.
+The editable install is currently the supported package path because the legacy renderers read the repository `core`
+tree. The two verification entry points are installed together. The published wheel declares only the two top level
+modules (`pyproject.toml`, `py-modules`), so it does not carry the `scripts/` tree: `mergen verify` cannot run from a
+wheel only install, and `mergen-supervise` cannot reproduce evidence from one — it returns `unverifiable` and holds
+(`mergen_cli.py`, `_VERIFY_CORE`; `mergen_supervise.py`, `_load_script`).
+
+```bash
+mergen verify --tasks-state tasks-state.json --root . --out verification-report.json --strict
+mergen-supervise --root . --report verification-report.json --tasks-state tasks-state.json --out milestone-decision.json
+```
+
+The first writes `verification-report.json` and its SHA-256 sidecar. The second writes the decision as JSON, a sidecar,
+and Markdown. The process exit code is zero only for a clean `pass` and `advance` decision. `fail` exits one.
+`conditional_pass` and `unverifiable` exit two. That exit code is how a host turns a verdict into a gate.
+
+<!-- DEMO-SLOT -->
+
+- **5 of 5 planted phantom completions caught, 0 of 3 genuine completions wrongly failed** on a labelled fixture corpus,
+  against a bare-checkbox baseline that catches 0 by construction. `python eval/benchmark.py --gate` runs on pushes to
+  `main` and on pull requests targeting `main`, so a regression in detection fails the build. The measurement is
+  mechanical detection on planted fixtures with known ground truth, not a code-quality comparison of two live toolchains
+  (`eval/benchmark.py` `run_gate`, `.github/workflows/ci.yml`, scope stated in `eval/README.md`).
+- **A `pass` is unreachable while any single check is unknown** — the decision function returns `pass` and `advance`
+  only when the failure list is empty, the unverifiable list is empty, and the check list is non-empty. An unresolved
+  check yields `unverifiable` and `hold`, or, when the human approval record is the only unresolved check,
+  `conditional_pass` and `human_review_required` (`mergen_supervise.py`, `_decision`).
+- **No model, no network, no third-party runtime dependency** — both entry points import only the Python standard
+  library, `pyproject.toml` declares no runtime dependencies, and a CI gate parses every hook on the live session path
+  and fails the build if one imports `anthropic`, `openai`, `requests`, `httpx`, `urllib.request`, `urllib3`, or
+  `aiohttp` (`scripts/spec_verify.py` `FORBIDDEN_ROOTS`, wired in `.github/workflows/ci.yml`). The one external process
+  is `pytest`, launched by the tests-pass lens only when a declared task asks the mechanical verifier to execute a test
+  (`scripts/verify_core.py`, `lens_tests_pass`).
+
+## Scope and limits
 
 > Status: v2.1.1, beta. The deterministic verification core is available. The bundled milestone supervisor currently
 > verifies Mergen software task reports. Broader domain profiles remain explicit extension points rather than implied
 > capabilities.
 
-## Install
+Mergen returns a decision and stops there. It does not start the next stage, does not modify the artifact it judges, and
+does not claim enforcement a host has not configured. Each of those limits is stated in full below, unchanged:
 
-```bash
-pip install mergen-verdict
-```
-
-The distribution is `mergen-verdict`; the import package and the commands stay `mergen`:
-
-```bash
-mergen --help
-mergen-supervise report.json
-```
+- [Why Mergen exists](#why-mergen-exists) — why a completion claim is not proof, and what Mergen does not do with it.
+- [Product boundary](#product-boundary) — what the external workflow owns and what Mergen owns.
+- [Requirements](#requirements) — Python, Git, and the single case that needs `pytest`.
+- [Verdicts](#verdicts) — all four verdicts, their advancement actions, and their exact meanings.
+- [Evidence classes](#evidence-classes) — how each check's evidence was obtained, including what is only asserted.
+- [High trust work](#high-trust-work) — risk floor reclassification and artifact bound human approval.
+- [Trust boundary](#trust-boundary) — what the tamper evident controls do and do not protect against.
+- [Host integration](#host-integration) — what a host must declare, and what Mergen will not claim on its behalf.
+- [Claim boundary](#claim-boundary) — the explicit list of things Mergen does not claim.
 
 ## Why Mergen exists
 
