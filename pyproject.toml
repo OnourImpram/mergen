@@ -58,6 +58,28 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
 py-modules = ["mergen_cli", "mergen_supervise"]
+packages = [
+  "mergen_payload",
+  "mergen_payload.scripts",
+  "mergen_payload.core",
+  "mergen_payload.dist",
+  "mergen_payload.effort_mode",
+]
+
+# The payload directories keep their place at the repository root so CI, the
+# install scripts, and every documented `python scripts/...` line keep working.
+# Only the wheel sees them under mergen_payload.
+[tool.setuptools.package-dir]
+"mergen_payload.scripts" = "scripts"
+"mergen_payload.core" = "core"
+"mergen_payload.dist" = "dist"
+"mergen_payload.effort_mode" = "effort-mode"
+
+[tool.setuptools.package-data]
+"mergen_payload.scripts" = ["**/*"]
+"mergen_payload.core" = ["**/*"]
+"mergen_payload.dist" = ["**/*"]
+"mergen_payload.effort_mode" = ["**/*"]
 
 [tool.ruff]
 line-length = 120

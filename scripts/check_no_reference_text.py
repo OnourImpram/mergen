@@ -57,6 +57,12 @@ DISAVOWED_ALLOWED = {
 
 TEXT_EXT = {".md", ".py", ".sh", ".ps1", ".toml", ".yml", ".yaml", ".json", ".txt", ".mdc"}
 SKIP_DIRS = {".git", ".pytest_cache", "__pycache__", ".specify", "node_modules"}
+# Build output and virtualenvs carry copies of the sources, including this
+# scanner, whose own fingerprint list would then be read as a finding. The
+# names below are exactly the artifact entries in .gitignore: the gate judges
+# the tracked tree, not what a build left behind. "dist" is absent on purpose,
+# because dist/native and dist/speckit are sources here, not wheel output.
+SKIP_DIRS |= {"build", ".venv", "venv", "site-packages", ".mypy_cache", ".ruff_cache", ".tox"}
 EXTRA_NAMES = {"NOTICE", "LICENSE"}
 
 
@@ -76,6 +82,8 @@ def iter_text_files(root: Path) -> Iterator[Path]:
         if not path.is_file():
             continue
         if any(part in SKIP_DIRS for part in path.parts):
+            continue
+        if any(part.endswith(".egg-info") for part in path.parts):
             continue
         if path.resolve() == SELF:
             continue

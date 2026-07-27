@@ -81,27 +81,59 @@ from typing import Any
 
 _REPO = Path(__file__).resolve().parent
 
-# In-repo helpers the CLI orchestrates.
-_BUILD_NATIVE = _REPO / "dist" / "native" / "build_native.py"
-_PATCH_HOOKS = _REPO / "dist" / "native" / "patch_settings_hooks.py"
-_VERIFY_CORE = _REPO / "scripts" / "verify_core.py"
-_VERIFY_LINT = _REPO / "scripts" / "verify_report_lint.py"
-_DASHBOARD = _REPO / "scripts" / "dashboard.py"
-_STATUS = _REPO / "scripts" / "tasks_status.py"
-_ISSUES = _REPO / "scripts" / "tasks_to_issues.py"
-_TRENDS = _REPO / "scripts" / "trends.py"
-_GRAPH = _REPO / "scripts" / "trust_graph.py"
-_REPLAY = _REPO / "scripts" / "replay.py"
-_IMPACTED = _REPO / "scripts" / "impacted.py"
-_PACK = _REPO / "scripts" / "pack_validate.py"
-_CALIBRATE = _REPO / "scripts" / "governor_adaptive.py"
-_ADAPTER = _REPO / "scripts" / "adapter_sdk.py"
-_SIGN = _REPO / "scripts" / "preaction_sign.py"
-_SCHEMAS_DIR = _REPO / "core" / "schemas"
-_EFFORT_PATCH = _REPO / "effort-mode" / "scripts" / "patch_settings.py"
-_EFFORT_CMD = _REPO / "effort-mode" / "commands" / "mergen.md"
-_EFFORT_HOOK = _REPO / "effort-mode" / "hooks" / "mergen_prompt_hook.py"
-_COMMANDS_SRC = _REPO / "core" / "commands"
+
+def payload_root(name: str) -> Path:
+    """Locate a tree the CLI runs but never imports.
+
+    A checkout keeps scripts/, core/, dist/, and effort-mode/ next to this
+    file, and it wins: an editable install has to run the code being edited,
+    not a stale copy installed earlier. A wheel has no such neighbours, so the
+    same trees ship inside the mergen_payload package and are read from there.
+    The packaged name replaces the hyphen because effort-mode cannot be a
+    Python identifier.
+
+    Returning the local path when neither exists is deliberate. Callers report
+    a missing script by path, and a path under the repository is the one a
+    reader can act on.
+    """
+    local = _REPO / name
+    if local.is_dir():
+        return local
+    try:
+        from importlib.resources import files
+
+        packaged = Path(str(files("mergen_payload"))) / name.replace("-", "_")
+    except Exception:
+        return local
+    return packaged if packaged.is_dir() else local
+
+
+_SCRIPTS = payload_root("scripts")
+_CORE = payload_root("core")
+_DIST = payload_root("dist")
+_EFFORT = payload_root("effort-mode")
+
+# Helpers the CLI orchestrates.
+_BUILD_NATIVE = _DIST / "native" / "build_native.py"
+_PATCH_HOOKS = _DIST / "native" / "patch_settings_hooks.py"
+_VERIFY_CORE = _SCRIPTS / "verify_core.py"
+_VERIFY_LINT = _SCRIPTS / "verify_report_lint.py"
+_DASHBOARD = _SCRIPTS / "dashboard.py"
+_STATUS = _SCRIPTS / "tasks_status.py"
+_ISSUES = _SCRIPTS / "tasks_to_issues.py"
+_TRENDS = _SCRIPTS / "trends.py"
+_GRAPH = _SCRIPTS / "trust_graph.py"
+_REPLAY = _SCRIPTS / "replay.py"
+_IMPACTED = _SCRIPTS / "impacted.py"
+_PACK = _SCRIPTS / "pack_validate.py"
+_CALIBRATE = _SCRIPTS / "governor_adaptive.py"
+_ADAPTER = _SCRIPTS / "adapter_sdk.py"
+_SIGN = _SCRIPTS / "preaction_sign.py"
+_SCHEMAS_DIR = _CORE / "schemas"
+_EFFORT_PATCH = _EFFORT / "scripts" / "patch_settings.py"
+_EFFORT_CMD = _EFFORT / "commands" / "mergen.md"
+_EFFORT_HOOK = _EFFORT / "hooks" / "mergen_prompt_hook.py"
+_COMMANDS_SRC = _CORE / "commands"
 
 # Files install copies into ~/.claude/hooks (the two SDD hooks are copied there
 # by build_native, the effort hook is copied by this CLI).
