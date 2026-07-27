@@ -6,6 +6,10 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+No unreleased changes yet.
+
+## [2.1.2] - 2026-07-27
+
 ### Fixed
 
 - The wheel now carries the trees the CLI runs. `pip install mergen-verdict`
@@ -26,6 +30,9 @@ All notable changes to this project are documented here. The format follows
   artifact entries in `.gitignore`. It previously scanned copies of its own
   source under `build/` and read its own fingerprint list as a finding. `dist`
   stays in scope, because `dist/native` and `dist/speckit` are sources here.
+- The pinned CodeQL action steps move on a single SHA again. `init` and
+  `analyze` had drifted apart in Dependabot's separate pull requests, and
+  `setup-python` was pinned at two versions in the same tree.
 
 ## [2.1.1] - 2026-07-25
 
