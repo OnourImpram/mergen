@@ -98,8 +98,19 @@ def test_packaging_installs_supervisor_entry_point_and_module():
 
 
 def test_readme_version_stamp_and_product_boundary_are_present():
+    # Read the stamp from pyproject rather than pinning a literal. A frozen
+    # version here is a fifth version source that validate_version.py does not
+    # know about, so it agreed with the other four right up until a release
+    # moved them and left this behind. The contract worth testing is that the
+    # README carries the canonical version, not that it carries one specific
+    # number forever.
+    pyproject = (REPO / "pyproject.toml").read_text(encoding="utf-8")
+    version_match = re.search(r'(?m)^version\s*=\s*"([^"]+)"', pyproject)
+    assert version_match is not None, "pyproject.toml has no [project].version"
+    version = version_match.group(1)
+
     text = (REPO / "README.md").read_text(encoding="utf-8")
-    assert "Status: v2.1.1" in text
+    assert f"Status: v{version}" in text
     assert "External workflow owns" in text
     assert "Mergen owns" in text
     assert "mergen-supervise" in text
