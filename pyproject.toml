@@ -1,6 +1,6 @@
 [project]
 name = "mergen-verdict"
-version = "2.1.1"
+version = "2.1.2"
 description = "Independent milestone verification for agentic and human engineering workflows."
 readme = "README.md"
 requires-python = ">=3.9"
