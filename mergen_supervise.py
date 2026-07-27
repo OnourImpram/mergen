@@ -401,7 +401,11 @@ def _semantic_checks(
 def _load_script(name: str) -> Any:
     if name in _MODULES:
         return _MODULES[name]
-    path = Path(__file__).resolve().parent / "scripts" / f"{name}.py"
+    # Same checkout-first, wheel-second resolution the CLI uses, so supervise
+    # cannot read a different copy of a script than the CLI just ran.
+    from mergen_cli import payload_root
+
+    path = payload_root("scripts") / f"{name}.py"
     spec = importlib.util.spec_from_file_location(f"mergen_{name}", path)
     if spec is None or spec.loader is None:
         raise ImportError(f"cannot load {path.name}")

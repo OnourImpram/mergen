@@ -6,7 +6,26 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
-No unreleased changes yet.
+### Fixed
+
+- The wheel now carries the trees the CLI runs. `pip install mergen-verdict`
+  produced a `mergen` whose `verify`, `verify-lint`, `dashboard`, `status`,
+  `issues`, `trends`, `graph`, `replay`, `impacted`, `pack`, `calibrate`,
+  `adapter`, and `sign` verbs all exited 2 with `can't open file
+  '...site-packages\scripts\verify_core.py'`, because the distribution declared
+  only two top-level modules while every one of those verbs shells out to a
+  script beside them. `scripts/`, `core/`, `dist/`, and `effort-mode/` now ship
+  inside the `mergen_payload` package and are located by `payload_root`, which
+  still prefers a checkout so an editable install runs the code being edited.
+  No source file moved: the trees stay at the repository root, so CI, the
+  install scripts, and every documented `python scripts/...` line are unchanged.
+
+### Changed
+
+- `check_no_reference_text.py` skips build output and virtualenvs, matching the
+  artifact entries in `.gitignore`. It previously scanned copies of its own
+  source under `build/` and read its own fingerprint list as a finding. `dist`
+  stays in scope, because `dist/native` and `dist/speckit` are sources here.
 
 ## [2.1.1] - 2026-07-25
 

@@ -29,15 +29,20 @@ becomes a `pass`, and `conditional_pass` means the mechanical checks passed whil
 absent.
 
 ```bash
-git clone https://github.com/OnourImpram/mergen.git && cd mergen && python -m pip install -e .
+python -m pip install mergen-verdict
 ```
 
-The published distribution is `mergen-verdict`; the import package and the commands stay `mergen` and `mergen-supervise`.
-The editable install is currently the supported package path because the legacy renderers read the repository `core`
-tree. The two verification entry points are installed together. The published wheel declares only the two top level
-modules (`pyproject.toml`, `py-modules`), so it does not carry the `scripts/` tree: `mergen verify` cannot run from a
-wheel only install, and `mergen-supervise` cannot reproduce evidence from one — it returns `unverifiable` and holds
-(`mergen_cli.py`, `_VERIFY_CORE`; `mergen_supervise.py`, `_load_script`).
+The published distribution is `mergen-verdict`; the commands stay `mergen` and `mergen-supervise`. The wheel carries
+the trees the CLI runs but never imports — `scripts/`, `core/`, `dist/`, and `effort-mode/` — inside the
+`mergen_payload` package, so `mergen verify` and `mergen-supervise` work from a plain install
+(`pyproject.toml`, `package-dir`; `mergen_cli.py`, `payload_root`).
+
+Install from a clone instead when you intend to change mergen itself. A checkout always wins over the packaged copy,
+so an editable install runs the code you are editing rather than a copy installed earlier:
+
+```bash
+git clone https://github.com/OnourImpram/mergen.git && cd mergen && python -m pip install -e .
+```
 
 ```bash
 mergen verify --tasks-state tasks-state.json --root . --out verification-report.json --strict
@@ -165,7 +170,13 @@ verification layer as the owner of an external workflow.
 Python 3.9 or newer. Git is required for provenance checks. `pytest` is required only when a declared task asks the
 mechanical verifier to execute a test.
 
-### Install from a clone
+### Install
+
+```bash
+python -m pip install mergen-verdict
+```
+
+Install from a clone when you intend to change mergen itself:
 
 ```bash
 git clone https://github.com/OnourImpram/mergen.git
@@ -173,8 +184,9 @@ cd mergen
 python -m pip install -e .
 ```
 
-The editable install is currently the supported package path because the legacy renderers read the repository `core`
-tree. The two verification entry points are installed together.
+Either path installs both verification entry points. The trees the CLI runs — `scripts/`, `core/`, `dist/`, and
+`effort-mode/` — stay at the repository root and ship inside the `mergen_payload` package, and a checkout takes
+precedence over the packaged copy.
 
 ```text
 mergen
