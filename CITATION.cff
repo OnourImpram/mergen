@@ -18,6 +18,16 @@ url: "https://github.com/OnourImpram/mergen"
 license: Apache-2.0
 version: "2.1.3"
 date-released: "2026-07-27"
+doi: "10.5281/zenodo.21638125"
+identifiers:
+  - type: doi
+    value: "10.5281/zenodo.21638125"
+    description: >-
+      Concept DOI. Resolves to the most recent archived version.
+  - type: doi
+    value: "10.5281/zenodo.21638126"
+    description: >-
+      Version DOI for 2.1.3, the first release deposited in the archive.
 keywords:
   - ai-agents
   - adversarial-verification
