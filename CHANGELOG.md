@@ -8,6 +8,13 @@ All notable changes to this project are documented here. The format follows
 
 No unreleased changes yet.
 
+## [2.1.3] - 2026-07-27
+
+No behaviour change, and nothing was fixed. This release exists so the software
+archive has a version to mint a DOI from: Zenodo mints on a release event, not
+on a version that already exists, so an archival identifier costs a version
+number. The DOI it produces is added to `CITATION.cff` in the commit after it.
+
 ## [2.1.2] - 2026-07-27
 
 ### Fixed

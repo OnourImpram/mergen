@@ -73,7 +73,7 @@ and Markdown. The process exit code is zero only for a clean `pass` and `advance
 
 ## Scope and limits
 
-> Status: v2.1.2, beta. The deterministic verification core is available. The bundled milestone supervisor currently
+> Status: v2.1.3, beta. The deterministic verification core is available. The bundled milestone supervisor currently
 > verifies Mergen software task reports. Broader domain profiles remain explicit extension points rather than implied
 > capabilities.
 
