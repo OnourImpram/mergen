@@ -688,3 +688,108 @@ class TestPolicyTraceCLI:
         # for the built-in catalog, per the docstring disclosure).
         policy_ids = {r["policy_id"] for r in decision["policy_results"]}
         assert "domain:clinical" not in policy_ids
+
+
+# ---------------------------------------------------------------------------
+# The diff scanner reads only what the change introduces or removes (#48).
+#
+# A unified diff carries text the change never touched: file headers, hunk
+# headers, and context lines. Git writes the enclosing block's name into the
+# hunk header, so a diff of CITATION.cff arrives with `authors:` in it whether
+# or not that line moved. Classifying on that made every release pull request
+# high-trust, because the version string lives in CITATION.cff.
+# ---------------------------------------------------------------------------
+
+# The shape of a real release diff: a version bump in a citation file. The word
+# `authors` appears only in the hunk header, exactly as git emits it.
+_RELEASE_DIFF = (
+    "diff --git a/CITATION.cff b/CITATION.cff\n"
+    "index 635e57a..416637a 100644\n"
+    "--- a/CITATION.cff\n"
+    "+++ b/CITATION.cff\n"
+    "@@ -16,7 +16,7 @@ authors:\n"
+    ' repository-code: "https://github.com/OnourImpram/mergen"\n'
+    " license: Apache-2.0\n"
+    '-version: "2.1.2"\n'
+    '+version: "2.1.3"\n'
+    ' date-released: "2026-07-27"\n'
+)
+
+
+def test_release_diff_is_not_high_trust_from_a_hunk_header():
+    # Regression for #48. Nothing in this change is high-trust; the only
+    # keyword match available is `authors` in git's hunk header.
+    result = classify_floor(["CITATION.cff"], _RELEASE_DIFF)
+    assert "high-trust-keyword-in-diff" not in _triggers(result)
+
+
+def test_context_line_keyword_does_not_fire():
+    # A context line is unchanged by definition, so it cannot be what the
+    # pull request is introducing.
+    diff = (
+        "diff --git a/README.md b/README.md\n"
+        "@@ -70,3 +70,3 @@\n"
+        " implied capabilities.\n"
+        "-Status: v2.1.2\n"
+        "+Status: v2.1.3\n"
+    )
+    assert "high-trust-keyword-in-diff" not in _triggers(classify_floor(["README.md"], diff))
+
+
+def test_added_line_keyword_still_fires():
+    # Coverage must not be lost: a keyword the diff actually adds still counts.
+    diff = (
+        "diff --git a/src/pay.py b/src/pay.py\n"
+        "@@ -1,2 +1,3 @@\n"
+        " import os\n"
+        "+def process_payment(amount):\n"
+    )
+    assert "high-trust-keyword-in-diff" in _triggers(classify_floor(["src/pay.py"], diff))
+
+
+def test_removed_line_keyword_still_fires():
+    # Deleting an authorization check is as high-trust as adding one.
+    #
+    # The call is written `authorize(user)` and not `require_authorize(user)`
+    # on purpose: `\bauth\w*` needs a word boundary before `auth`, and `_` is a
+    # word character, so the keyword does not match inside an identifier like
+    # `require_authorize`. That is a property of the pattern, not of this fix,
+    # and pinning it here keeps the test honest about what is being proven.
+    diff = (
+        "diff --git a/src/api.py b/src/api.py\n"
+        "@@ -1,3 +1,2 @@\n"
+        " import os\n"
+        "-    authorize(user)\n"
+    )
+    assert "high-trust-keyword-in-diff" in _triggers(classify_floor(["src/api.py"], diff))
+
+
+def test_secret_in_an_added_line_still_fires():
+    diff = (
+        "diff --git a/conf.py b/conf.py\n"
+        "@@ -1 +1,2 @@\n"
+        " x = 1\n"
+        "+api_key = 'AKIAIOSFODNN7EXAMPLE'\n"
+    )
+    assert "secret-in-diff" in _triggers(classify_floor(["conf.py"], diff))
+
+
+def test_raw_text_is_still_scanned_in_full():
+    # Callers that pass raw text rather than a unified diff keep full coverage:
+    # with no diff markers there are no headers or context lines to confuse.
+    assert "secret-in-diff" in _triggers(
+        classify_floor([], "api_key = 'AKIAIOSFODNN7EXAMPLE'")
+    )
+
+
+def test_removed_line_beginning_with_dashes_is_not_mistaken_for_a_file_header():
+    # git writes file headers as `--- a/path` with a space. A removed content
+    # line reading `--authorize` renders as `---authorize` and must still be
+    # scanned, or a deletion could hide behind its own leading dashes.
+    diff = (
+        "diff --git a/x.txt b/x.txt\n"
+        "@@ -1 +1 @@\n"
+        "---authorization: required\n"
+        "+ok\n"
+    )
+    assert "high-trust-keyword-in-diff" in _triggers(classify_floor(["x.txt"], diff))
