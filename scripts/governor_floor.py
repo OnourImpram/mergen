@@ -134,6 +134,43 @@ _COMPILED_DIFF: dict[str, list[re.Pattern[str]]] = {
     for tid, patterns in _DIFF_PATTERNS.items()
 }
 
+# A unified diff carries text the change never introduced: file headers
+# (`--- a/x`, `+++ b/x`), hunk headers, and context lines. Git also writes the
+# name of the enclosing block into the hunk header, so
+# `@@ -16,7 +16,7 @@ authors:` puts the word `authors` in front of the scanner
+# even when the diff never touched that line. Reading those as content made
+# every edit to a CITATION.cff match the `auth` keyword and land in the
+# high-trust tier, and since the version string lives in that file, every
+# release pull request stopped at the gate for a reason that was never the
+# real one. A gate that always fires stops carrying information.
+#
+# Only added and removed lines are scanned. Removals count: deleting an
+# authorization check is as high-trust as adding one.
+_DIFF_MARKER_RE = re.compile(r"(?m)^(?:diff --git |@@ )")
+
+
+def _scannable_lines(diff_text: str) -> list[str]:
+    """Return the lines a diff actually introduces or removes, prefix stripped.
+
+    Callers that pass raw text rather than a unified diff still get every line
+    scanned: without a `diff --git` or `@@ ` marker there are no headers or
+    context lines to confuse, so narrowing would only lose coverage.
+    """
+    if not _DIFF_MARKER_RE.search(diff_text):
+        return diff_text.splitlines()
+
+    scannable: list[str] = []
+    for line in diff_text.splitlines():
+        # `--- ` and `+++ ` with the trailing space are git's file headers. A
+        # removed content line reading `--foo` appears as `---foo` with no
+        # space, so it is still scanned.
+        if line.startswith("--- ") or line.startswith("+++ "):
+            continue
+        if line[:1] in ("+", "-"):
+            # Strip the marker so it cannot break a leading word boundary.
+            scannable.append(line[1:])
+    return scannable
+
 
 def _normalise_path(p: str) -> str:
     """Return the path lowercased with all separators converted to forward slashes."""
@@ -192,7 +229,7 @@ def _check_diff(diff_text: str) -> list[str]:
     fired: list[str] = []
     seen: set[str] = set()
 
-    for line in diff_text.splitlines():
+    for line in _scannable_lines(diff_text):
         for tid, patterns in _COMPILED_DIFF.items():
             if tid in seen:
                 continue
