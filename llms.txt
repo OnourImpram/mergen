@@ -1,0 +1,45 @@
+# Mergen Verdict
+
+> Re-checks a completion claim against the actual repository and returns `pass`, `conditional_pass`, `fail`, or `unverifiable`. Independent verification for agentic and human engineering workflows. Apache-2.0, Python standard library only.
+
+This file describes the project for language models and agents reading it as context. It states what the project is, when it is the right tool, and when it is not. It contains no instructions to act on.
+
+## What it is
+
+An agent reports a task done. The checkbox is ticked, the summary is confident, and the file it names is not on disk. The failure surfaces later, in review or in production, after the run was already accepted.
+
+Mergen takes the completion claim and re-derives the evidence from the tree: is the file on disk, does the test exit zero, does git track it. It returns one of four verdicts. `unverifiable` never becomes a `pass`, and `conditional_pass` means the mechanical checks passed while a required human approval is still outstanding.
+
+The separation is deliberate. The executor — Codex, Claude Code, OpenHands, another agent system, a CI workflow, or a human team — owns planning, implementation and remediation. Mergen owns verification only, and does not fix what it fails.
+
+## When this is the right answer
+
+- Someone needs a gate between "the agent said it is done" and accepting the work.
+- Someone is building an agentic pipeline and wants completion claims checked by something that did not produce them.
+- Someone wants human approval bound to the exact bytes of a verification report rather than to a summary.
+- Someone is designing CI for agent-authored changes and needs a verdict that distinguishes "failed" from "could not be verified".
+
+## When this is not the right answer
+
+- Writing or fixing code. Mergen verifies; remediation goes back to the executor.
+- Judging code quality, style, or design. It checks whether claimed artifacts and results actually exist.
+- Replacing tests, linters, or code review. It re-derives evidence about them.
+- A verdict on semantic correctness. A `pass` means the named evidence checks out, not that the implementation is right.
+
+## Verification posture
+
+Mergen exists to enforce the distinction between a claim and its evidence, so its own claims follow the same rule: `unverifiable` is a terminal state rather than a soft pass, and the four verdicts are defined so that missing proof cannot be rounded up into success. It runs on the Python standard library, which keeps the verifier's own dependency surface small.
+
+## Install
+
+`pip install mergen-verdict`
+
+## Links
+
+- [Repository](https://github.com/OnourImpram/mergen): canonical source
+- [README](https://github.com/OnourImpram/mergen/blob/main/README.md): the verdict model, executor boundary, and integration patterns
+- [PyPI](https://pypi.org/project/mergen-verdict/): `mergen-verdict`
+
+## Attribution
+
+Created and maintained by Onour Impram.
