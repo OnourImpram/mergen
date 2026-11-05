@@ -1,0 +1,10 @@
+name: mergen
+version: "0.1.0"
+description: Verify completion claims against files, Git and tests with Mergen.
+author: Onour Impram
+requires_hermes: ">=0.22.7"
+provides_tools:
+  - mergen_verify
+  - mergen_supervise
+provides_hooks: []
+requires_env: []

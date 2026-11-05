@@ -318,6 +318,10 @@ Host capability manifests live under `core/adapters/`. A host must state whether
 block advancement, expose a live filesystem, run hooks, isolate verifier contexts, or support human approval. Mergen
 does not claim enforcement that the host cannot provide.
 
+## Hermes integration
+
+The native [Hermes plugin](integrations/hermes/README.md) exposes verification and milestone supervision through Hermes' terminal tool. It preserves terminal approval checks and returns evidence without claiming automatic workflow enforcement. The adapter has its own version and installation requirements.
+
 ## Command map
 
 | Command | Purpose |

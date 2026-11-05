@@ -6,7 +6,10 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
-No unreleased changes yet.
+### Added
+
+- Native Hermes adapter 0.1.0 under `integrations/hermes`, with typed verification and supervision tools, a bundled evidence workflow skill, and explicit terminal execution disclosures.
+- Adapter contract tests covering command quoting, invalid arguments, host context, and denied or pending operations.
 
 ## [2.1.3] - 2026-07-27
 
