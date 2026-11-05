@@ -2,7 +2,7 @@
 
 ## Reproducible evidence
 
-From the repository root, with pytest installed in the current Python environment:
+From the repository root on Linux, macOS or WSL, with pytest installed in the current Python environment. Native Windows is outside this POSIX adapter's scope and the demo exits with an explicit platform error:
 
 ```sh
 python eval/hermes_demo.py --out /tmp/mergen-hermes-demo-evidence

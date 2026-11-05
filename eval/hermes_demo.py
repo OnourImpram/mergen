@@ -107,6 +107,8 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--out", required=True, type=Path, help="Directory for synthetic demo reports")
     args = parser.parse_args()
+    if os.name == "nt":
+        parser.error("POSIX terminal required. Run this demo in WSL, Linux or macOS.")
     # Prevent repository test code from writing Python bytecode in the fixture.
     os.environ["PYTHONDONTWRITEBYTECODE"] = "1"
     print(json.dumps(run_demo(args.out), indent=2))
